@@ -198,6 +198,9 @@
     <ClCompile Include="Widgets\Extended\RDTableView.cpp">
       <Filter>Widgets\Extended</Filter>
     </ClCompile>
+    <ClCompile Include="Widgets\Extended\StructuredTableExport.cpp">
+      <Filter>Widgets\Extended</Filter>
+    </ClCompile>
     <ClCompile Include="3rdparty\scintilla\lexlib\Accessor.cxx">
       <Filter>3rdparty\Scintilla\lexlib</Filter>
     </ClCompile>
@@ -793,6 +796,9 @@
   <ItemGroup>
     <ClInclude Include="3rdparty\flowlayout\FlowLayout.h">
       <Filter>3rdparty\FlowLayout</Filter>
+    </ClInclude>
+    <ClInclude Include="Widgets\Extended\StructuredTableExport.h">
+      <Filter>Widgets\Extended</Filter>
     </ClInclude>
     <ClInclude Include="Code\CaptureContext.h">
       <Filter>Code</Filter>

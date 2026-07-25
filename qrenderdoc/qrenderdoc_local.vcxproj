@@ -724,6 +724,7 @@
     <ClCompile Include="Widgets\FindReplace.cpp" />
     <ClCompile Include="Widgets\Extended\RDListWidget.cpp" />
     <ClCompile Include="Widgets\Extended\RDTableView.cpp" />
+    <ClCompile Include="Widgets\Extended\StructuredTableExport.cpp" />
     <ClCompile Include="Widgets\Extended\RDTableWidget.cpp" />
     <ClCompile Include="Widgets\Extended\RDTreeView.cpp" />
     <ClCompile Include="Widgets\Extended\RDTreeWidget.cpp" />
@@ -827,6 +828,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="3rdparty\catch\catch.hpp" />
+    <ClInclude Include="Widgets\Extended\StructuredTableExport.h" />
     <ClInclude Include="3rdparty\catch\official\catch.hpp" />
     <ClInclude Include="3rdparty\scintilla\include\ILexer.h" />
     <ClInclude Include="3rdparty\scintilla\include\Platform.h" />
