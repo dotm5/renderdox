@@ -65,6 +65,11 @@ ReplayController::~ReplayController()
 
 void ReplayController::SetFrameEvent(uint32_t eventId, bool force)
 {
+  SetFrameEventSelection(eventId, eventId, force);
+}
+
+void ReplayController::SetFrameEventSelection(uint32_t selectedEventId, uint32_t eventId, bool force)
+{
   CHECK_REPLAY_THREAD();
   RENDERDOC_PROFILEFUNCTION();
 
@@ -72,6 +77,9 @@ void ReplayController::SetFrameEvent(uint32_t eventId, bool force)
   auto it = m_EventRemap.find(eventId);
   if(it != m_EventRemap.end())
     eventId = it->second;
+
+  const bool selectionChanged = selectedEventId != m_SelectedEventID;
+  m_SelectedEventID = selectedEventId;
 
   if(eventId != m_EventID || force)
   {
@@ -87,6 +95,13 @@ void ReplayController::SetFrameEvent(uint32_t eventId, bool force)
     FatalErrorCheck();
 
     FetchPipelineState(eventId);
+  }
+  else if(selectionChanged)
+  {
+    // A multi-action parent and its final child can share the same effective EID. The pipeline is
+    // already correct, but overlays must be dirtied because their action set is selection-specific.
+    for(size_t i = 0; i < m_Outputs.size(); i++)
+      m_Outputs[i]->SetFrameEvent(eventId);
   }
 }
 
@@ -1601,7 +1616,7 @@ rdcarray<PixelModification> ReplayController::PixelHistory(ResourceId target, ui
   ret = m_pDevice->PixelHistory(events, id, x, y, subresource, typeCast);
   FatalErrorCheck();
 
-  SetFrameEvent(m_EventID, true);
+  SetFrameEventSelection(m_SelectedEventID, m_EventID, true);
 
   return ret;
 }
@@ -1663,7 +1678,7 @@ ShaderDebugTrace *ReplayController::DebugVertex(uint32_t vertid, uint32_t instid
   ShaderDebugTrace *ret = m_pDevice->DebugVertex(m_EventID, vertid, instid, idx, view);
   FatalErrorCheck();
 
-  SetFrameEvent(m_EventID, true);
+  SetFrameEventSelection(m_SelectedEventID, m_EventID, true);
 
   if(ret->debugger)
     m_Debuggers.push_back(ret->debugger);
@@ -1680,7 +1695,7 @@ ShaderDebugTrace *ReplayController::DebugPixel(uint32_t x, uint32_t y, const Deb
   ShaderDebugTrace *ret = m_pDevice->DebugPixel(m_EventID, x, y, inputs);
   FatalErrorCheck();
 
-  SetFrameEvent(m_EventID, true);
+  SetFrameEventSelection(m_SelectedEventID, m_EventID, true);
 
   if(ret->debugger)
     m_Debuggers.push_back(ret->debugger);
@@ -1698,7 +1713,7 @@ ShaderDebugTrace *ReplayController::DebugThread(const rdcfixedarray<uint32_t, 3>
   ShaderDebugTrace *ret = m_pDevice->DebugThread(m_EventID, groupid, threadid);
   FatalErrorCheck();
 
-  SetFrameEvent(m_EventID, true);
+  SetFrameEventSelection(m_SelectedEventID, m_EventID, true);
 
   if(ret->debugger)
     m_Debuggers.push_back(ret->debugger);
@@ -1716,7 +1731,7 @@ ShaderDebugTrace *ReplayController::DebugMeshThread(const rdcfixedarray<uint32_t
   ShaderDebugTrace *ret = m_pDevice->DebugMeshThread(m_EventID, groupid, threadid);
   FatalErrorCheck();
 
-  SetFrameEvent(m_EventID, true);
+  SetFrameEventSelection(m_SelectedEventID, m_EventID, true);
 
   if(ret->debugger)
     m_Debuggers.push_back(ret->debugger);
@@ -2161,7 +2176,7 @@ void ReplayController::ReplaceResource(ResourceId from, ResourceId to)
   m_pDevice->ReplaceResource(from, to);
   FatalErrorCheck();
 
-  SetFrameEvent(m_EventID, true);
+  SetFrameEventSelection(m_SelectedEventID, m_EventID, true);
 
   for(size_t i = 0; i < m_Outputs.size(); i++)
     if(m_Outputs[i]->GetType() != ReplayOutputType::Headless)
@@ -2175,7 +2190,7 @@ void ReplayController::RemoveReplacement(ResourceId id)
   m_pDevice->RemoveReplacement(id);
   FatalErrorCheck();
 
-  SetFrameEvent(m_EventID, true);
+  SetFrameEventSelection(m_SelectedEventID, m_EventID, true);
 
   for(size_t i = 0; i < m_Outputs.size(); i++)
     if(m_Outputs[i]->GetType() != ReplayOutputType::Headless)

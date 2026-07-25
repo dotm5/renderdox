@@ -257,6 +257,9 @@ public:
 class IReplayDriver : public IRemoteDriver
 {
 public:
+  void SetOverlayActionEvents(const rdcarray<uint32_t> &events) { m_OverlayActionEvents = events; }
+  const rdcarray<uint32_t> &GetOverlayActionEvents() const { return m_OverlayActionEvents; }
+
   virtual bool IsRemoteProxy() = 0;
 
   virtual IReplayDriver *MakeDummyDriver() = 0;
@@ -311,6 +314,9 @@ public:
 
   virtual uint32_t PickVertex(uint32_t eventId, int32_t width, int32_t height,
                               const MeshDisplay &cfg, uint32_t x, uint32_t y) = 0;
+
+private:
+  rdcarray<uint32_t> m_OverlayActionEvents;
 };
 
 // for protocols, we extend the public interface a bit to add callbacks for remapping connection

@@ -5,6 +5,7 @@ import traceback
 
 from . import SCHEMA_VERSION, TOOL_VERSION
 from .common import enum_name, resource_id, sha256_file, structural_hash, utc_now
+from .multiaction import build_multiaction_map
 from .pass_graph import build_pass_graph, usage_sets
 
 
@@ -99,6 +100,14 @@ def _flatten_actions(rd, controller):
                 "numIndices": int(getattr(action, "numIndices", 0)),
                 "numInstances": int(getattr(action, "numInstances", 0)),
                 "drawIndex": int(getattr(action, "drawIndex", 0)),
+                "outputResources": [
+                    identifier
+                    for identifier in (
+                        resource_id(output) for output in getattr(action, "outputs", [])
+                    )
+                    if identifier is not None
+                ],
+                "depthOutput": resource_id(getattr(action, "depthOut", None)),
                 "children": [int(child.eventId) for child in action.children],
             }
             actions.append(record)
@@ -550,6 +559,7 @@ def analyse_capture(capture_path):
         )
         _progress("pass-graph")
         graph = build_pass_graph(actions, resource_usages, action_signatures)
+        multi_action_map = build_multiaction_map(actions)
         _progress("debug-messages")
         messages = _debug_messages(rd, controller)
         fatal = controller.GetFatalErrorStatus()
@@ -607,6 +617,7 @@ def analyse_capture(capture_path):
                 },
                 "actionSignatures": action_signatures,
                 "passGraph": graph,
+                "multiActionMap": multi_action_map,
             }
         )
 

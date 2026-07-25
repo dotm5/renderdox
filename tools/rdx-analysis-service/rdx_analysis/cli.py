@@ -179,6 +179,10 @@ def write_outputs(output_directory, results, source):
         os.path.join(output_directory, "shader-summary.json"),
         _artifact("shader-summary", results, "shaderSummary"),
     )
+    atomic_write_json(
+        os.path.join(output_directory, "multiaction-action-map.json"),
+        _artifact("multiaction-action-map", results, "multiActionMap"),
+    )
 
     error_lines = []
     for result in results:

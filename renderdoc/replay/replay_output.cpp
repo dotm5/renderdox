@@ -30,6 +30,59 @@
 #include "strings/string_utils.h"
 #include "replay_controller.h"
 
+static bool ActionWritesOverlayTarget(const ActionDescription &action, ResourceId target)
+{
+  if(target == ResourceId() || action.depthOut == target)
+    return true;
+
+  for(ResourceId output : action.outputs)
+    if(output == target)
+      return true;
+
+  return false;
+}
+
+static bool ContainsActionEvent(const ActionDescription &action, uint32_t eventId)
+{
+  if(action.eventId == eventId)
+    return true;
+
+  for(const ActionDescription &child : action.children)
+    if(ContainsActionEvent(child, eventId))
+      return true;
+
+  return false;
+}
+
+static void CollectOverlayDrawEvents(const ActionDescription &action, ResourceId target,
+                                     rdcarray<uint32_t> &events)
+{
+  if(action.children.empty())
+  {
+    if((action.flags & ActionFlags::Drawcall) && ActionWritesOverlayTarget(action, target))
+      events.push_back(action.eventId);
+    return;
+  }
+
+  for(const ActionDescription &child : action.children)
+    CollectOverlayDrawEvents(child, target, events);
+}
+
+static rdcarray<uint32_t> GetMultiActionOverlayEvents(const ActionDescription *selectedAction,
+                                                      uint32_t effectiveEventId, ResourceId target)
+{
+  rdcarray<uint32_t> events;
+
+  if(selectedAction == NULL || selectedAction->eventId == effectiveEventId ||
+     selectedAction->children.empty() ||
+     !(selectedAction->flags & (ActionFlags::MultiAction | ActionFlags::Indirect)) ||
+     !ContainsActionEvent(*selectedAction, effectiveEventId))
+    return events;
+
+  CollectOverlayDrawEvents(*selectedAction, target, events);
+  return events;
+}
+
 static uint64_t GetHandle(WindowingData window)
 {
 #if ENABLED(RDOC_LINUX)
@@ -282,8 +335,19 @@ void ReplayOutput::RefreshOverlay()
     {
       FloatVector f = m_RenderData.texDisplay.backgroundColor;
 
+      rdcarray<uint32_t> overlayEvents;
+      if(m_RenderData.texDisplay.overlay == DebugOverlay::Drawcall ||
+         m_RenderData.texDisplay.overlay == DebugOverlay::Wireframe)
+      {
+        const ActionDescription *selectedAction =
+            m_pController->GetActionByEID(m_pController->GetSelectedEventID());
+        overlayEvents = GetMultiActionOverlayEvents(selectedAction, m_EventID, id);
+      }
+
+      m_pDevice->SetOverlayActionEvents(overlayEvents);
       m_OverlayResourceId =
           m_pDevice->RenderOverlay(id, f, m_RenderData.texDisplay.overlay, m_EventID, passEvents);
+      m_pDevice->SetOverlayActionEvents({});
       m_pController->FatalErrorCheck();
       m_OverlayDirty = false;
     }
@@ -297,6 +361,76 @@ void ReplayOutput::RefreshOverlay()
     m_OverlayDirty = false;
   }
 }
+
+#if ENABLED(ENABLE_UNIT_TESTS)
+
+#include "catch/catch.hpp"
+
+TEST_CASE("Multi-action overlay maps only matching leaf draws", "[multiaction-overlay]")
+{
+  const ResourceId color = ResourceIDGen::GetNewUniqueID();
+  const ResourceId other = ResourceIDGen::GetNewUniqueID();
+
+  ActionDescription parent;
+  parent.eventId = 10;
+  parent.flags = ActionFlags::MultiAction | ActionFlags::Indirect;
+
+  ActionDescription colorDraw;
+  colorDraw.eventId = 11;
+  colorDraw.flags = ActionFlags::Drawcall;
+  colorDraw.outputs[0] = color;
+
+  ActionDescription otherDraw;
+  otherDraw.eventId = 12;
+  otherDraw.flags = ActionFlags::Drawcall | ActionFlags::Indexed;
+  otherDraw.outputs[0] = other;
+
+  ActionDescription dispatch;
+  dispatch.eventId = 13;
+  dispatch.flags = ActionFlags::Dispatch;
+
+  ActionDescription nested;
+  nested.eventId = 14;
+  nested.flags = ActionFlags::MultiAction;
+
+  ActionDescription depthDraw;
+  depthDraw.eventId = 15;
+  depthDraw.flags = ActionFlags::Drawcall;
+  depthDraw.depthOut = color;
+  nested.children.push_back(depthDraw);
+
+  parent.children = {colorDraw, otherDraw, dispatch, nested};
+
+  SECTION("The displayed render target filters unrelated children")
+  {
+    const rdcarray<uint32_t> events = GetMultiActionOverlayEvents(&parent, 15, color);
+    REQUIRE(events.size() == 2);
+    CHECK(events[0] == 11);
+    CHECK(events[1] == 15);
+  }
+
+  SECTION("A null target returns every leaf draw but not dispatches")
+  {
+    const rdcarray<uint32_t> events =
+        GetMultiActionOverlayEvents(&parent, 15, ResourceId());
+    REQUIRE(events.size() == 3);
+    CHECK(events[0] == 11);
+    CHECK(events[1] == 12);
+    CHECK(events[2] == 15);
+  }
+
+  SECTION("Selecting a child preserves the ordinary single-action path")
+  {
+    CHECK(GetMultiActionOverlayEvents(&colorDraw, 11, color).empty());
+  }
+
+  SECTION("An unrelated effective event cannot reuse stale parent mapping")
+  {
+    CHECK(GetMultiActionOverlayEvents(&parent, 99, color).empty());
+  }
+}
+
+#endif
 
 ResourceId ReplayOutput::GetCustomShaderTexID()
 {

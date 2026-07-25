@@ -144,6 +144,8 @@ public:
   void FileChanged();
 
   void SetFrameEvent(uint32_t eventId, bool force);
+  void SetFrameEventSelection(uint32_t selectedEventId, uint32_t effectiveEventId, bool force);
+  uint32_t GetSelectedEventID() const { return m_SelectedEventID; }
   rdcarray<uint32_t> SetDisabledActions(const rdcarray<uint32_t> &disabledEventIds);
 
   const D3D11Pipe::State *GetD3D11PipelineState();
@@ -276,6 +278,7 @@ private:
   ResultDetails m_FatalErrorResult = {ResultCode::Succeeded};
 
   uint32_t m_EventID;
+  uint32_t m_SelectedEventID = 0;
 
   std::map<uint32_t, uint32_t> m_EventRemap;
 

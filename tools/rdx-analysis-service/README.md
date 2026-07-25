@@ -29,6 +29,7 @@ contains:
 - `action-signatures.json`
 - `resource-summary.json`
 - `shader-summary.json`
+- `multiaction-action-map.json`
 - `errors.log`
 
 The command returns non-zero when any input cannot be analysed. Use

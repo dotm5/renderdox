@@ -740,7 +740,16 @@ ResourceId GLReplay::RenderOverlay(ResourceId texid, FloatVector clearCol, Debug
     float colVal[] = {0.8f, 0.1f, 0.8f, 1.0f};
     drv.glProgramUniform4fv(DebugData.overlayProg, overlayFixedColLocation, 1, colVal);
 
-    ReplayLog(eventId, eReplay_OnlyDraw);
+    const rdcarray<uint32_t> &overlayEvents = GetOverlayActionEvents();
+    if(overlayEvents.empty())
+    {
+      ReplayLog(eventId, eReplay_OnlyDraw);
+    }
+    else
+    {
+      for(uint32_t childEID : overlayEvents)
+        ReplayLog(childEID, eReplay_OnlyDraw);
+    }
   }
   else if(overlay == DebugOverlay::Wireframe)
   {
@@ -755,7 +764,16 @@ ResourceId GLReplay::RenderOverlay(ResourceId texid, FloatVector clearCol, Debug
       // desktop GL is simple
       drv.glPolygonMode(eGL_FRONT_AND_BACK, eGL_LINE);
 
-      ReplayLog(eventId, eReplay_OnlyDraw);
+      const rdcarray<uint32_t> &overlayEvents = GetOverlayActionEvents();
+      if(overlayEvents.empty())
+      {
+        ReplayLog(eventId, eReplay_OnlyDraw);
+      }
+      else
+      {
+        for(uint32_t childEID : overlayEvents)
+          ReplayLog(childEID, eReplay_OnlyDraw);
+      }
     }
     else
     {
