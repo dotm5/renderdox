@@ -40,6 +40,108 @@
 
 #define VERBOSE_DEBUG_HOOK OPTION_OFF
 
+static bool GetCanonicalSystemModulePath(const rdcstr &libraryName, rdcwstr &modulePath)
+{
+  // DXGI is always an operating-system component. Do not extend this list to D3D12: applications
+  // can legitimately use a private Agility SDK D3D12Core deployment.
+  if(_stricmp(libraryName.c_str(), "dxgi.dll") != 0)
+    return false;
+
+  rdcarray<wchar_t> systemDirectory;
+  systemDirectory.resize(256);
+
+  while(true)
+  {
+    UINT length = GetSystemDirectoryW(systemDirectory.data(), (UINT)systemDirectory.size());
+    if(length == 0)
+      return false;
+
+    if((size_t)length < systemDirectory.size())
+      break;
+
+    // On insufficient space GetSystemDirectoryW returns the required size including the null.
+    systemDirectory.resize(length);
+  }
+
+  const size_t directoryLength = wcslen(systemDirectory.data());
+  const bool addSeparator = directoryLength > 0 && systemDirectory[directoryLength - 1] != L'\\' &&
+                            systemDirectory[directoryLength - 1] != L'/';
+  const rdcwstr wideLibraryName = StringFormat::UTF82Wide(libraryName);
+  const size_t libraryNameLength = wideLibraryName.length();
+
+  modulePath = rdcwstr(directoryLength + (addSeparator ? 1 : 0) + libraryNameLength);
+
+  size_t offset = 0;
+  memcpy(modulePath.data(), systemDirectory.data(), directoryLength * sizeof(wchar_t));
+  offset += directoryLength;
+
+  if(addSeparator)
+    modulePath[offset++] = L'\\';
+
+  memcpy(modulePath.data() + offset, wideLibraryName.c_str(),
+         (libraryNameLength + 1) * sizeof(wchar_t));
+  return true;
+}
+
+static bool ModulePathMatches(HMODULE module, const rdcwstr &expectedPath)
+{
+  if(module == NULL || expectedPath.c_str() == NULL || expectedPath.c_str()[0] == 0)
+    return false;
+
+  rdcarray<wchar_t> modulePath;
+  modulePath.resize(512);
+
+  while(true)
+  {
+    DWORD length = GetModuleFileNameW(module, modulePath.data(), (DWORD)modulePath.size());
+    if(length == 0)
+      return false;
+
+    if((size_t)length < modulePath.size())
+      return _wcsicmp(modulePath.data(), expectedPath.c_str()) == 0;
+
+    // A Windows module path cannot exceed 32,767 characters. Fail closed if an invalid module
+    // handle keeps reporting a truncated path.
+    if(modulePath.size() >= 32768)
+      return false;
+
+    modulePath.resize(modulePath.size() * 2);
+  }
+}
+
+static HMODULE GetLoadedCanonicalSystemModule(const rdcstr &libraryName)
+{
+  rdcwstr modulePath;
+  if(!GetCanonicalSystemModulePath(libraryName, modulePath))
+    return NULL;
+
+  // Hook registration runs under the loader lock. Query only: the bootstrap must load the real
+  // System32 DXGI before loading the Core if a same-name proxy is already present.
+  HMODULE module = GetModuleHandleW(modulePath.c_str());
+  if(module == NULL || !ModulePathMatches(module, modulePath))
+    return NULL;
+
+  return module;
+}
+
+static HMODULE GetPreferredOriginalModule(const rdcstr &libraryName, HMODULE fallback)
+{
+  HMODULE systemModule = GetLoadedCanonicalSystemModule(libraryName);
+  return systemModule ? systemModule : fallback;
+}
+
+static bool ModuleHandleIsLoaded(HMODULE module)
+{
+  if(module == NULL)
+    return false;
+
+  HMODULE currentModule = NULL;
+  BOOL success = GetModuleHandleExW(
+      GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+      (LPCWSTR)module, &currentModule);
+  return success && currentModule == module;
+}
+
 // map from address of IAT entry, to original contents
 std::map<void **, void *> s_InstalledHooks;
 Threading::CriticalSection installedLock;
@@ -86,6 +188,10 @@ bool ApplyHook(FunctionHook &hook, void **IATentry, bool &already)
 struct DllHookset
 {
   HMODULE module = NULL;
+  // Onward calls may need a different module from the handle used for matching imports and
+  // GetProcAddress requests. In particular, a local dxgi.dll proxy remains a matched module while
+  // original calls resolve directly against the already-loaded System32 DXGI.
+  HMODULE originalModule = NULL;
   bool hooksfetched = false;
   // if we have multiple copies of the dll loaded (unlikely), the other module handles will be
   // stored here
@@ -147,6 +253,43 @@ struct DllHookset
   }
 };
 
+static void RefreshOriginalModule(const rdcstr &libraryName, DllHookset &hookset, HMODULE fallback)
+{
+  // The caller must hold CachedHookData::lock while selecting and rebinding original pointers.
+  HMODULE selected = GetPreferredOriginalModule(libraryName, fallback);
+  if(selected == NULL || selected == hookset.originalModule)
+    return;
+
+  HMODULE previous = hookset.originalModule;
+  bool previousIsLoaded = ModuleHandleIsLoaded(previous);
+
+  for(FunctionHook &hook : hookset.FunctionHooks)
+  {
+    if(hook.orig == NULL)
+      continue;
+
+    if(previous == NULL)
+    {
+      if(*hook.orig == NULL)
+        *hook.orig = GetProcAddress(selected, hook.function.c_str());
+    }
+    else if(!previousIsLoaded)
+    {
+      // The old module was unloaded, so its export address cannot be queried safely.
+      *hook.orig = GetProcAddress(selected, hook.function.c_str());
+    }
+    else
+    {
+      // Preserve first-hook precedence when multiple hooks intentionally share an original pointer.
+      void *previousFunction = GetProcAddress(previous, hook.function.c_str());
+      if(*hook.orig == previousFunction)
+        *hook.orig = GetProcAddress(selected, hook.function.c_str());
+    }
+  }
+
+  hookset.originalModule = selected;
+}
+
 struct CachedHookData
 {
   bool hookAll = true;
@@ -197,21 +340,21 @@ struct CachedHookData
     {
       if(!_stricmp(it->first.c_str(), modName))
       {
+        SCOPED_LOCK(lock);
+
+        // Refresh before checking alternate modules. A late-loaded canonical DXGI may already be in
+        // the alternate list, but its presence must still move onward calls away from a proxy.
+        RefreshOriginalModule(it->first, it->second, it->second.module ? it->second.module : module);
+
         if(it->second.module == NULL)
         {
           it->second.module = module;
 
           it->second.hooksfetched = true;
 
-          // fetch all function hooks here, since we want to fill out the original function pointer
-          // even in case nothing imports from that function (which means it would not get filled
-          // out through FunctionHook::ApplyHook)
-          for(FunctionHook &hook : it->second.FunctionHooks)
-          {
-            if(hook.orig && *hook.orig == NULL)
-              *hook.orig = GetProcAddress(module, hook.function.c_str());
-          }
-
+          // Fetch all original function pointers even if no module imports them. When a local DXGI
+          // proxy coexists with the real System32 DXGI, keep the proxy as the matching module but
+          // use the canonical module for onward calls.
           it->second.FetchOrdinalNames();
         }
         else if(it->second.module != module)
@@ -253,13 +396,15 @@ struct CachedHookData
                     it->second.module, module);
 
             // we also need to re-initialise the hooks as the orig pointers are now stale
+            HMODULE originalModule = GetPreferredOriginalModule(it->first, module);
             for(FunctionHook &hook : it->second.FunctionHooks)
             {
               if(hook.orig)
-                *hook.orig = GetProcAddress(module, hook.function.c_str());
+                *hook.orig = GetProcAddress(originalModule, hook.function.c_str());
             }
 
             it->second.module = module;
+            it->second.originalModule = originalModule;
           }
         }
       }
@@ -603,17 +748,14 @@ static void HookAllModules()
     if(it->second.module == NULL)
       continue;
 
+    {
+      SCOPED_LOCK(s_HookData->lock);
+      RefreshOriginalModule(it->first, it->second, it->second.module);
+    }
+
     if(!it->second.hooksfetched)
     {
       it->second.hooksfetched = true;
-
-      // fetch all function hooks here, if we didn't above (perhaps because this library was
-      // late-loaded)
-      for(FunctionHook &hook : it->second.FunctionHooks)
-      {
-        if(hook.orig && *hook.orig == NULL)
-          *hook.orig = GetProcAddress(it->second.module, hook.function.c_str());
-      }
     }
 
     rdcarray<FunctionLoadCallback> callbacks;
@@ -777,21 +919,23 @@ FARPROC WINAPI Hooked_GetProcAddress(HMODULE mod, const LPCSTR func)
 
   for(auto it = s_HookData->DllHooks.begin(); it != s_HookData->DllHooks.end(); ++it)
   {
-    if(it->second.module == NULL)
     {
-      it->second.module = GetModuleHandleA(it->first.c_str());
-      if(it->second.module)
-      {
-        // fetch all function hooks here, since we want to fill out the original function pointer
-        // even in case nothing imports from that function (which means it would not get filled
-        // out through FunctionHook::ApplyHook)
-        for(FunctionHook &hook : it->second.FunctionHooks)
-        {
-          if(hook.orig && *hook.orig == NULL)
-            *hook.orig = GetProcAddress(it->second.module, hook.function.c_str());
-        }
+      SCOPED_LOCK(s_HookData->lock);
 
-        it->second.FetchOrdinalNames();
+      if(it->second.module == NULL)
+      {
+        it->second.module = GetModuleHandleA(it->first.c_str());
+        if(it->second.module)
+        {
+          // Fill original pointers even when no import was patched.
+          RefreshOriginalModule(it->first, it->second, it->second.module);
+
+          it->second.FetchOrdinalNames();
+        }
+      }
+      else
+      {
+        RefreshOriginalModule(it->first, it->second, it->second.module);
       }
     }
 
@@ -1045,16 +1189,75 @@ void Win32_ManualHookModule(rdcstr modName, HMODULE module)
 
   modName = strlower(modName);
 
-  s_HookData->DllHooks[modName].module = module;
-
-  for(FunctionHook &hook : s_HookData->DllHooks[modName].FunctionHooks)
   {
-    if(hook.orig)
-      *hook.orig = GetProcAddress(module, hook.function.c_str());
+    SCOPED_LOCK(s_HookData->lock);
+
+    DllHookset &hookset = s_HookData->DllHooks[modName];
+    hookset.module = module;
+    hookset.originalModule = GetPreferredOriginalModule(modName, module);
+
+    for(FunctionHook &hook : hookset.FunctionHooks)
+    {
+      if(hook.orig)
+        *hook.orig = GetProcAddress(hookset.originalModule, hook.function.c_str());
+    }
   }
 
   s_HookData->ApplyHooks(modName.c_str(), module);
 }
+
+#if ENABLED(ENABLE_UNIT_TESTS)
+
+#include "catch/catch.hpp"
+
+TEST_CASE("Win32 hook originals select an already-loaded canonical DXGI",
+          "[win32][hook-resolution]")
+{
+  rdcwstr systemDXGIPath;
+  REQUIRE(GetCanonicalSystemModulePath("dxgi.dll", systemDXGIPath));
+
+  rdcwstr rejectedPath;
+  CHECK_FALSE(GetCanonicalSystemModulePath("d3d12.dll", rejectedPath));
+  CHECK_FALSE(GetCanonicalSystemModulePath("../dxgi.dll", rejectedPath));
+  CHECK(GetCanonicalSystemModulePath("DXGI.DLL", rejectedPath));
+  CHECK(_wcsicmp(rejectedPath.c_str(), systemDXGIPath.c_str()) == 0);
+
+  HMODULE coreModule = GetModuleHandleA(RDOC_CORE_FILENAME);
+  REQUIRE(coreModule != NULL);
+  CHECK(ModuleHandleIsLoaded(coreModule));
+  CHECK_FALSE(ModuleHandleIsLoaded(NULL));
+  CHECK_FALSE(ModulePathMatches(coreModule, systemDXGIPath));
+
+  HMODULE systemDXGI = LoadLibraryW(systemDXGIPath.c_str());
+  REQUIRE(systemDXGI != NULL);
+  REQUIRE(ModulePathMatches(systemDXGI, systemDXGIPath));
+  CHECK(GetLoadedCanonicalSystemModule("dxgi.dll") == systemDXGI);
+  CHECK(GetPreferredOriginalModule("dxgi.dll", coreModule) == systemDXGI);
+  CHECK(GetPreferredOriginalModule("d3d12.dll", coreModule) == coreModule);
+
+  FARPROC createFactory = GetProcAddress(systemDXGI, "CreateDXGIFactory1");
+  REQUIRE(createFactory != NULL);
+
+  void *originalFactory = NULL;
+  CachedHookData hookData;
+  DllHookset &dxgiHookset = hookData.DllHooks["dxgi.dll"];
+  dxgiHookset.originalModule = coreModule;
+  dxgiHookset.FunctionHooks.push_back(FunctionHook("CreateDXGIFactory1", &originalFactory, NULL));
+  {
+    SCOPED_LOCK(hookData.lock);
+    RefreshOriginalModule("dxgi.dll", dxgiHookset, coreModule);
+  }
+  CHECK(dxgiHookset.originalModule == systemDXGI);
+  CHECK(originalFactory == (void *)createFactory);
+
+  MEMORY_BASIC_INFORMATION memory = {};
+  REQUIRE(VirtualQuery(createFactory, &memory, sizeof(memory)) == sizeof(memory));
+  CHECK(memory.AllocationBase == systemDXGI);
+
+  FreeLibrary(systemDXGI);
+}
+
+#endif
 
 // android only hooking functions, not used on win32
 ScopedSuppressHooking::ScopedSuppressHooking()
