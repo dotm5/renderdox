@@ -26,6 +26,7 @@
 // must be separate so that it's included first and not sorted by clang-format
 #include <windows.h>
 
+#include <delayimp.h>
 #include <tlhelp32.h>
 #include <algorithm>
 #include <functional>
@@ -140,6 +141,70 @@ static bool ModuleHandleIsLoaded(HMODULE module)
       GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
       (LPCWSTR)module, &currentModule);
   return success && currentModule == module;
+}
+
+static bool IsValidImageRange(size_t imageSize, size_t rva, size_t byteCount)
+{
+  return rva < imageSize && byteCount <= imageSize - rva;
+}
+
+static bool IsReadableMemoryProtection(DWORD protection)
+{
+  if(protection & PAGE_GUARD)
+    return false;
+
+  const DWORD access = protection & 0xff;
+  return access == PAGE_READONLY || access == PAGE_READWRITE || access == PAGE_WRITECOPY ||
+         access == PAGE_EXECUTE_READ || access == PAGE_EXECUTE_READWRITE ||
+         access == PAGE_EXECUTE_WRITECOPY;
+}
+
+static size_t GetReadableImageSpan(const byte *baseAddress, size_t imageSize, size_t rva)
+{
+  if(!IsValidImageRange(imageSize, rva, 1))
+    return 0;
+
+  const byte *current = baseAddress + rva;
+  size_t remaining = imageSize - rva;
+  size_t readable = 0;
+
+  while(remaining > 0)
+  {
+    MEMORY_BASIC_INFORMATION memory = {};
+    if(VirtualQuery(current, &memory, sizeof(memory)) != sizeof(memory) ||
+       memory.AllocationBase != baseAddress || memory.State != MEM_COMMIT ||
+       !IsReadableMemoryProtection(memory.Protect))
+      break;
+
+    const byte *regionBase = (const byte *)memory.BaseAddress;
+    if(current < regionBase)
+      break;
+
+    const size_t regionOffset = (size_t)(current - regionBase);
+    if(regionOffset >= memory.RegionSize)
+      break;
+
+    const size_t available = memory.RegionSize - regionOffset;
+    const size_t advance = RDCMIN(available, remaining);
+    if(advance == 0)
+      break;
+
+    readable += advance;
+    remaining -= advance;
+    current += advance;
+  }
+
+  return readable;
+}
+
+static const char *GetImageString(const byte *baseAddress, size_t imageSize, size_t rva)
+{
+  const size_t readable = GetReadableImageSpan(baseAddress, imageSize, rva);
+  if(readable == 0)
+    return NULL;
+
+  const char *str = (const char *)(baseAddress + rva);
+  return memchr(str, 0, readable) ? str : NULL;
 }
 
 // map from address of IAT entry, to original contents
@@ -305,6 +370,25 @@ struct CachedHookData
 
   int32_t posthooking = 0;
 
+  bool ShouldSkipImportPatching(const char *lowername)
+  {
+    // for safety (and because we don't need to), ignore these modules
+    if(!_stricmp(lowername, "kernel32.dll") || !_stricmp(lowername, "powrprof.dll") ||
+       !_stricmp(lowername, "CoreMessaging.dll") || !_stricmp(lowername, "opengl32.dll") ||
+       !_stricmp(lowername, "gdi32.dll") || !_stricmp(lowername, "gdi32full.dll") ||
+       !_stricmp(lowername, "windows.storage.dll") || !_stricmp(lowername, "nvoglv32.dll") ||
+       !_stricmp(lowername, "nvoglv64.dll") || !_stricmp(lowername, "vulkan-1.dll") ||
+       !_stricmp(lowername, "atio6axx.dll") || !_stricmp(lowername, "atioglxx.dll") ||
+       !_stricmp(lowername, "nvcuda.dll") || strstr(lowername, "cudart") == lowername ||
+       strstr(lowername, "msvcr") == lowername || strstr(lowername, "msvcp") == lowername ||
+       strstr(lowername, "nv-vk") == lowername || strstr(lowername, "amdvlk") == lowername ||
+       strstr(lowername, "igvk") == lowername || strstr(lowername, "nvopencl") == lowername ||
+       strstr(lowername, "nvapi") == lowername)
+      return true;
+
+    return ignores.find(lowername) != ignores.end();
+  }
+
   void ApplyHooks(const char *modName, HMODULE module)
   {
     char lowername[512] = {};
@@ -410,21 +494,7 @@ struct CachedHookData
       }
     }
 
-    // for safety (and because we don't need to), ignore these modules
-    if(!_stricmp(modName, "kernel32.dll") || !_stricmp(modName, "powrprof.dll") ||
-       !_stricmp(modName, "CoreMessaging.dll") || !_stricmp(modName, "opengl32.dll") ||
-       !_stricmp(modName, "gdi32.dll") || !_stricmp(modName, "gdi32full.dll") ||
-       !_stricmp(modName, "windows.storage.dll") || !_stricmp(modName, "nvoglv32.dll") ||
-       !_stricmp(modName, "nvoglv64.dll") || !_stricmp(modName, "vulkan-1.dll") ||
-       !_stricmp(modName, "atio6axx.dll") || !_stricmp(modName, "atioglxx.dll") ||
-       !_stricmp(modName, "nvcuda.dll") || strstr(lowername, "cudart") == lowername ||
-       strstr(lowername, "msvcr") == lowername || strstr(lowername, "msvcp") == lowername ||
-       strstr(lowername, "nv-vk") == lowername || strstr(lowername, "amdvlk") == lowername ||
-       strstr(lowername, "igvk") == lowername || strstr(lowername, "nvopencl") == lowername ||
-       strstr(lowername, "nvapi") == lowername)
-      return;
-
-    if(ignores.find(lowername) != ignores.end())
+    if(ShouldSkipImportPatching(lowername))
       return;
 
     // the module could have been unloaded after our toolhelp snapshot, especially if we spent a
@@ -665,6 +735,207 @@ struct CachedHookData
 
     FreeLibrary(refcountModHandle);
   }
+
+  void ApplyDelayHooks(const char *modName, HMODULE module)
+  {
+    char lowername[512] = {};
+
+    size_t nameLength = strlen(modName);
+    if(nameLength >= ARRAY_COUNT(lowername))
+      return;
+
+    for(size_t i = 0; i < nameLength; i++)
+      lowername[i] = (char)tolower(modName[i]);
+
+    // Keep the same exclusions as normal import patching. Delay-import support must not expand the
+    // set of modules that RenderDoc is willing to modify.
+    if(strstr(lowername, "fraps") || strstr(lowername, "gameoverlayrenderer") ||
+       _strnicmp(lowername, RDOC_CORE_FILENAME, strlen(RDOC_CORE_FILENAME)) == 0 ||
+       ShouldSkipImportPatching(lowername))
+      return;
+
+    // Windows hotpatch modules are not normal DLL mappings and are deliberately skipped by the
+    // regular import path as well.
+    if(strstr(lowername, "hotpatch"))
+      return;
+
+    HMODULE refcountModHandle = NULL;
+    BOOL refcounted = GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR)module,
+                                         &refcountModHandle);
+    if(!refcounted || refcountModHandle != module)
+    {
+      if(refcountModHandle)
+        FreeLibrary(refcountModHandle);
+      return;
+    }
+
+    const byte *baseAddress = (const byte *)refcountModHandle;
+    MEMORY_BASIC_INFORMATION headerMemory = {};
+    if(VirtualQuery(baseAddress, &headerMemory, sizeof(headerMemory)) != sizeof(headerMemory) ||
+       headerMemory.AllocationBase != baseAddress || headerMemory.BaseAddress != baseAddress ||
+       headerMemory.State != MEM_COMMIT || !IsReadableMemoryProtection(headerMemory.Protect) ||
+       headerMemory.RegionSize < sizeof(IMAGE_DOS_HEADER))
+    {
+      FreeLibrary(refcountModHandle);
+      return;
+    }
+
+    const IMAGE_DOS_HEADER *dosHeader = (const IMAGE_DOS_HEADER *)baseAddress;
+    if(dosHeader->e_magic != IMAGE_DOS_SIGNATURE || dosHeader->e_lfanew <= 0 ||
+       (size_t)dosHeader->e_lfanew > headerMemory.RegionSize ||
+       sizeof(IMAGE_NT_HEADERS) > headerMemory.RegionSize - (size_t)dosHeader->e_lfanew)
+    {
+      FreeLibrary(refcountModHandle);
+      return;
+    }
+
+    const IMAGE_NT_HEADERS *ntHeaders = (const IMAGE_NT_HEADERS *)(baseAddress + dosHeader->e_lfanew);
+
+    if(ntHeaders->Signature != IMAGE_NT_SIGNATURE ||
+       ntHeaders->FileHeader.SizeOfOptionalHeader < sizeof(IMAGE_OPTIONAL_HEADER) ||
+       ntHeaders->OptionalHeader.NumberOfRvaAndSizes <= IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT)
+    {
+      FreeLibrary(refcountModHandle);
+      return;
+    }
+
+#if ENABLED(RDOC_X64)
+    if(ntHeaders->OptionalHeader.Magic != IMAGE_NT_OPTIONAL_HDR64_MAGIC)
+#else
+    if(ntHeaders->OptionalHeader.Magic != IMAGE_NT_OPTIONAL_HDR32_MAGIC)
+#endif
+    {
+      FreeLibrary(refcountModHandle);
+      return;
+    }
+
+    const size_t imageSize = ntHeaders->OptionalHeader.SizeOfImage;
+    const IMAGE_DATA_DIRECTORY &directory =
+        ntHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT];
+
+    if(directory.VirtualAddress == 0 || directory.Size < sizeof(ImgDelayDescr) ||
+       GetReadableImageSpan(baseAddress, imageSize, directory.VirtualAddress) < directory.Size)
+    {
+      FreeLibrary(refcountModHandle);
+      return;
+    }
+
+    const ImgDelayDescr *descriptors =
+        (const ImgDelayDescr *)(baseAddress + directory.VirtualAddress);
+    const size_t descriptorCount = directory.Size / sizeof(ImgDelayDescr);
+
+    struct hook_find
+    {
+      bool operator()(const FunctionHook &a, const char *b)
+      {
+        return strcmp(a.function.c_str(), b) < 0;
+      }
+    };
+
+    for(size_t descriptorIndex = 0; descriptorIndex < descriptorCount; descriptorIndex++)
+    {
+      const ImgDelayDescr &descriptor = descriptors[descriptorIndex];
+      if(descriptor.rvaDLLName == 0)
+        break;
+
+      // The PE delay-load contract permits VA-based descriptors for legacy images. Only the
+      // standard RVA form can be validated against SizeOfImage without trusting arbitrary
+      // process pointers, so fail closed for every other attribute value.
+      if(descriptor.grAttrs != uint32_t(dlattrRva) || descriptor.rvaINT == 0 || descriptor.rvaIAT == 0)
+        continue;
+
+      const char *dllName = GetImageString(baseAddress, imageSize, descriptor.rvaDLLName);
+      if(dllName == NULL)
+        continue;
+
+      const rdcstr libraryName = strlower(rdcstr(dllName));
+      auto hookIt = DllHooks.find(libraryName);
+      if(hookIt == DllHooks.end())
+        continue;
+
+      DllHookset &hookset = hookIt->second;
+
+      // Do not turn delay-IAT discovery into a loader. Original function pointers are valid only
+      // after the target DLL has already been observed during the normal module pass.
+      if(!ModuleHandleIsLoaded(hookset.module))
+        continue;
+
+      {
+        SCOPED_LOCK(lock);
+        RefreshOriginalModule(libraryName, hookset, hookset.module);
+      }
+
+      const size_t nameThunkCount =
+          GetReadableImageSpan(baseAddress, imageSize, descriptor.rvaINT) / sizeof(IMAGE_THUNK_DATA);
+      const size_t addressThunkCount =
+          GetReadableImageSpan(baseAddress, imageSize, descriptor.rvaIAT) / sizeof(IMAGE_THUNK_DATA);
+      const size_t thunkCount = RDCMIN(nameThunkCount, addressThunkCount);
+
+      const IMAGE_THUNK_DATA *nameTable = (const IMAGE_THUNK_DATA *)(baseAddress + descriptor.rvaINT);
+      IMAGE_THUNK_DATA *addressTable =
+          (IMAGE_THUNK_DATA *)(const_cast<byte *>(baseAddress) + descriptor.rvaIAT);
+
+      for(size_t thunkIndex = 0; thunkIndex < thunkCount; thunkIndex++)
+      {
+        const ULONG_PTR nameValue = nameTable[thunkIndex].u1.AddressOfData;
+        if(nameValue == 0)
+          break;
+
+        const char *importName = NULL;
+
+#if ENABLED(RDOC_X64)
+        const bool importByOrdinal = IMAGE_SNAP_BY_ORDINAL64(nameValue);
+        const WORD ordinal = IMAGE_ORDINAL64(nameValue);
+#else
+        const bool importByOrdinal = IMAGE_SNAP_BY_ORDINAL32(nameValue);
+        const WORD ordinal = IMAGE_ORDINAL32(nameValue);
+#endif
+
+        if(importByOrdinal)
+        {
+          if(hookset.OrdinalNames.empty())
+          {
+            missedOrdinals = true;
+            continue;
+          }
+
+          if(ordinal < hookset.OrdinalBase)
+            continue;
+
+          const DWORD nameIndex = ordinal - hookset.OrdinalBase;
+          if(nameIndex >= hookset.OrdinalNames.size() || hookset.OrdinalNames[nameIndex].empty())
+            continue;
+
+          importName = hookset.OrdinalNames[nameIndex].c_str();
+        }
+        else
+        {
+          if(nameValue > imageSize ||
+             GetReadableImageSpan(baseAddress, imageSize, (size_t)nameValue) < sizeof(WORD) + 1)
+            continue;
+
+          importName = GetImageString(baseAddress, imageSize, (size_t)nameValue + sizeof(WORD));
+          if(importName == NULL)
+            continue;
+        }
+
+        auto found = std::lower_bound(hookset.FunctionHooks.begin(), hookset.FunctionHooks.end(),
+                                      importName, hook_find());
+
+        if(found == hookset.FunctionHooks.end() ||
+           strcmp(found->function.c_str(), importName) != 0 || ownmodule == module)
+          continue;
+
+        bool already = false;
+        {
+          SCOPED_LOCK(lock);
+          ApplyHook(*found, (void **)&addressTable[thunkIndex].u1.Function, already);
+        }
+      }
+    }
+
+    FreeLibrary(refcountModHandle);
+  }
 };
 
 static CachedHookData *s_HookData = NULL;
@@ -733,8 +1004,16 @@ static void HookAllModules()
   if(!s_HookData->hookAll)
     return;
 
-  ForAllModules(
-      [](const MODULEENTRY32 &me32) { s_HookData->ApplyHooks(me32.szModule, me32.hModule); });
+  rdcarray<MODULEENTRY32> modules;
+  ForAllModules([&modules](const MODULEENTRY32 &me32) { modules.push_back(me32); });
+
+  for(const MODULEENTRY32 &me32 : modules)
+    s_HookData->ApplyHooks(me32.szModule, me32.hModule);
+
+  // A separate pass ensures every already-loaded target DLL has populated its original function
+  // pointers before any delay-IAT entry can be redirected to a hook.
+  for(const MODULEENTRY32 &me32 : modules)
+    s_HookData->ApplyDelayHooks(me32.szModule, me32.hModule);
 
   // check if we're already in this section of code, and if so don't go in again.
   int32_t prev = Atomic::CmpExch32(&s_HookData->posthooking, 0, 1);
