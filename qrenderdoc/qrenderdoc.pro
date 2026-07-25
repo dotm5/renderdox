@@ -232,6 +232,7 @@ SOURCES += Code/qrenderdoc.cpp \
     Widgets/BufferFormatSpecifier.cpp \
     Windows/BufferViewer.cpp \
     Widgets/Extended/RDTableView.cpp \
+    Widgets/Extended/StructuredTableExport.cpp \
     Windows/DebugMessageView.cpp \
     Windows/LogView.cpp \
     Windows/CommentView.cpp \
@@ -321,6 +322,7 @@ HEADERS += Code/CaptureContext.h \
     Widgets/BufferFormatSpecifier.h \
     Windows/BufferViewer.h \
     Widgets/Extended/RDTableView.h \
+    Widgets/Extended/StructuredTableExport.h \
     Windows/DebugMessageView.h \
     Windows/LogView.h \
     Windows/CommentView.h \
