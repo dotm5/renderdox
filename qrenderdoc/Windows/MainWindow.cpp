@@ -3200,7 +3200,8 @@ void MainWindow::exportSelectedActionEvidence()
 
   QDir applicationDirectory = QFileInfo(QCoreApplication::applicationFilePath()).absoluteDir();
   QStringList candidates;
-  const QString configuredRoot = qEnvironmentVariable("RENDERDOC_ANALYSIS_SUITE_ROOT");
+  const QString configuredRoot =
+      QProcessEnvironment::systemEnvironment().value(lit("RENDERDOC_ANALYSIS_SUITE_ROOT"));
   if(!configuredRoot.isEmpty())
   {
     candidates
@@ -3230,7 +3231,7 @@ void MainWindow::exportSelectedActionEvidence()
     return;
   }
 
-  const QString jobId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+  const QString jobId = QUuid::createUuid().toString().mid(1, 36);
   QDir outputDirectory(outputRoot);
   const QString jobDirectory = outputDirectory.absoluteFilePath(lit(".draw-evidence-jobs/") + jobId);
   if(!QDir().mkpath(jobDirectory))
