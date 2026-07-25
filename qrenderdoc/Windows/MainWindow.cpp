@@ -24,22 +24,31 @@
 
 #include "MainWindow.h"
 #include <QAbstractItemView>
+#include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QDateTime>
 #include <QDesktopServices>
+#include <QDir>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QKeyEvent>
 #include <QMimeData>
 #include <QMouseEvent>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QPixmapCache>
+#include <QProcess>
+#include <QProcessEnvironment>
 #include <QProgressBar>
 #include <QProgressDialog>
+#include <QSaveFile>
 #include <QShortcut>
+#include <QTimer>
 #include <QToolButton>
 #include <QToolTip>
+#include <QUuid>
 #include "Code/QRDUtils.h"
 #include "Code/Resources.h"
 #include "Widgets/Extended/RDLabel.h"
@@ -147,6 +156,9 @@ MainWindow::MainWindow(ICaptureContext &ctx) : QMainWindow(NULL), ui(new Ui::Mai
   m_ExportTableCSVNoHeaders =
       m_AnalysisSuiteMenu->addAction(tr("Export Focused Table to CSV without Headers..."));
   m_ExportTableJSON = m_AnalysisSuiteMenu->addAction(tr("Export Focused Table to JSON..."));
+  m_AnalysisSuiteMenu->addSeparator();
+  m_ExportSelectedEvidence =
+      m_AnalysisSuiteMenu->addAction(tr("Export Selected Action Evidence..."));
 
   ui->menu_Tools->insertMenu(ui->action_Settings, m_AnalysisSuiteMenu);
   ui->menu_Tools->insertSeparator(ui->action_Settings);
@@ -163,6 +175,8 @@ MainWindow::MainWindow(ICaptureContext &ctx) : QMainWindow(NULL), ui(new Ui::Mai
                    [this]() { exportFocusedTable(StructuredTableFormat::CSV, false); });
   QObject::connect(m_ExportTableJSON, &QAction::triggered,
                    [this]() { exportFocusedTable(StructuredTableFormat::JSON, true); });
+  QObject::connect(m_ExportSelectedEvidence, &QAction::triggered, this,
+                   &MainWindow::exportSelectedActionEvidence);
 
   QObject::connect(ui->action_Load_Default_Layout, &QAction::triggered, this,
                    &MainWindow::loadLayout_triggered);
@@ -3149,6 +3163,171 @@ void MainWindow::updateAnalysisSuiteActions()
   m_ExportTableCSV->setEnabled(enabled);
   m_ExportTableCSVNoHeaders->setEnabled(enabled);
   m_ExportTableJSON->setEnabled(enabled);
+  m_ExportSelectedEvidence->setEnabled(selectedEvidenceEvent() != 0);
+}
+
+uint32_t MainWindow::selectedEvidenceEvent() const
+{
+  const ActionDescription *action = m_Ctx.CurSelectedAction();
+  const ActionFlags supported = ActionFlags::Drawcall | ActionFlags::Dispatch |
+                                ActionFlags::MeshDispatch | ActionFlags::DispatchRay;
+  if(action && action->children.empty() && (action->flags & supported))
+    return action->eventId;
+
+  // A selected MultiAction/ExecuteIndirect parent has a distinct effective child event.
+  // Export the effective leaf so pipeline, geometry, and descriptors remain child-specific.
+  action = m_Ctx.CurAction();
+  if(action && action->children.empty() && (action->flags & supported))
+    return action->eventId;
+
+  return 0;
+}
+
+void MainWindow::exportSelectedActionEvidence()
+{
+  const uint32_t eventId = selectedEvidenceEvent();
+  if(!m_Ctx.IsCaptureLoaded() || eventId == 0)
+  {
+    RDDialog::warning(this, tr("No exportable action"),
+                      tr("Select a leaf Draw or Dispatch action first."));
+    return;
+  }
+
+  const QString outputRoot =
+      RDDialog::getExistingDirectory(this, tr("Choose Draw Evidence output directory"));
+  if(outputRoot.isEmpty())
+    return;
+
+  QDir applicationDirectory = QFileInfo(QCoreApplication::applicationFilePath()).absoluteDir();
+  QStringList candidates;
+  const QString configuredRoot = qEnvironmentVariable("RENDERDOC_ANALYSIS_SUITE_ROOT");
+  if(!configuredRoot.isEmpty())
+  {
+    candidates
+        << QDir(configuredRoot).absoluteFilePath(lit("draw-evidence-package/embedded_entry.py"));
+    candidates << QDir(configuredRoot).absoluteFilePath(lit("embedded_entry.py"));
+  }
+  candidates << applicationDirectory.absoluteFilePath(
+      lit("tools/draw-evidence-package/embedded_entry.py"));
+  candidates << applicationDirectory.absoluteFilePath(
+      lit("../../tools/draw-evidence-package/embedded_entry.py"));
+
+  QString embeddedEntry;
+  for(const QString &candidate : candidates)
+  {
+    if(QFileInfo::exists(candidate))
+    {
+      embeddedEntry = QFileInfo(candidate).absoluteFilePath();
+      break;
+    }
+  }
+  if(embeddedEntry.isEmpty())
+  {
+    RDDialog::critical(
+        this, tr("Draw Evidence exporter not found"),
+        tr("Could not locate tools/draw-evidence-package/embedded_entry.py. "
+           "Set RENDERDOC_ANALYSIS_SUITE_ROOT to the tools directory for an installed build."));
+    return;
+  }
+
+  const QString jobId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+  QDir outputDirectory(outputRoot);
+  const QString jobDirectory = outputDirectory.absoluteFilePath(lit(".draw-evidence-jobs/") + jobId);
+  if(!QDir().mkpath(jobDirectory))
+  {
+    RDDialog::critical(this, tr("Draw Evidence export failed"),
+                       tr("Could not create worker directory: %1").arg(jobDirectory));
+    return;
+  }
+
+  const QString jobPath = QDir(jobDirectory).absoluteFilePath(lit("job.json"));
+  const QString resultPath = QDir(jobDirectory).absoluteFilePath(lit("result.json"));
+  QJsonObject jobDocument;
+  jobDocument.insert(lit("schemaVersion"), 1);
+  jobDocument.insert(lit("capturePath"), QString(m_Ctx.GetCaptureFilename()));
+  jobDocument.insert(lit("eventId"), int(eventId));
+  jobDocument.insert(lit("instance"), 0);
+  jobDocument.insert(lit("maxResourceBytes"), 256 * 1024 * 1024);
+  jobDocument.insert(lit("outputRoot"), QFileInfo(outputRoot).absoluteFilePath());
+  jobDocument.insert(lit("resultPath"), resultPath);
+
+  QSaveFile jobFile(jobPath);
+  if(!jobFile.open(QIODevice::WriteOnly) ||
+     jobFile.write(QJsonDocument(jobDocument).toJson(QJsonDocument::Indented)) < 0 ||
+     !jobFile.commit())
+  {
+    RDDialog::critical(this, tr("Draw Evidence export failed"),
+                       tr("Could not write worker job: %1").arg(jobFile.errorString()));
+    return;
+  }
+
+  QProcess *process = new QProcess(this);
+  QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
+  environment.insert(lit("DRAW_EVIDENCE_JOB"), jobPath);
+  environment.insert(lit("DRAW_EVIDENCE_ROOT"), QFileInfo(embeddedEntry).absolutePath());
+  process->setProcessEnvironment(environment);
+  process->setWorkingDirectory(applicationDirectory.absolutePath());
+  process->setStandardOutputFile(QDir(jobDirectory).absoluteFilePath(lit("stdout.log")));
+  process->setStandardErrorFile(QDir(jobDirectory).absoluteFilePath(lit("stderr.log")));
+
+  QProgressDialog *progress =
+      new QProgressDialog(tr("Exporting EID %1 evidence...").arg(eventId), tr("Cancel"), 0, 0, this);
+  progress->setWindowModality(Qt::WindowModal);
+  progress->setMinimumDuration(250);
+  progress->setAttribute(Qt::WA_DeleteOnClose);
+
+  QObject::connect(progress, &QProgressDialog::canceled, process, [process]() {
+    process->terminate();
+    QTimer::singleShot(3000, process, [process]() {
+      if(process->state() != QProcess::NotRunning)
+        process->kill();
+    });
+  });
+  QObject::connect(
+      process, OverloadedSlot<int, QProcess::ExitStatus>::of(&QProcess::finished),
+      [this, process, progress, resultPath, jobDirectory](int exitCode, QProcess::ExitStatus status) {
+        if(progress)
+          progress->close();
+
+        QFile resultFile(resultPath);
+        QJsonDocument resultDocument;
+        if(resultFile.open(QIODevice::ReadOnly))
+          resultDocument = QJsonDocument::fromJson(resultFile.readAll());
+        const QJsonObject result = resultDocument.object();
+        const bool succeeded = status == QProcess::NormalExit && exitCode == 0 &&
+                               result.value(lit("status")).toString() == lit("succeeded");
+        if(succeeded)
+        {
+          const QString packagePath = result.value(lit("packagePath")).toString();
+          RDDialog::information(this, tr("Draw Evidence export complete"),
+                                tr("Evidence package:\n%1").arg(packagePath));
+          qInfo() << "Draw Evidence package exported:" << packagePath;
+        }
+        else
+        {
+          QString message = result.value(lit("error")).toObject().value(lit("message")).toString();
+          if(message.isEmpty())
+            message = tr("Worker exit code %1. Logs: %2").arg(exitCode).arg(jobDirectory);
+          RDDialog::critical(this, tr("Draw Evidence export failed"), message);
+          qCritical() << "Draw Evidence exporter failed:" << message << jobDirectory;
+        }
+        process->deleteLater();
+      });
+  QObject::connect(process, &QProcess::errorOccurred,
+                   [this, process, progress, jobDirectory](QProcess::ProcessError error) {
+                     if(error != QProcess::FailedToStart)
+                       return;
+                     if(progress)
+                       progress->close();
+                     RDDialog::critical(
+                         this, tr("Draw Evidence export failed"),
+                         tr("Could not start the worker process. Logs: %1").arg(jobDirectory));
+                     process->deleteLater();
+                   });
+
+  process->start(QCoreApplication::applicationFilePath(), QStringList()
+                                                              << lit("--python") << embeddedEntry);
+  progress->show();
 }
 
 bool MainWindow::structuredTableMetadata(StructuredTableMetadata &metadata, bool hashCapture,

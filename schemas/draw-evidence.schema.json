@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://renderdoc.org/analysis-suite/draw-evidence.schema.json",
+  "title": "RenderDoc Draw Evidence Package Manifest",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schemaVersion",
+    "kind",
+    "toolVersion",
+    "captureSHA256",
+    "eventId",
+    "instance",
+    "action",
+    "geometry",
+    "artifacts"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "kind": {
+      "const": "draw-evidence-package"
+    },
+    "toolVersion": {
+      "type": "string"
+    },
+    "captureSHA256": {
+      "type": "string",
+      "pattern": "^[0-9A-F]{64}$"
+    },
+    "eventId": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "instance": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "action": {
+      "type": "object",
+      "required": ["schemaVersion", "eventId", "name", "flags"],
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "eventId": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "name": {
+          "type": "string"
+        },
+        "flags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "geometry": {
+      "type": "object",
+      "required": ["input", "postVS"],
+      "properties": {
+        "input": {
+          "$ref": "#/$defs/geometryStage"
+        },
+        "postVS": {
+          "$ref": "#/$defs/geometryStage"
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "byteLength", "sha256"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "pattern": "^[^\\\\]+(?:/[^\\\\]+)*$"
+          },
+          "byteLength": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9A-F]{64}$"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "geometryStage": {
+      "type": "object",
+      "required": ["status", "fidelity"],
+      "properties": {
+        "status": {
+          "enum": [
+            "exported",
+            "raw-only",
+            "unavailable",
+            "not-applicable",
+            "unknown"
+          ]
+        },
+        "fidelity": {
+          "enum": ["exact", "approximation", "unknown", "not-applicable", null]
+        },
+        "vertexCount": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "indexCount": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

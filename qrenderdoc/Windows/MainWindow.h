@@ -238,6 +238,8 @@ private:
   void copyFocusedTable(bool includeHeaders);
   void exportFocusedTable(StructuredTableFormat format, bool includeHeaders);
   void updateAnalysisSuiteActions();
+  uint32_t selectedEvidenceEvent() const;
+  void exportSelectedActionEvidence();
 
   enum class UpdateResult
   {
@@ -272,6 +274,7 @@ private:
   QAction *m_ExportTableCSV = NULL;
   QAction *m_ExportTableCSVNoHeaders = NULL;
   QAction *m_ExportTableJSON = NULL;
+  QAction *m_ExportSelectedEvidence = NULL;
   QPointer<QAbstractItemView> m_LastFocusedItemView;
 
   QTimer m_MessageTick;
