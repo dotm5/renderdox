@@ -111,4 +111,3 @@ RDC
   dependencies.
 - New dependencies require an explicit lock record and license entry. The
   selected initial implementation adds no third-party runtime dependency.
-

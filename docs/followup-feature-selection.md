@@ -1,7 +1,7 @@
 # Windows analysis-suite feature selection
 
 Status: implemented and integrated
-Baseline: `25df92efcf0f5e138f3bc663fe54dcf4c8f72149`  
+Baseline: `25df92efcf0f5e138f3bc663fe54dcf4c8f72149`
 Official target: RenderDoc `v1.45` (`2fc0bc04cb95499635f63986a55bc6f67849dd9f`)
 
 This document records the decision made before follow-up feature code is

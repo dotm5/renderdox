@@ -45,4 +45,3 @@ manual mapping, binary identity replacement, Android/emulator code, bundled
 donor binaries/databases, and mutable agent tools were not integrated. No new
 third-party runtime dependency was added to RenderDoc/Core; Blender remains an
 optional external converter executable.
-

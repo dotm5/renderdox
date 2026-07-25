@@ -37,4 +37,3 @@ No final claim is made that every cross-API pixel output was rechecked after
 the documentation-only final commit. That expensive matrix was intentionally
 omitted; retained feature evidence and the final D3D12 gate are reported
 separately so the boundary is explicit.
-
