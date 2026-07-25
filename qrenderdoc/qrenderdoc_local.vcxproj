@@ -34,14 +34,15 @@
   </PropertyGroup>
   <Import Project="$(SolutionDir)\util\WindowsSDKTarget.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(SolutionDir)\build\product_identity.props" />
   <PropertyGroup>
     <PlatformToolSet>v140</PlatformToolSet>
     <OutputDirectory>$(SolutionDir)$(Platform)\$(Configuration)\</OutputDirectory>
     <ATLMinimizesCRunTimeLibraryUsage>false</ATLMinimizesCRunTimeLibraryUsage>
     <CharacterSet>NotSet</CharacterSet>
     <ConfigurationType>Application</ConfigurationType>
-    <PrimaryOutput>qrenderdoc</PrimaryOutput>
-    <TargetName>qrenderdoc</TargetName>
+    <PrimaryOutput>$(RDocUIBaseName)</PrimaryOutput>
+    <TargetName>$(RDocUIBaseName)</TargetName>
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
     <SolutionRelativeIntDir>$(Platform)\$(Configuration)\obj\$(ProjectName)\</SolutionRelativeIntDir>
   </PropertyGroup>

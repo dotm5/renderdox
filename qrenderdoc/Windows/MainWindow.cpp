@@ -53,6 +53,7 @@
 #include "Windows/Dialogs/TipsDialog.h"
 #include "Windows/Dialogs/UpdateDialog.h"
 #include "ui_MainWindow.h"
+#include "../../renderdoc/generated/product_identity.h"
 #include "version.h"
 
 #define JSON_ID "rdocLayoutData"
@@ -1212,7 +1213,7 @@ void MainWindow::SetTitle(const QString &filename)
   if(m_Ctx.Replay().CurrentRemote().IsValid())
     prefix += tr("Remote: %1 - ").arg(m_Ctx.Replay().CurrentRemote().Name());
 
-  QString text = prefix + lit("RenderDoc ");
+  QString text = prefix + lit(RDOC_PRODUCT_DISPLAY_NAME " ");
 
   if(RENDERDOC_STABLE_BUILD)
     text += lit(FULL_VERSION_STRING);

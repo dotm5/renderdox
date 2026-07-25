@@ -9,6 +9,10 @@ Release32/
 Release64/
 build/
 build-*/
+!/build/
+/build/*
+!/build/product_identity.json
+!/build/product_identity.props
 /compile_commands.json
 .cache/
 /dist/

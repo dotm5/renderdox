@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "productDisplayName": "RenderDoc",
+  "uiDisplayName": "QRenderDoc",
+  "coreBaseName": "renderdoc",
+  "uiBaseName": "qrenderdoc",
+  "commandBaseName": "renderdoccmd",
+  "uiStubBaseName": "renderdocui",
+  "shimBaseName": "renderdocshim"
+}

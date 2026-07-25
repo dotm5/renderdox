@@ -70,6 +70,8 @@ jobs:
     - uses: actions/checkout@v6
       with:
         fetch-depth: 0
+    - name: Check generated product identity
+      run: python3 util/buildscripts/generate_product_identity.py --check
     - name: Run clang-format
       run: |
         bash ./util/clang_format_all.sh

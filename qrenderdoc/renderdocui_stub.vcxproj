@@ -26,6 +26,7 @@
   </PropertyGroup>
   <Import Project="$(SolutionDir)\util\WindowsSDKTarget.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(SolutionDir)\build\product_identity.props" />
   <PropertyGroup>
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
@@ -33,8 +34,8 @@
     <OutputDirectory>$(SolutionDir)$(Platform)\$(Configuration)\</OutputDirectory>
     <SolutionRelativeIntDir>$(Platform)\$(Configuration)\obj\$(ProjectName)\</SolutionRelativeIntDir>
     <CharacterSet>Unicode</CharacterSet>
-    <PrimaryOutput>renderdocui</PrimaryOutput>
-    <TargetName>renderdocui</TargetName>
+    <PrimaryOutput>$(RDocUIStubBaseName)</PrimaryOutput>
+    <TargetName>$(RDocUIStubBaseName)</TargetName>
   </PropertyGroup>
   <PropertyGroup>
     <IntDir>$(SolutionDir)$(SolutionRelativeIntDir)</IntDir>
@@ -75,6 +76,7 @@
     </Link>
     <ResourceCompile>
       <AdditionalIncludeDirectories>$(SolutionDir)renderdoc\api\replay</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>RDOC_UI_STUB_RESOURCE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
