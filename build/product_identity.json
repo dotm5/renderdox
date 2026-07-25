@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "productDisplayName": "RenderDoc",
-  "uiDisplayName": "QRenderDoc",
-  "coreBaseName": "renderdoc",
-  "uiBaseName": "qrenderdoc",
-  "commandBaseName": "renderdoccmd",
-  "uiStubBaseName": "renderdocui",
-  "shimBaseName": "renderdocshim"
+  "productDisplayName": "RenderTest",
+  "uiDisplayName": "QRenderTest",
+  "coreBaseName": "rendertest",
+  "uiBaseName": "qrendertest",
+  "commandBaseName": "rendertestcmd",
+  "uiStubBaseName": "rendertestui",
+  "shimBaseName": "rendertestshim"
 }
