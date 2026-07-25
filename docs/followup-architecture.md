@@ -109,7 +109,8 @@ Eligibility is calculated before the action can be toggled:
 | Depth/stencil write | Risky; explicit session confirmation |
 | Writable UAV/storage or stream-out | Risky; explicit session confirmation |
 | Output later read by another action | Risky; explicit session confirmation |
-| Dispatch, mesh dispatch, ray dispatch | Ineligible in first version |
+| Leaf direct compute dispatch | Eligible after resource-side-effect confirmation |
+| Mesh dispatch, ray dispatch | Ineligible in first version |
 | ExecuteIndirect/MultiAction parent | Ineligible; choose a verified child |
 | Barrier/layout transition | Ineligible |
 | Begin/end render pass | Ineligible |
@@ -216,4 +217,3 @@ No new RDC chunk or serialised API field is introduced.
 Each feature is removable independently. External tools have no load-time
 effect on RenderDoc. The two Core features use empty/default state to preserve
 the existing path.
-

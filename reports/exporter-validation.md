@@ -16,6 +16,12 @@ multi-hour API smoke matrix was not repeated.
 | Package | `D:\rdoc-port\audit\followup\draw-evidence-validation\run-20260726\frame_or_draw_D3D12_Execute_Indirect_211` |
 | Result | PASS |
 
+The same D3D12 EID was exported once more after the final Development x64
+build. That final run opened and replayed the capture successfully, completed
+in 2.392 seconds wall-clock, spent 203 ms in the exporter, and again produced
+6 input vertices/indices and 6 Post-VS vertices/indices. Its evidence is under
+`audit/followup/final-validation/d3d12-evidence/`.
+
 Both `geometry/input.glb` and `geometry/post_vs.glb` passed the built-in GLB 2
 structural validator. Each contains 6 vertices and 6 indices, equal to the
 selected RenderDoc action count. Input geometry fidelity is `exact`; Post-VS
