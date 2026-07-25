@@ -23,6 +23,9 @@
  ******************************************************************************/
 
 #include "MainWindow.h"
+#include <QAbstractItemView>
+#include <QCryptographicHash>
+#include <QDateTime>
 #include <QDesktopServices>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -41,6 +44,7 @@
 #include "Code/Resources.h"
 #include "Widgets/Extended/RDLabel.h"
 #include "Widgets/Extended/RDMenu.h"
+#include "Widgets/Extended/StructuredTableExport.h"
 #include "Widgets/ReplayOptionsSelector.h"
 #include "Windows/Dialogs/AboutDialog.h"
 #include "Windows/Dialogs/CaptureDialog.h"
@@ -133,6 +137,32 @@ MainWindow::MainWindow(ICaptureContext &ctx) : QMainWindow(NULL), ui(new Ui::Mai
   setAcceptDrops(true);
 
   QObject::connect(ui->menu_Tools, &QMenu::aboutToShow, this, &MainWindow::updateToolsMenuOptions);
+
+  m_AnalysisSuiteMenu = new QMenu(tr("Analysis Suite"), this);
+  m_CopyTableTSV = m_AnalysisSuiteMenu->addAction(tr("Copy Focused Table as TSV"));
+  m_CopyTableTSVHeaders =
+      m_AnalysisSuiteMenu->addAction(tr("Copy Focused Table as TSV with Headers"));
+  m_AnalysisSuiteMenu->addSeparator();
+  m_ExportTableCSV = m_AnalysisSuiteMenu->addAction(tr("Export Focused Table to CSV..."));
+  m_ExportTableCSVNoHeaders =
+      m_AnalysisSuiteMenu->addAction(tr("Export Focused Table to CSV without Headers..."));
+  m_ExportTableJSON = m_AnalysisSuiteMenu->addAction(tr("Export Focused Table to JSON..."));
+
+  ui->menu_Tools->insertMenu(ui->action_Settings, m_AnalysisSuiteMenu);
+  ui->menu_Tools->insertSeparator(ui->action_Settings);
+
+  QObject::connect(m_AnalysisSuiteMenu, &QMenu::aboutToShow, this,
+                   &MainWindow::updateAnalysisSuiteActions);
+  QObject::connect(m_CopyTableTSV, &QAction::triggered,
+                   [this]() { copyFocusedTable(false); });
+  QObject::connect(m_CopyTableTSVHeaders, &QAction::triggered,
+                   [this]() { copyFocusedTable(true); });
+  QObject::connect(m_ExportTableCSV, &QAction::triggered,
+                   [this]() { exportFocusedTable(StructuredTableFormat::CSV, true); });
+  QObject::connect(m_ExportTableCSVNoHeaders, &QAction::triggered,
+                   [this]() { exportFocusedTable(StructuredTableFormat::CSV, false); });
+  QObject::connect(m_ExportTableJSON, &QAction::triggered,
+                   [this]() { exportFocusedTable(StructuredTableFormat::JSON, true); });
 
   QObject::connect(ui->action_Load_Default_Layout, &QAction::triggered, this,
                    &MainWindow::loadLayout_triggered);
@@ -2401,6 +2431,20 @@ void MainWindow::UnregisterShortcut(const rdcstr &shortcut, QWidget *widget)
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 {
+  if(event->type() == QEvent::FocusIn)
+  {
+    QWidget *widget = qobject_cast<QWidget *>(watched);
+    while(widget)
+    {
+      if(QAbstractItemView *view = qobject_cast<QAbstractItemView *>(widget))
+      {
+        m_LastFocusedItemView = view;
+        break;
+      }
+      widget = widget->parentWidget();
+    }
+  }
+
   if(event->type() == QEvent::ShortcutOverride)
   {
     QKeyEvent *ke = (QKeyEvent *)event;
@@ -3067,6 +3111,8 @@ void MainWindow::loadLayout_triggered()
 
 void MainWindow::updateToolsMenuOptions()
 {
+  updateAnalysisSuiteActions();
+
   if(m_Ctx.Replay().GetCaptureAccess())
   {
     m_Ctx.Replay().AsyncInvoke([this](IReplayController *) {
@@ -3079,6 +3125,177 @@ void MainWindow::updateToolsMenuOptions()
       });
     });
   }
+}
+
+QAbstractItemView *MainWindow::focusedExportView() const
+{
+  QWidget *widget = QApplication::focusWidget();
+  while(widget)
+  {
+    if(QAbstractItemView *view = qobject_cast<QAbstractItemView *>(widget))
+      return view;
+    widget = widget->parentWidget();
+  }
+
+  return m_LastFocusedItemView.data();
+}
+
+void MainWindow::updateAnalysisSuiteActions()
+{
+  QAbstractItemView *view = focusedExportView();
+  bool enabled = StructuredTableExport::HasExportableSelection(view);
+  m_CopyTableTSV->setEnabled(enabled);
+  m_CopyTableTSVHeaders->setEnabled(enabled);
+  m_ExportTableCSV->setEnabled(enabled);
+  m_ExportTableCSVNoHeaders->setEnabled(enabled);
+  m_ExportTableJSON->setEnabled(enabled);
+}
+
+bool MainWindow::structuredTableMetadata(StructuredTableMetadata &metadata, bool hashCapture,
+                                         QString *error)
+{
+  metadata.capturePath = m_Ctx.IsCaptureLoaded() ? QString(m_Ctx.GetCaptureFilename()) : QString();
+  metadata.api =
+      m_Ctx.IsCaptureLoaded() ? ToQStr(m_Ctx.APIProps().pipelineType) : tr("No capture");
+  metadata.renderDocVersion = QString::fromLatin1(RENDERDOC_GetVersionString());
+  metadata.portCommit = QString::fromLatin1(RENDERDOC_GetCommitHash());
+  metadata.generatedAt = QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs);
+  metadata.eventId = m_Ctx.IsCaptureLoaded() ? m_Ctx.CurEvent() : 0;
+
+  if(metadata.capturePath.isEmpty() || !hashCapture)
+    return true;
+
+  QFile capture(metadata.capturePath);
+  if(!capture.open(QIODevice::ReadOnly))
+  {
+    if(error)
+      *error = tr("Couldn't hash capture for export provenance: %1").arg(capture.errorString());
+    qWarning() << "Couldn't hash capture for table export:" << capture.errorString();
+    return false;
+  }
+
+  QProgressDialog progress(tr("Hashing capture for export provenance..."), tr("Cancel"), 0, 1000,
+                           this);
+  progress.setWindowModality(Qt::WindowModal);
+  progress.setMinimumDuration(500);
+
+  QCryptographicHash hash(QCryptographicHash::Sha256);
+  const qint64 total = qMax<qint64>(1, capture.size());
+  qint64 completed = 0;
+  while(!capture.atEnd())
+  {
+    QByteArray block = capture.read(4 * 1024 * 1024);
+    if(block.isEmpty() && capture.error() != QFile::NoError)
+    {
+      if(error)
+        *error = tr("Capture hash read failed: %1").arg(capture.errorString());
+      qWarning() << "Capture hash read failed:" << capture.errorString();
+      return false;
+    }
+    hash.addData(block);
+    completed += block.size();
+    progress.setValue(int((completed * 1000) / total));
+    QApplication::processEvents();
+    if(progress.wasCanceled())
+    {
+      if(error)
+        *error = tr("Capture hashing cancelled.");
+      return false;
+    }
+  }
+
+  progress.setValue(1000);
+  metadata.captureSHA256 = QString::fromLatin1(hash.result().toHex().toUpper());
+  return true;
+}
+
+void MainWindow::copyFocusedTable(bool includeHeaders)
+{
+  QAbstractItemView *view = focusedExportView();
+  QString error;
+  StructuredTableMetadata metadata;
+  structuredTableMetadata(metadata, false, NULL);
+  if(!StructuredTableExport::CopyTSV(view, metadata, includeHeaders, &error))
+  {
+    RDDialog::critical(this, tr("Table copy failed"), error);
+    qCritical() << "Structured table clipboard export failed:" << error;
+  }
+}
+
+void MainWindow::exportFocusedTable(StructuredTableFormat format, bool includeHeaders)
+{
+  QAbstractItemView *view = focusedExportView();
+  if(!StructuredTableExport::HasExportableSelection(view))
+  {
+    RDDialog::warning(this, tr("No table selection"),
+                      tr("Focus a table and select one or more cells or rows first."));
+    return;
+  }
+
+  QString filter;
+  QString title;
+  if(format == StructuredTableFormat::JSON)
+  {
+    title = tr("Export focused table to JSON");
+    filter = tr("JSON files (*.json)");
+  }
+  else
+  {
+    title = tr("Export focused table to CSV");
+    filter = tr("CSV files (*.csv)");
+  }
+
+  QString filename =
+      RDDialog::getSaveFileName(this, title, QString(), tr("%1;;All files (*)").arg(filter));
+  if(filename.isEmpty())
+    return;
+
+  StructuredTableMetadata metadata;
+  QString error;
+  if(!structuredTableMetadata(metadata, true, &error))
+  {
+    if(error != tr("Capture hashing cancelled."))
+      RDDialog::critical(this, tr("Table export failed"), error);
+    return;
+  }
+
+  StructuredTableOptions options;
+  options.includeHeaders = includeHeaders;
+  options.includeMetadata = true;
+
+  QProgressDialog *progress =
+      new QProgressDialog(tr("Exporting selected table..."), tr("Cancel"), 0, 1000, this);
+  progress->setWindowModality(Qt::WindowModal);
+  progress->setMinimumDuration(250);
+  progress->setAttribute(Qt::WA_DeleteOnClose);
+  progress->show();
+
+  QPointer<QProgressDialog> progressPointer(progress);
+  StructuredTableExport::SaveAsync(
+      view, format, filename, metadata, options, this,
+      [this, filename, progressPointer](bool saved, const QString &saveError) {
+        if(progressPointer)
+        {
+          progressPointer->setValue(1000);
+          progressPointer->close();
+        }
+
+        if(!saved)
+        {
+          if(saveError != tr("Export cancelled."))
+            RDDialog::critical(this, tr("Table export failed"), saveError);
+          qCritical() << "Structured table file export failed:" << filename << saveError;
+          return;
+        }
+
+        qInfo() << "Structured table exported:" << filename;
+      },
+      [progressPointer](quint64 completed, quint64 total) {
+        if(!progressPointer)
+          return false;
+        progressPointer->setValue(total ? int((completed * 1000) / total) : 1000);
+        return !progressPointer->wasCanceled();
+      });
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)

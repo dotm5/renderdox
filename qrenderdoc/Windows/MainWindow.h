@@ -27,6 +27,7 @@
 #include <stdint.h>
 #include <QMainWindow>
 #include <QMutex>
+#include <QPointer>
 #include <QSemaphore>
 #include <QThread>
 #include <QTimer>
@@ -43,12 +44,17 @@ class RDLabel;
 class RDMenu;
 class LambdaThread;
 class QMimeData;
+class QAbstractItemView;
+class QAction;
+class QMenu;
 class QProgressBar;
 class QShortcut;
 class QToolButton;
 class CaptureDialog;
 class LiveCapture;
 class QNetworkAccessManager;
+enum class StructuredTableFormat;
+struct StructuredTableMetadata;
 
 class NetworkWorker : public QObject
 {
@@ -226,6 +232,13 @@ private:
   void MakeNetworkRequest(QUrl url, std::function<void(QByteArray)> success,
                           std::function<void(QString)> failure = {});
 
+  QAbstractItemView *focusedExportView() const;
+  bool structuredTableMetadata(StructuredTableMetadata &metadata, bool hashCapture,
+                               QString *error);
+  void copyFocusedTable(bool includeHeaders);
+  void exportFocusedTable(StructuredTableFormat format, bool includeHeaders);
+  void updateAnalysisSuiteActions();
+
   enum class UpdateResult
   {
     Disabled,
@@ -253,6 +266,13 @@ private:
   QToolButton *contextChooser;
 
   QAction *updateAction = NULL;
+  QMenu *m_AnalysisSuiteMenu = NULL;
+  QAction *m_CopyTableTSV = NULL;
+  QAction *m_CopyTableTSVHeaders = NULL;
+  QAction *m_ExportTableCSV = NULL;
+  QAction *m_ExportTableCSVNoHeaders = NULL;
+  QAction *m_ExportTableJSON = NULL;
+  QPointer<QAbstractItemView> m_LastFocusedItemView;
 
   QTimer m_MessageTick;
   QSemaphore m_RemoteProbeSemaphore;
