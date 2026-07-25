@@ -2,7 +2,7 @@
 
 ## Result
 
-Status: **IMPLEMENTED; focused runtime gate pending the final Development build**
+Status: **PASS under the shortened final gate**
 
 - Parent selection and effective replay EID are passed atomically.
 - Only Drawcall and Wireframe overlays expand a parent into child draws.
@@ -10,6 +10,8 @@ Status: **IMPLEMENTED; focused runtime gate pending the final Development build*
 - D3D11, D3D12, OpenGL, and Vulkan retain the ordinary single-child path when the map is empty.
 - D3D12 and Vulkan restore the overlay render state before each child replay.
 - Action Visibility remains compatible because indirect and MultiAction descendants are protected.
+- Final Development x64 compilation passed with zero warnings/errors.
+- The focused C++ mapping test passed 9 assertions in one test case.
 
 ## Evidence
 
@@ -24,7 +26,8 @@ The committed, path-free review extract is `reports/multiaction-action-map.json`
 
 The pure mapping tests cover nested MultiAction nodes, exclusion of dispatches, target filtering,
 ordinary child selection, and an unrelated effective EID. The C++ test mirrors the same invariants
-inside `ReplayOutput`.
+inside `ReplayOutput`. Per the shortened final gate, the earlier cross-API capture map was retained
+and the multi-hour graphical overlay matrix was not repeated after the final build.
 
 ## Donor comparison
 

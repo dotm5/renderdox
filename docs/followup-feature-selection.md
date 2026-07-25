@@ -1,6 +1,6 @@
 # Windows analysis-suite feature selection
 
-Status: approved for implementation  
+Status: implemented and integrated
 Baseline: `25df92efcf0f5e138f3bc663fe54dcf4c8f72149`  
 Official target: RenderDoc `v1.45` (`2fc0bc04cb95499635f63986a55bc6f67849dd9f`)
 
@@ -82,10 +82,10 @@ equivalents are in `audit/followup/donor-symbol-map.csv`.
   mesh, ray, depth, stencil, and UAV-producing actions. It does not compute a
   dependency closure or preserve a documented safe-action policy.
 - Target implementation:
-  - only leaf, direct raster draw actions are initially eligible;
+  - only leaf, direct raster draw and compute-dispatch actions are eligible;
   - barriers, render-pass boundaries, clears, copies, resolves, queries,
-    presents, dispatches, ray/mesh dispatches, and MultiAction parents are
-    never eligible in the first version;
+    presents, ray/mesh dispatches, and MultiAction parents are never eligible
+    in the first version;
   - actions with depth/stencil, writable storage/UAV, stream-out, or later
     resource consumers are classified risky and require an explicit session
     confirmation;
@@ -202,4 +202,3 @@ before/after evidence.
 - Autodesk FBX SDK in RenderDoc or QRenderDoc;
 - shader/capture mutation in the RDX service;
 - unknown donor binaries, databases, captured artifacts, and installers.
-
