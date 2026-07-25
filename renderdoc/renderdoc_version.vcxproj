@@ -134,7 +134,9 @@ namespace GitIntrospection {
       if(File.Exists(dotGITpath)) {
         string gitData = File.ReadAllText(dotGITpath).Trim();
         if(gitData.StartsWith("gitdir: ")) {
-          dotGITpath = Repository + gitData.Substring(8).Replace('/', '\\');
+          string gitDir = gitData.Substring(8).Trim().Replace('/', Path.DirectorySeparatorChar);
+          dotGITpath = Path.GetFullPath(
+              Path.IsPathRooted(gitDir) ? gitDir : Path.Combine(Repository, gitDir));
           int index = dotGITpath.IndexOf(".git");
           if (index >= 0) {
             refGITpath = dotGITpath.Substring(0, index+4);
