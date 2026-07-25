@@ -38,6 +38,7 @@
 #define RDOC_CANONICAL_COMMAND_FILENAME_W L"renderdoccmd.exe"
 #define RDOC_CANONICAL_UI_STUB_FILENAME "renderdocui.exe"
 #define RDOC_CANONICAL_UI_STUB_FILENAME_W L"renderdocui.exe"
+#define RDOC_VULKAN_JSON_BASE_NAME "renderdoc"
 #define RDOC_CORE_FILE_DESCRIPTION "Core DLL for RenderTest"
 #define RDOC_UI_FILE_DESCRIPTION "RenderTest"
 #define RDOC_COMMAND_FILE_DESCRIPTION "rendertestcmd - https://renderdoc.org/"

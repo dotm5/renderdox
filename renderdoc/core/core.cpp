@@ -48,7 +48,7 @@
 
 #include "replay/renderdoc_serialise.inl"
 
-extern "C" const rdcstr VulkanLayerJSONBasename = STRINGIZE(RDOC_BASE_NAME);
+extern "C" const rdcstr VulkanLayerJSONBasename = RDOC_VULKAN_JSON_BASE_NAME;
 
 RDOC_DEBUG_CONFIG(bool, Capture_Debug_SnapshotDiagnosticLog, false,
                   "Snapshot the diagnostic log at capture time and embed in the capture.");

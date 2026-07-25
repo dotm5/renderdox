@@ -204,6 +204,8 @@ def render_header(identity):
         ("RDOC_CANONICAL_UI_FILENAME", "qrenderdoc.exe"),
         ("RDOC_CANONICAL_COMMAND_FILENAME", "renderdoccmd.exe"),
         ("RDOC_CANONICAL_UI_STUB_FILENAME", "renderdocui.exe"),
+        # The Vulkan loader and layer registration use this public compatibility basename.
+        ("RDOC_VULKAN_JSON_BASE_NAME", "renderdoc"),
         ("RDOC_CORE_FILE_DESCRIPTION", "Core DLL for " + product),
         ("RDOC_UI_FILE_DESCRIPTION", product),
         ("RDOC_COMMAND_FILE_DESCRIPTION", command + " - https://renderdoc.org/"),

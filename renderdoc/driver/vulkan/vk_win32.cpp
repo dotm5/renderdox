@@ -201,10 +201,7 @@ rdcstr GetJSONPath(bool wow6432)
 
   jsonPath += "\\";
 
-  rdcstr module_name;
-  FileIO::GetLibraryFilename(module_name);
-  jsonPath += strip_extension(get_basename(module_name));
-
+  jsonPath += VulkanLayerJSONBasename;
   jsonPath += ".json";
 
   return jsonPath;
