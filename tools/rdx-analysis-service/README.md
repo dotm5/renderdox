@@ -55,3 +55,19 @@ python -m unittest discover -s tools/rdx-analysis-service/tests -v
 
 Replay integration tests are performed by running the CLI against the frozen
 D3D11, D3D12, OpenGL, Vulkan, and UE5 captures.
+
+## Local JSON-RPC service
+
+`rdx-service.py` exposes the same analysis model plus bounded, isolated Replay
+queries over newline-delimited JSON-RPC 2.0 on stdin/stdout:
+
+```powershell
+python tools\rdx-analysis-service\rdx-service.py `
+  --qrenderdoc D:\rdoc-port\wt-followup\x64\Development\qrendertest.exe `
+  --output-root D:\rdx-service-data
+```
+
+The service is local-only and capture-read-only. Binary resources are returned
+as SHA-256 file references below `--output-root`; they are never embedded into
+JSON. Requests support timeout and `$/cancelRequest`. See
+`docs/rdx-service-api.md` and `schemas/rdx-protocol.schema.json`.
