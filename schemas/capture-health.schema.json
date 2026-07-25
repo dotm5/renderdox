@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://renderdoc.local/schemas/capture-health.schema.json",
+  "title": "RenderDoc Capture Health",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "kind",
+    "toolVersion",
+    "generatedAt",
+    "source",
+    "captures",
+    "summary"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "kind": {
+      "const": "capture-health"
+    },
+    "toolVersion": {
+      "type": "string"
+    },
+    "generatedAt": {
+      "type": "string"
+    },
+    "source": {
+      "type": "object"
+    },
+    "captures": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/capture"
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "captureCount",
+        "healthyCount",
+        "degradedCount",
+        "failedCount"
+      ],
+      "properties": {
+        "captureCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "healthyCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "degradedCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failedCount": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "capture": {
+      "type": "object",
+      "required": [
+        "capturePath",
+        "captureSHA256",
+        "status"
+      ],
+      "properties": {
+        "capturePath": {
+          "type": "string"
+        },
+        "captureSHA256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[A-F0-9]{64}$"
+        },
+        "status": {
+          "enum": [
+            "healthy",
+            "degraded",
+            "failed"
+          ]
+        },
+        "api": {
+          "type": "string"
+        },
+        "actionCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "analysisDurationMs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "peakMemoryBytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

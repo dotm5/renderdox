@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://renderdoc.local/schemas/pass-graph.schema.json",
+  "title": "RenderDoc Pass Graph",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "kind",
+    "toolVersion",
+    "generatedAt",
+    "captures"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "kind": {
+      "const": "pass-graph"
+    },
+    "captures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "capturePath",
+          "captureSHA256",
+          "passGraph"
+        ],
+        "properties": {
+          "capturePath": {
+            "type": "string"
+          },
+          "captureSHA256": {
+            "type": "string",
+            "pattern": "^[A-F0-9]{64}$"
+          },
+          "passGraph": {
+            "$ref": "#/$defs/graph"
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "$defs": {
+    "graph": {
+      "type": "object",
+      "required": [
+        "actions",
+        "actionEdges",
+        "passes",
+        "passEdges"
+      ],
+      "properties": {
+        "actions": {
+          "type": "array"
+        },
+        "actionEdges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/actionEdge"
+          }
+        },
+        "passes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/pass"
+          }
+        },
+        "passEdges": {
+          "type": "array"
+        }
+      },
+      "additionalProperties": true
+    },
+    "actionEdge": {
+      "type": "object",
+      "required": [
+        "fromEventId",
+        "toEventId",
+        "resourceId",
+        "kind"
+      ],
+      "properties": {
+        "fromEventId": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "toEventId": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "resourceId": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "write-to-read"
+        }
+      },
+      "additionalProperties": true
+    },
+    "pass": {
+      "type": "object",
+      "required": [
+        "passIndex",
+        "actionEventIds",
+        "actionKinds",
+        "inputResources",
+        "outputResources",
+        "structuralSignature"
+      ],
+      "properties": {
+        "passIndex": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "structuralSignature": {
+          "type": "string",
+          "pattern": "^[A-F0-9]{64}$"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}
