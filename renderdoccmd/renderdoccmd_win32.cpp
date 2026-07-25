@@ -916,7 +916,7 @@ int main(int, char *)
     argv[i] = conv(std::wstring(wargv[i]));
 
   if(argv.empty())
-    argv.push_back("renderdoccmd");
+    argv.push_back(RDOC_COMMAND_BASE_NAME);
 
   LocalFree(wargv);
 

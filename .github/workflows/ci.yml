@@ -174,6 +174,18 @@ jobs:
       with:
         fetch-depth: 5
 
+    - name: Load Windows product identity
+      run: |
+        $identity = Get-Content -LiteralPath build/product_identity.json -Raw | ConvertFrom-Json
+        if (-not $identity.commandBaseName -or -not $identity.uiBaseName) {
+          throw "Product identity is missing commandBaseName or uiBaseName"
+        }
+        "RDOC_COMMAND_BASENAME=$($identity.commandBaseName)" |
+          Add-Content -LiteralPath $env:GITHUB_ENV -Encoding utf8
+        "RDOC_UI_BASENAME=$($identity.uiBaseName)" |
+          Add-Content -LiteralPath $env:GITHUB_ENV -Encoding utf8
+      shell: pwsh
+
     - name: Install VSSetup
       run: Install-Module VSSetup -Scope CurrentUser
       shell: powershell
@@ -292,14 +304,14 @@ jobs:
     - if: matrix.configuration == 'Development'
       name: Running core unit tests
       run: |
-        if ! ./*/Development/renderdoccmd.exe test unit -o test.log; then
+        if ! ./*/Development/${RDOC_COMMAND_BASENAME}.exe test unit -o test.log; then
           echo "::error::$(cat test.log)" | tr -d '\r' |  tr '\n' '\001' | sed -e 's#\x01#%0D%0A#g';
           exit 1;
         fi
     - if: matrix.configuration == 'Development'
       name: Running UI unit tests
       run: |
-        if ! ./*/Development/qrenderdoc.exe --unittest log=test.log; then
+        if ! ./*/Development/${RDOC_UI_BASENAME}.exe --unittest log=test.log; then
           echo "::error::$(cat test.log)" | tr -d '\r' |  tr '\n' '\001' | sed -e 's#\x01#%0D%0A#g';
           exit 1;
         fi

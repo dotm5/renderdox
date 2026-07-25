@@ -25,6 +25,7 @@
 #pragma once
 
 #if defined(WIN32)
+#include "../../../renderdoc/generated/product_identity.h"
 #include "win32/win32_platform.h"
 #elif defined(ANDROID)
 #include "android/android_platform.h"

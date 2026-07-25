@@ -131,17 +131,23 @@ void main(uint3 threadID : SV_DispatchThreadID)
 
     if(!agsLib)
     {
-      // try in plugins folder next to renderdoc.dll
-      HMODULE rdocmod = GetModuleHandleA("renderdoc.dll");
+      // try in plugins folder next to the core library
+      HMODULE rdocmod = GetModuleHandleA(RDOC_CORE_FILENAME);
       char path[MAX_PATH + 1] = {};
 
       if(rdocmod)
       {
-        GetModuleFileNameA(rdocmod, path, MAX_PATH);
-        std::string tmp = path;
-        tmp.resize(tmp.size() - (sizeof("/renderdoc.dll") - 1));
-
-        agsLib = LoadLibraryA((tmp + "/plugins/amd/ags/" + agsname).c_str());
+        DWORD pathLength = GetModuleFileNameA(rdocmod, path, (DWORD)ARRAY_COUNT(path));
+        if(pathLength > 0 && pathLength < ARRAY_COUNT(path))
+        {
+          std::string modulePath = path;
+          size_t separator = modulePath.find_last_of("\\/");
+          if(separator != std::string::npos)
+          {
+            modulePath.resize(separator);
+            agsLib = LoadLibraryA((modulePath + "/plugins/amd/ags/" + agsname).c_str());
+          }
+        }
       }
     }
 

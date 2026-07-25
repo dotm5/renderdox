@@ -44,6 +44,8 @@ parser.add_argument('--internal_run_test', help=argparse.SUPPRESS, type=str, req
 parser.add_argument('--internal_vulkan_register', help=argparse.SUPPRESS, action="store_true", required=False)
 # Internal command, when we re-run as a remote server
 parser.add_argument('--internal_remote_server', help=argparse.SUPPRESS, action="store_true", required=False)
+# Internal flag indicating that the embedded command executable owns this Python runner
+parser.add_argument('--internal_command_runner', help=argparse.SUPPRESS, action="store_true", required=False)
 args = parser.parse_args()
 
 custom_pyrenderdoc = None
@@ -116,6 +118,8 @@ except (ModuleNotFoundError, ImportError) as ex:
     sys.exit(1)
 
 from tests import *
+
+rdtest.set_running_from_command(args.internal_command_runner)
 
 if args.list:
     for test in rdtest.get_tests():

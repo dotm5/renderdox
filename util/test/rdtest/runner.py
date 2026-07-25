@@ -32,6 +32,12 @@ def get_tests():
 
 
 RUNNER_DEBUG = False   # Debug test runner running by printing messages to track it
+RUNNING_FROM_COMMAND = False
+
+
+def set_running_from_command(running):
+    global RUNNING_FROM_COMMAND
+    RUNNING_FROM_COMMAND = bool(running)
 
 
 def _enqueue_output(process: subprocess.Popen, out, q: queue.Queue):
@@ -268,7 +274,7 @@ def run_tests(test_include: str, test_exclude: str, in_process: bool, slow_tests
                         if os.path.exists(args[i]):
                             args[i] = str(Path(args[i]).resolve())
 
-                    if 'renderdoccmd' in sys.executable:
+                    if RUNNING_FROM_COMMAND:
                         args = ['vulkanlayer', '--register', '--system']
 
                     ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, ' '.join(args), None, 1)
@@ -418,7 +424,7 @@ def launch_remote_server():
     args.append('--internal_remote_server')
 
     # if we're running from renderdoccmd, invoke it properly
-    if 'renderdoccmd' in sys.executable:
+    if RUNNING_FROM_COMMAND:
         # run_tests.py
         # --renderdoc
         # <renderdoc_path>

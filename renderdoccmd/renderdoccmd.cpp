@@ -27,6 +27,18 @@
 #include <app/renderdoc_app.h>
 #include <replay/version.h>
 #include <string>
+#if defined(_WIN32)
+#include "../renderdoc/generated/product_identity.h"
+#endif
+
+static const char *command_executable_name()
+{
+#if defined(_WIN32)
+  return RDOC_COMMAND_BASE_NAME;
+#else
+  return "renderdoccmd";
+#endif
+}
 
 rdcstr conv(const std::string &s)
 {
@@ -136,8 +148,9 @@ struct VersionCommand : public Command
   virtual bool Parse(cmdline::parser &, GlobalEnvironment &) { return true; }
   virtual int Execute(const CaptureOptions &)
   {
-    std::cout << "renderdoccmd " << (sizeof(uintptr_t) == sizeof(uint64_t) ? "x64" : "x86")
-              << " v" MAJOR_MINOR_VERSION_STRING << " built from " << RENDERDOC_GetCommitHash()
+    std::cout << command_executable_name() << " "
+              << (sizeof(uintptr_t) == sizeof(uint64_t) ? "x64" : "x86") << " v"
+              << MAJOR_MINOR_VERSION_STRING << " built from " << RENDERDOC_GetCommitHash()
               << std::endl;
 
 #if defined(DISTRIBUTION_VERSION)
@@ -589,8 +602,8 @@ public:
       {
         std::cerr << "Error: " << result.Message() << " - Couldn't connect to " << remote_host
                   << "." << std::endl;
-        std::cerr << "       Have you run renderdoccmd remoteserver on '" << remote_host << "'?"
-                  << std::endl;
+        std::cerr << "       Have you run " << command_executable_name() << " remoteserver on '"
+                  << remote_host << "'?" << std::endl;
         return 1;
       }
 
@@ -897,10 +910,14 @@ public:
   virtual int Execute(const CaptureOptions &)
   {
     if(mode == "unit")
-      return RENDERDOC_RunUnitTests("renderdoccmd test unit", args);
+      return RENDERDOC_RunUnitTests(rdcstr(command_executable_name()) + " test unit", args);
 #if PYTHON_AVAILABLE == 1
     else if(mode == "functional")
-      return RENDERDOC_RunFunctionalTests(args);
+    {
+      rdcarray<rdcstr> functionalArgs = args;
+      functionalArgs.insert(0, "--internal_command_runner");
+      return RENDERDOC_RunFunctionalTests(functionalArgs);
+    }
 #endif
 
     std::cerr << "Unsupported test frame work '" << mode << "'" << std::endl << std::endl;
@@ -1493,7 +1510,7 @@ static int command_usage(std::string command)
               << std::endl
               << std::endl;
 
-  std::cerr << "Usage: renderdoccmd <command> [args ...]" << std::endl;
+  std::cerr << "Usage: " << command_executable_name() << " <command> [args ...]" << std::endl;
   std::cerr << "Command line tool for capture & replay with RenderDoc." << std::endl << std::endl;
 
   std::cerr << "Command can be one of:" << std::endl;
@@ -1519,7 +1536,8 @@ static int command_usage(std::string command)
   }
   std::cerr << std::endl;
 
-  std::cerr << "To see details of any command, see 'renderdoccmd <command> --help'" << std::endl
+  std::cerr << "To see details of any command, see '" << command_executable_name()
+            << " <command> --help'" << std::endl
             << std::endl;
 
   std::cerr << "For more information, see <https://renderdoc.org/>." << std::endl;
@@ -1609,7 +1627,7 @@ int renderdoccmd(GlobalEnvironment &env, std::vector<std::string> &argv)
 
     cmdline::parser cmd;
 
-    cmd.set_program_name("renderdoccmd");
+    cmd.set_program_name(command_executable_name());
     cmd.set_header(command);
 
     it->second->AddOptions(cmd);

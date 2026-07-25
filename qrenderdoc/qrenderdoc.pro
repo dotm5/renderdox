@@ -40,6 +40,12 @@ QMAKE_CXXFLAGS += -Wno-deprecated-declarations
 
 # Different output folders per platform
 win32 {
+	PRODUCT_IDENTITY_PRI = $$_PRO_FILE_PWD_/../build/product_identity.pri
+	!exists($$PRODUCT_IDENTITY_PRI): error("Missing generated product identity: $$PRODUCT_IDENTITY_PRI")
+	include($$PRODUCT_IDENTITY_PRI)
+	isEmpty(RDOC_UI_BASE_NAME): error("RDOC_UI_BASE_NAME is missing from $$PRODUCT_IDENTITY_PRI")
+	isEmpty(RDOC_CORE_BASE_NAME): error("RDOC_CORE_BASE_NAME is missing from $$PRODUCT_IDENTITY_PRI")
+	TARGET = $$RDOC_UI_BASE_NAME
 
 	RC_INCLUDEPATH = $$_PRO_FILE_PWD_/../renderdoc/api/replay
 	RC_FILE = Resources/qrenderdoc.rc
@@ -99,7 +105,7 @@ win32 {
 	LIBS += user32.lib
 
 	# Link against the core library
-	LIBS += $$DESTDIR/renderdoc.lib
+	LIBS += "$$DESTDIR/$${RDOC_CORE_BASE_NAME}.lib"
 
 	# Link against the version library
 	LIBS += $$DESTDIR/version.lib
