@@ -624,6 +624,7 @@ private:
 
   rdcarray<FrameDescription> m_CapturedFrames;
   rdcarray<ActionDescription *> m_Actions;
+  rdcarray<uint32_t> m_DisabledActionEvents;
 
   void MaskResourceMiscFlags(UINT &MiscFlags);
 
@@ -674,6 +675,8 @@ public:
   const SOShaderData &GetSOShaderData(ResourceId id) { return m_SOShaders[id]; }
   ResourceId GetResourceID() { return m_ResourceID; }
   const ActionDescription *GetAction(uint32_t eventId);
+  void SetDisabledActions(const rdcarray<uint32_t> &eventIds) { m_DisabledActionEvents = eventIds; }
+  bool IsActionDisabled(uint32_t eventId) const { return m_DisabledActionEvents.contains(eventId); }
   ResourceDescription &GetResourceDesc(ResourceId id);
   FrameStatistics &GetFrameStats();
 

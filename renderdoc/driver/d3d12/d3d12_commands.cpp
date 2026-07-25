@@ -1890,6 +1890,24 @@ void D3D12CommandData::GetIndirectBuffer(size_t size, ID3D12Resource **buf, uint
   m_IndirectOffset = AlignUp16(m_IndirectOffset + size);
 }
 
+bool D3D12CommandData::IsActionDisabled() const
+{
+  if(m_DisabledActionEvents.empty())
+    return false;
+
+  ActionUse use(m_CurChunkOffset, 0);
+  auto it = std::lower_bound(m_ActionUses.begin(), m_ActionUses.end(), use);
+
+  while(it != m_ActionUses.end() && it->fileOffset == m_CurChunkOffset)
+  {
+    if(m_DisabledActionEvents.contains(it->eventId))
+      return true;
+    ++it;
+  }
+
+  return false;
+}
+
 uint32_t D3D12CommandData::HandlePreCallback(ID3D12GraphicsCommandListX *list, ActionFlags type,
                                              uint32_t multiDrawOffset)
 {

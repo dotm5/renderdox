@@ -165,6 +165,8 @@ public:
 
   RDResult ReadLogInitialisation(RDCFile *rdc, bool readStructuredBuffers);
   void ReplayLog(uint32_t endEventID, ReplayLogType replayType);
+  bool SupportsActionVisibility() override { return true; }
+  void SetDisabledActions(const rdcarray<uint32_t> &disabledEventIds) override;
   SDFile *GetStructuredFile();
 
   rdcarray<uint32_t> GetPassEvents(uint32_t eventId);

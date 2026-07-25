@@ -330,17 +330,21 @@ bool WrappedVulkan::Serialise_vkCmdDraw(SerialiserType &ser, VkCommandBuffer com
       {
         commandBuffer = RerecordCmdBuf(m_LastCmdBufferID);
 
-        uint32_t eventId = HandlePreCallback(commandBuffer);
-
-        ObjDisp(commandBuffer)
-            ->CmdDraw(Unwrap(commandBuffer), vertexCount, instanceCount, firstVertex, firstInstance);
-
-        if(eventId && m_ActionCallback->PostDraw(eventId, ActionFlags::Drawcall, commandBuffer))
+        if(!IsActionDisabled())
         {
+          uint32_t eventId = HandlePreCallback(commandBuffer);
+
           ObjDisp(commandBuffer)
               ->CmdDraw(Unwrap(commandBuffer), vertexCount, instanceCount, firstVertex,
                         firstInstance);
-          m_ActionCallback->PostRedraw(eventId, ActionFlags::Drawcall, commandBuffer);
+
+          if(eventId && m_ActionCallback->PostDraw(eventId, ActionFlags::Drawcall, commandBuffer))
+          {
+            ObjDisp(commandBuffer)
+                ->CmdDraw(Unwrap(commandBuffer), vertexCount, instanceCount, firstVertex,
+                          firstInstance);
+            m_ActionCallback->PostRedraw(eventId, ActionFlags::Drawcall, commandBuffer);
+          }
         }
       }
     }
@@ -419,18 +423,21 @@ bool WrappedVulkan::Serialise_vkCmdDrawIndexed(SerialiserType &ser, VkCommandBuf
       {
         commandBuffer = RerecordCmdBuf(m_LastCmdBufferID);
 
-        uint32_t eventId = HandlePreCallback(commandBuffer);
-
-        ObjDisp(commandBuffer)
-            ->CmdDrawIndexed(Unwrap(commandBuffer), indexCount, instanceCount, firstIndex,
-                             vertexOffset, firstInstance);
-
-        if(eventId && m_ActionCallback->PostDraw(eventId, ActionFlags::Drawcall, commandBuffer))
+        if(!IsActionDisabled())
         {
+          uint32_t eventId = HandlePreCallback(commandBuffer);
+
           ObjDisp(commandBuffer)
               ->CmdDrawIndexed(Unwrap(commandBuffer), indexCount, instanceCount, firstIndex,
                                vertexOffset, firstInstance);
-          m_ActionCallback->PostRedraw(eventId, ActionFlags::Drawcall, commandBuffer);
+
+          if(eventId && m_ActionCallback->PostDraw(eventId, ActionFlags::Drawcall, commandBuffer))
+          {
+            ObjDisp(commandBuffer)
+                ->CmdDrawIndexed(Unwrap(commandBuffer), indexCount, instanceCount, firstIndex,
+                                 vertexOffset, firstInstance);
+            m_ActionCallback->PostRedraw(eventId, ActionFlags::Drawcall, commandBuffer);
+          }
         }
       }
     }
@@ -1246,14 +1253,18 @@ bool WrappedVulkan::Serialise_vkCmdDispatch(SerialiserType &ser, VkCommandBuffer
       {
         commandBuffer = RerecordCmdBuf(m_LastCmdBufferID);
 
-        uint32_t eventId = HandlePreCallback(commandBuffer, ActionFlags::Dispatch);
-
-        ObjDisp(commandBuffer)->CmdDispatch(Unwrap(commandBuffer), x, y, z);
-
-        if(eventId && m_ActionCallback->PostDispatch(eventId, ActionFlags::Dispatch, commandBuffer))
+        if(!IsActionDisabled())
         {
+          uint32_t eventId = HandlePreCallback(commandBuffer, ActionFlags::Dispatch);
+
           ObjDisp(commandBuffer)->CmdDispatch(Unwrap(commandBuffer), x, y, z);
-          m_ActionCallback->PostRedispatch(eventId, ActionFlags::Dispatch, commandBuffer);
+
+          if(eventId &&
+             m_ActionCallback->PostDispatch(eventId, ActionFlags::Dispatch, commandBuffer))
+          {
+            ObjDisp(commandBuffer)->CmdDispatch(Unwrap(commandBuffer), x, y, z);
+            m_ActionCallback->PostRedispatch(eventId, ActionFlags::Dispatch, commandBuffer);
+          }
         }
       }
     }

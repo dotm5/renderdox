@@ -1709,6 +1709,11 @@ void D3D11Replay::ReplayLog(uint32_t endEventID, ReplayLogType replayType)
   }
 }
 
+void D3D11Replay::SetDisabledActions(const rdcarray<uint32_t> &disabledEventIds)
+{
+  m_pDevice->SetDisabledActions(disabledEventIds);
+}
+
 SDFile *D3D11Replay::GetStructuredFile()
 {
   return m_pDevice->GetStructuredFile();

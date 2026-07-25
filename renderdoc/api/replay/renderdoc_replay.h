@@ -483,6 +483,25 @@ function must be called from another thread.
 )");
   virtual void SetFrameEvent(uint32_t eventId, bool force) = 0;
 
+  DOCUMENT(R"(Set the direct draw/dispatch actions omitted during subsequent replay.
+
+The original capture is never modified. The disabled set exists only for this replay-controller
+session and is empty by default. Unsupported event IDs are rejected; only actions for which
+:meth:`ActionDescription.IsActionVisibilityEligible` returns ``True`` can be applied. State
+management, barriers, render-pass boundaries, clears, copies, resolves, queries, and presents are
+never disabled by this API.
+
+The returned array is sorted and contains the event IDs actually accepted by the active replay
+driver. Call :meth:`SetFrameEvent` with ``force=True`` after changing the set to refresh replay
+outputs. Passing an empty array restores ordinary replay.
+
+:param List[int] disabledEventIds: Event IDs to omit.
+:return: The sorted event IDs accepted by the replay driver.
+:rtype: List[int]
+)");
+  virtual rdcarray<uint32_t> SetDisabledActions(
+      const rdcarray<uint32_t> &disabledEventIds) = 0;
+
   DOCUMENT(R"(Retrieve the current :class:`D3D11State` pipeline state.
 
 The return value will be ``None`` if the capture is not using the D3D11 API.

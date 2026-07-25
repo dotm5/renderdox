@@ -176,6 +176,8 @@ public:
 
   virtual RDResult ReadLogInitialisation(RDCFile *rdc, bool storeStructuredBuffers) = 0;
   virtual void ReplayLog(uint32_t endEventID, ReplayLogType replayType) = 0;
+  virtual bool SupportsActionVisibility() { return false; }
+  virtual void SetDisabledActions(const rdcarray<uint32_t> &disabledEventIds) {}
   virtual SDFile *GetStructuredFile() = 0;
 
   virtual rdcarray<uint32_t> GetPassEvents(uint32_t eventId) = 0;

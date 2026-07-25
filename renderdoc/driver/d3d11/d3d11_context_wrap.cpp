@@ -3962,10 +3962,12 @@ bool WrappedID3D11DeviceContext::Serialise_DrawIndexedInstanced(
 
   if(IsReplayingAndReading())
   {
-    m_pRealContext->DrawIndexedInstanced(IndexCountPerInstance, InstanceCount, StartIndexLocation,
-                                         BaseVertexLocation, StartInstanceLocation);
-
-    LatchSOProperties();
+    if(!IsActiveReplaying(m_State) || !m_pDevice->IsActionDisabled(m_CurEventID))
+    {
+      m_pRealContext->DrawIndexedInstanced(IndexCountPerInstance, InstanceCount, StartIndexLocation,
+                                           BaseVertexLocation, StartInstanceLocation);
+      LatchSOProperties();
+    }
 
     if(IsLoading(m_State))
     {
@@ -4039,10 +4041,12 @@ bool WrappedID3D11DeviceContext::Serialise_DrawInstanced(SerialiserType &ser,
 
   if(IsReplayingAndReading())
   {
-    m_pRealContext->DrawInstanced(VertexCountPerInstance, InstanceCount, StartVertexLocation,
-                                  StartInstanceLocation);
-
-    LatchSOProperties();
+    if(!IsActiveReplaying(m_State) || !m_pDevice->IsActionDisabled(m_CurEventID))
+    {
+      m_pRealContext->DrawInstanced(VertexCountPerInstance, InstanceCount, StartVertexLocation,
+                                    StartInstanceLocation);
+      LatchSOProperties();
+    }
 
     if(IsLoading(m_State))
     {
@@ -4111,9 +4115,11 @@ bool WrappedID3D11DeviceContext::Serialise_DrawIndexed(SerialiserType &ser, UINT
 
   if(IsReplayingAndReading())
   {
-    m_pRealContext->DrawIndexed(IndexCount, StartIndexLocation, BaseVertexLocation);
-
-    LatchSOProperties();
+    if(!IsActiveReplaying(m_State) || !m_pDevice->IsActionDisabled(m_CurEventID))
+    {
+      m_pRealContext->DrawIndexed(IndexCount, StartIndexLocation, BaseVertexLocation);
+      LatchSOProperties();
+    }
 
     if(IsLoading(m_State))
     {
@@ -4177,9 +4183,11 @@ bool WrappedID3D11DeviceContext::Serialise_Draw(SerialiserType &ser, UINT Vertex
 
   if(IsReplayingAndReading())
   {
-    m_pRealContext->Draw(VertexCount, StartVertexLocation);
-
-    LatchSOProperties();
+    if(!IsActiveReplaying(m_State) || !m_pDevice->IsActionDisabled(m_CurEventID))
+    {
+      m_pRealContext->Draw(VertexCount, StartVertexLocation);
+      LatchSOProperties();
+    }
 
     if(IsLoading(m_State))
     {
@@ -5156,7 +5164,8 @@ bool WrappedID3D11DeviceContext::Serialise_Dispatch(SerialiserType &ser, UINT Th
 
   if(IsReplayingAndReading())
   {
-    m_pRealContext->Dispatch(ThreadGroupCountX, ThreadGroupCountY, ThreadGroupCountZ);
+    if(!IsActiveReplaying(m_State) || !m_pDevice->IsActionDisabled(m_CurEventID))
+      m_pRealContext->Dispatch(ThreadGroupCountX, ThreadGroupCountY, ThreadGroupCountZ);
 
     if(IsLoading(m_State))
     {

@@ -212,6 +212,11 @@ void VulkanReplay::ReplayLog(uint32_t endEventID, ReplayLogType replayType)
   m_pDriver->ReplayLog(0, endEventID, replayType);
 }
 
+void VulkanReplay::SetDisabledActions(const rdcarray<uint32_t> &disabledEventIds)
+{
+  m_pDriver->SetDisabledActions(disabledEventIds);
+}
+
 SDFile *VulkanReplay::GetStructuredFile()
 {
   return m_pDriver->GetStructuredFile();
