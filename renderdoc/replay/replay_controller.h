@@ -144,6 +144,7 @@ public:
   void FileChanged();
 
   void SetFrameEvent(uint32_t eventId, bool force);
+  rdcarray<uint32_t> SetDisabledActions(const rdcarray<uint32_t> &disabledEventIds);
 
   const D3D11Pipe::State *GetD3D11PipelineState();
   const D3D12Pipe::State *GetD3D12PipelineState();

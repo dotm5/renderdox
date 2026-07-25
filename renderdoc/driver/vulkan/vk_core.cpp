@@ -707,6 +707,24 @@ void WrappedVulkan::InlineCleanupImageBarriers(VkCommandBuffer cmd, ImageBarrier
     DoPipelineBarrier(cmd, (uint32_t)batch.size(), batch.data());
 }
 
+bool WrappedVulkan::IsActionDisabled() const
+{
+  if(m_DisabledActionEvents.empty())
+    return false;
+
+  ActionUse use(m_CurChunkOffset, 0);
+  auto it = std::lower_bound(m_ActionUses.begin(), m_ActionUses.end(), use);
+
+  while(it != m_ActionUses.end() && it->fileOffset == m_CurChunkOffset)
+  {
+    if(m_DisabledActionEvents.contains(it->eventId))
+      return true;
+    ++it;
+  }
+
+  return false;
+}
+
 uint32_t WrappedVulkan::HandlePreCallback(VkCommandBuffer commandBuffer, ActionFlags type,
                                           uint32_t multiDrawOffset)
 {

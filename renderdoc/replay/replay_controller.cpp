@@ -90,6 +90,30 @@ void ReplayController::SetFrameEvent(uint32_t eventId, bool force)
   }
 }
 
+rdcarray<uint32_t> ReplayController::SetDisabledActions(
+    const rdcarray<uint32_t> &disabledEventIds)
+{
+  CHECK_REPLAY_THREAD();
+
+  rdcarray<uint32_t> accepted;
+
+  if(!m_pDevice->SupportsActionVisibility())
+    return accepted;
+
+  accepted.reserve(disabledEventIds.size());
+  for(uint32_t eventId : disabledEventIds)
+  {
+    const ActionDescription *action = GetActionByEID(eventId);
+    if(action && action->eventId == eventId && action->IsActionVisibilityEligible())
+      accepted.push_back(eventId);
+  }
+
+  std::sort(accepted.begin(), accepted.end());
+  accepted.resize(std::unique(accepted.begin(), accepted.end()) - accepted.begin());
+  m_pDevice->SetDisabledActions(accepted);
+  return accepted;
+}
+
 const D3D11Pipe::State *ReplayController::GetD3D11PipelineState()
 {
   CHECK_REPLAY_THREAD();

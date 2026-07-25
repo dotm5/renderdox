@@ -3410,14 +3410,17 @@ bool WrappedID3D12GraphicsCommandList::Serialise_DrawInstanced(SerialiserType &s
       {
         ID3D12GraphicsCommandListX *list = m_Cmd->RerecordCmdList(m_Cmd->m_LastCmdListID);
 
-        uint32_t eventId = m_Cmd->HandlePreCallback(list, ActionFlags::Drawcall);
-        Unwrap(list)->DrawInstanced(VertexCountPerInstance, InstanceCount, StartVertexLocation,
-                                    StartInstanceLocation);
-        if(eventId && m_Cmd->m_ActionCallback->PostDraw(eventId, list))
+        if(!m_Cmd->IsActionDisabled())
         {
+          uint32_t eventId = m_Cmd->HandlePreCallback(list, ActionFlags::Drawcall);
           Unwrap(list)->DrawInstanced(VertexCountPerInstance, InstanceCount, StartVertexLocation,
                                       StartInstanceLocation);
-          m_Cmd->m_ActionCallback->PostRedraw(eventId, list);
+          if(eventId && m_Cmd->m_ActionCallback->PostDraw(eventId, list))
+          {
+            Unwrap(list)->DrawInstanced(VertexCountPerInstance, InstanceCount, StartVertexLocation,
+                                        StartInstanceLocation);
+            m_Cmd->m_ActionCallback->PostRedraw(eventId, list);
+          }
         }
       }
     }
@@ -3489,14 +3492,18 @@ bool WrappedID3D12GraphicsCommandList::Serialise_DrawIndexedInstanced(
       {
         ID3D12GraphicsCommandListX *list = m_Cmd->RerecordCmdList(m_Cmd->m_LastCmdListID);
 
-        uint32_t eventId = m_Cmd->HandlePreCallback(list, ActionFlags::Drawcall);
-        Unwrap(list)->DrawIndexedInstanced(IndexCountPerInstance, InstanceCount, StartIndexLocation,
-                                           BaseVertexLocation, StartInstanceLocation);
-        if(eventId && m_Cmd->m_ActionCallback->PostDraw(eventId, list))
+        if(!m_Cmd->IsActionDisabled())
         {
+          uint32_t eventId = m_Cmd->HandlePreCallback(list, ActionFlags::Drawcall);
           Unwrap(list)->DrawIndexedInstanced(IndexCountPerInstance, InstanceCount, StartIndexLocation,
                                              BaseVertexLocation, StartInstanceLocation);
-          m_Cmd->m_ActionCallback->PostRedraw(eventId, list);
+          if(eventId && m_Cmd->m_ActionCallback->PostDraw(eventId, list))
+          {
+            Unwrap(list)->DrawIndexedInstanced(IndexCountPerInstance, InstanceCount,
+                                               StartIndexLocation, BaseVertexLocation,
+                                               StartInstanceLocation);
+            m_Cmd->m_ActionCallback->PostRedraw(eventId, list);
+          }
         }
       }
     }
@@ -3569,12 +3576,15 @@ bool WrappedID3D12GraphicsCommandList::Serialise_Dispatch(SerialiserType &ser, U
       {
         ID3D12GraphicsCommandListX *list = m_Cmd->RerecordCmdList(m_Cmd->m_LastCmdListID);
 
-        uint32_t eventId = m_Cmd->HandlePreCallback(list, ActionFlags::Dispatch);
-        Unwrap(list)->Dispatch(ThreadGroupCountX, ThreadGroupCountY, ThreadGroupCountZ);
-        if(eventId && m_Cmd->m_ActionCallback->PostDispatch(eventId, list))
+        if(!m_Cmd->IsActionDisabled())
         {
+          uint32_t eventId = m_Cmd->HandlePreCallback(list, ActionFlags::Dispatch);
           Unwrap(list)->Dispatch(ThreadGroupCountX, ThreadGroupCountY, ThreadGroupCountZ);
-          m_Cmd->m_ActionCallback->PostRedispatch(eventId, list);
+          if(eventId && m_Cmd->m_ActionCallback->PostDispatch(eventId, list))
+          {
+            Unwrap(list)->Dispatch(ThreadGroupCountX, ThreadGroupCountY, ThreadGroupCountZ);
+            m_Cmd->m_ActionCallback->PostRedispatch(eventId, list);
+          }
         }
       }
     }

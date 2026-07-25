@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://renderdoc.org/schemas/action-visibility-preset.schema.json",
+  "title": "RenderDoc Action Visibility Preset",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schemaVersion",
+    "kind",
+    "loadable",
+    "captureSHA256",
+    "captureFileName",
+    "api",
+    "renderDocVersion",
+    "portCommit",
+    "generatedAt",
+    "disabledEventIds",
+    "actions"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "kind": {
+      "enum": [
+        "renderdoc-action-visibility-preset",
+        "renderdoc-disabled-action-report"
+      ]
+    },
+    "loadable": {
+      "type": "boolean"
+    },
+    "captureSHA256": {
+      "type": "string",
+      "pattern": "^[A-Fa-f0-9]{64}$"
+    },
+    "captureFileName": {
+      "type": "string"
+    },
+    "api": {
+      "type": "string"
+    },
+    "renderDocVersion": {
+      "type": "string"
+    },
+    "portCommit": {
+      "type": "string"
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "disabledEventIds": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 4294967295
+      }
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "eventId",
+          "name",
+          "flags",
+          "knownOutputs"
+        ],
+        "properties": {
+          "eventId": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4294967295
+          },
+          "name": {
+            "type": "string"
+          },
+          "flags": {
+            "type": "string"
+          },
+          "knownOutputs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "name",
+                "kind"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "kind": {
+                  "enum": [
+                    "color",
+                    "depth-stencil"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "limitations": {
+      "type": "string"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "renderdoc-action-visibility-preset"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "loadable": {
+            "const": true
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "loadable": {
+            "const": false
+          }
+        }
+      }
+    }
+  ]
+}

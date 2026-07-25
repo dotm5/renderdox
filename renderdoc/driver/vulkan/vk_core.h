@@ -913,6 +913,7 @@ private:
     }
   };
   rdcarray<ActionUse> m_ActionUses;
+  rdcarray<uint32_t> m_DisabledActionEvents;
 
   // during active replay, command buffers may be partially-submitted if the selected event occurs
   // within the range of the command buffer. If secondary command buffers are used and the selected
@@ -1430,6 +1431,8 @@ public:
   }
   void Shutdown();
   void ReplayLog(uint32_t startEventID, uint32_t endEventID, ReplayLogType replayType);
+  void SetDisabledActions(const rdcarray<uint32_t> &eventIds) { m_DisabledActionEvents = eventIds; }
+  bool IsActionDisabled() const;
   void ReplayDraw(VkCommandBuffer cmd, const ActionDescription &action);
   RDResult ReadLogInitialisation(RDCFile *rdc, bool storeStructuredBuffers);
 

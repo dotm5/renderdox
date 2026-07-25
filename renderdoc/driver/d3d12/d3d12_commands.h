@@ -362,6 +362,10 @@ struct D3D12CommandData
     }
   };
   rdcarray<ActionUse> m_ActionUses;
+  rdcarray<uint32_t> m_DisabledActionEvents;
+
+  void SetDisabledActions(const rdcarray<uint32_t> &eventIds) { m_DisabledActionEvents = eventIds; }
+  bool IsActionDisabled() const;
 
   rdcarray<DebugMessage> m_EventMessages;
 

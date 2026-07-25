@@ -355,6 +355,11 @@ void D3D12Replay::ReplayLog(uint32_t endEventID, ReplayLogType replayType)
     m_pDevice->ReplayWorkWaitForIdle();
 }
 
+void D3D12Replay::SetDisabledActions(const rdcarray<uint32_t> &disabledEventIds)
+{
+  m_pDevice->GetQueue()->GetCommandData()->SetDisabledActions(disabledEventIds);
+}
+
 SDFile *D3D12Replay::GetStructuredFile()
 {
   return m_pDevice->GetStructuredFile();

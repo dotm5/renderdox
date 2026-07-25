@@ -189,6 +189,7 @@ private slots:
   void events_keyPress(QKeyEvent *event);
   void events_contextMenu(const QPoint &pos);
   void events_currentChanged(const QModelIndex &current, const QModelIndex &previous);
+  void events_clicked(const QModelIndex &index);
   void locationEdit_clicked();
   void location_leave();
   void location_keyPress(QKeyEvent *e);
@@ -216,6 +217,20 @@ private:
   void CreateFilterDialog();
 
   void AddFilterExplanations(RDTreeWidgetItem *root, QVector<FilterExpression> exprs, QString &notes);
+
+  bool VisibilityBackendSupported() const;
+  rdcarray<uint32_t> SelectedVisibilityActions(const QModelIndex &fallback = QModelIndex()) const;
+  bool ConfirmVisibilityRisk(const rdcarray<uint32_t> &eventIds);
+  void ApplyDisabledActions(const QSet<uint32_t> &requested, bool confirmRisk);
+  void DisableSelectedActions(const QModelIndex &fallback = QModelIndex());
+  void EnableSelectedActions(const QModelIndex &fallback = QModelIndex());
+  void ClearDisabledActions();
+  bool CaptureSHA256(QString &sha256, QString &error) const;
+  bool WriteVisibilityPreset(const QString &filename, const QString &kind, QString &error) const;
+  bool ReadVisibilityPreset(const QString &filename, QSet<uint32_t> &eventIds, QString &error) const;
+  void SaveVisibilityPreset();
+  void LoadVisibilityPreset();
+  void ExportDisabledActionList();
 
   QString GetExportString(int indent, bool firstchild, const QModelIndex &idx);
   void GetMaxNameLength(int &maxNameLength, int indent, bool firstchild, const QModelIndex &idx);
@@ -267,6 +282,8 @@ private:
   QCompleter *m_SavedCompleter;
   QStringListModel *m_SavedCompletionModel;
   RDTextEdit *m_CurrentFilterText;
+
+  QSet<uint32_t> m_DisabledActions;
 
   void RefreshShaderMessages();
   Ui::EventBrowser *ui;

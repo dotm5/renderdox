@@ -2023,6 +2023,35 @@ or from the matching chunk in the structured data passed in.
     return rdcstr();
   }
 
+  DOCUMENT(R"(Returns whether this action is eligible for direct-work counterfactual replay.
+
+Eligibility is deliberately conservative. Only leaf draw or compute-dispatch actions are accepted.
+Indirect, multi-action, DrawAuto, mesh, and ray-dispatch actions are rejected, including children
+below an indirect or multi-action parent. This method only describes whether the replay backend can
+omit the direct work command while preserving state-management commands; it does not imply that
+omitting the action is free of color, depth, stencil, UAV, stream-output, or downstream data-flow
+effects.
+
+:return: ``True`` if the action can be submitted to
+  :meth:`ReplayController.SetDisabledActions`.
+:rtype: bool
+)");
+  bool IsActionVisibilityEligible() const
+  {
+    const ActionFlags directWork = ActionFlags::Drawcall | ActionFlags::Dispatch;
+    const ActionFlags unsupported =
+        ActionFlags::Indirect | ActionFlags::MultiAction | ActionFlags::Auto |
+        ActionFlags::MeshDispatch | ActionFlags::DispatchRay;
+    if(!children.empty() || !(flags & directWork) || bool(flags & unsupported))
+      return false;
+
+    for(const ActionDescription *ancestor = parent; ancestor; ancestor = ancestor->parent)
+      if(bool(ancestor->flags & (ActionFlags::Indirect | ActionFlags::MultiAction)))
+        return false;
+
+    return true;
+  }
+
   DOCUMENT("");
   bool operator==(const ActionDescription &o) const { return eventId == o.eventId; }
   bool operator<(const ActionDescription &o) const { return eventId < o.eventId; }
