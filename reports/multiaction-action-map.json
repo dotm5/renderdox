@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "kind": "multiaction-action-map-review",
+  "source": {
+    "tool": "rdx-analysis-service",
+    "evidenceDirectory": "audit/followup/multiaction-overlay-map",
+    "captures": [
+      {
+        "label": "D3D12 Execute Indirect",
+        "sha256": "CA6D84AC0BD7A19AFCDD85841ED5D921A4C3DE519D41ABDFB1B371B889F4B11A",
+        "parentCount": 14,
+        "childDrawCount": 25
+      },
+      {
+        "label": "Vulkan Indirect",
+        "sha256": "3619EFC9DA03142CE65B7C6033B280D2AEF40D09E9D038ADEED0717FF647BD3C",
+        "parentCount": 8,
+        "childDrawCount": 18
+      }
+    ]
+  },
+  "representativeMappings": [
+    {
+      "api": "D3D12",
+      "parentEventId": 210,
+      "effectiveEventId": 219,
+      "name": "ExecuteIndirect(maxCount 8, count <8>)",
+      "displayedTarget": "ResourceId::316",
+      "childEventIds": [211, 212, 213, 214, 215, 216, 217, 218],
+      "childIndexCounts": [6, 12, 3, 9, 18, 15, 21, 24],
+      "childInstanceCounts": [1, 1, 1, 1, 1, 1, 1, 1]
+    },
+    {
+      "api": "D3D12",
+      "parentEventId": 282,
+      "effectiveEventId": 284,
+      "name": "ExecuteIndirect(maxCount 1, count <1>)",
+      "displayedTarget": "ResourceId::316",
+      "childEventIds": [283],
+      "childIndexCounts": [3],
+      "childInstanceCounts": [1024]
+    },
+    {
+      "api": "Vulkan",
+      "parentEventId": 39,
+      "effectiveEventId": 42,
+      "name": "vkCmdDrawIndexedIndirect(2)",
+      "displayedTarget": "ResourceId::926",
+      "childEventIds": [40, 41],
+      "childIndexCounts": [3, 6],
+      "childInstanceCounts": [3, 2]
+    },
+    {
+      "api": "Vulkan",
+      "parentEventId": 46,
+      "effectiveEventId": 50,
+      "name": "vkCmdDrawIndirectCount(<3>)",
+      "displayedTarget": "ResourceId::926",
+      "childEventIds": [47, 48, 49],
+      "childIndexCounts": [3, 3, 3],
+      "childInstanceCounts": [4, 2, 5]
+    }
+  ],
+  "mappingSemantics": {
+    "selectedEventId": "MultiAction or Indirect parent chosen in the Event Browser",
+    "effectiveEventId": "last descendant replay event used for pipeline state",
+    "overlayChildEventIds": "leaf Drawcall descendants that write the displayed color/depth target",
+    "ordinaryChildSelection": "empty mapping; the existing single-action overlay path is used",
+    "actionVisibility": "indirect and MultiAction descendants remain protected from disabling"
+  }
+}

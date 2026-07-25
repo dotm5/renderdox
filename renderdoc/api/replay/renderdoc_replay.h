@@ -483,6 +483,19 @@ function must be called from another thread.
 )");
   virtual void SetFrameEvent(uint32_t eventId, bool force) = 0;
 
+  DOCUMENT(R"(Set both the user-selected event and the effective replay event atomically.
+
+This is primarily useful for a multi-action parent, where the UI selection identifies the parent
+while the effective event identifies its final child. Ordinary callers should continue to use
+:meth:`SetFrameEvent`, which treats the selected and effective event as identical.
+
+:param int selectedEventId: The event selected by the user.
+:param int effectiveEventId: The event to replay to.
+:param bool force: Whether to force replay even if the effective event is unchanged.
+)");
+  virtual void SetFrameEventSelection(uint32_t selectedEventId, uint32_t effectiveEventId,
+                                      bool force) = 0;
+
   DOCUMENT(R"(Set the direct draw/dispatch actions omitted during subsequent replay.
 
 The original capture is never modified. The disabled set exists only for this replay-controller
