@@ -33,6 +33,7 @@
 #include <set>
 #include "common/common.h"
 #include "common/threading.h"
+#include "generated/product_identity.h"
 #include "hooks/hooks.h"
 #include "os/os_specific.h"
 #include "strings/string_utils.h"
@@ -186,9 +187,9 @@ struct CachedHookData
     // we also exclude some other overlay renderers here, such as steam's
     //
     // Also we exclude ourselves here - just in case the application has already loaded
-    // renderdoc.dll, or tries to load it.
+    // our core DLL, or tries to load it.
     if(strstr(lowername, "fraps") || strstr(lowername, "gameoverlayrenderer") ||
-       strstr(lowername, STRINGIZE(RDOC_BASE_NAME) ".dll") == lowername)
+       _strnicmp(lowername, RDOC_CORE_FILENAME, strlen(RDOC_CORE_FILENAME)) == 0)
       return;
 
     // set module pointer if we are hooking exports from this module

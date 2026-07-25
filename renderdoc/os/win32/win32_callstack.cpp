@@ -37,6 +37,7 @@
 #include "core/core.h"
 #include "core/settings.h"
 #include "dbghelp/dbghelp.h"
+#include "generated/product_identity.h"
 #include "os/os_specific.h"
 #include "strings/string_utils.h"
 
@@ -491,7 +492,7 @@ static bool InitDbgHelp()
   else
   {
     wchar_t path[MAX_PATH] = {0};
-    GetModuleFileNameW(GetModuleHandleA(STRINGIZE(RDOC_BASE_NAME) ".dll"), path, MAX_PATH - 1);
+    GetModuleFileNameW(GetModuleHandleA(RDOC_CORE_FILENAME), path, MAX_PATH - 1);
 
     wchar_t *slash = wcsrchr(path, '\\');
 
@@ -965,9 +966,9 @@ Win32CallstackResolver::Win32CallstackResolver(bool interactive, byte *moduleDB,
         {
           pdbName = get_dirname(defaultPdb) + "\\" + get_basename(defaultPdb);
 
-          // prompt for new pdbName, unless it's renderdoc or dbghelp, or we're non-interactive
-          if(pdbName.contains("renderdoc.") || pdbName.contains("dbghelp.") ||
-             pdbName.contains("symsrv.") || !interactive)
+          // prompt for a new pdbName unless it belongs to us or dbghelp, or we're non-interactive
+          if(strlower(pdbName).contains(strlower(RDOC_CORE_BASE_NAME) + ".") ||
+             pdbName.contains("dbghelp.") || pdbName.contains("symsrv.") || !interactive)
             pdbName = "";
           else
             pdbName = pdbBrowse(pdbName);
@@ -1004,9 +1005,10 @@ Win32CallstackResolver::Win32CallstackResolver(bool interactive, byte *moduleDB,
 
       RDCWARN("Couldn't get symbols for %s", m.name.c_str());
 
-      // silently ignore renderdoc.dll, dbghelp.dll, and symsrv.dll without asking to permanently
-      // ignore
-      if(m.name.contains("renderdoc.") || m.name.contains("dbghelp.") || m.name.contains("symsrv."))
+      // silently ignore our core module, dbghelp.dll, and symsrv.dll without asking to
+      // permanently ignore
+      if(strlower(m.name).contains(strlower(RDOC_CORE_BASE_NAME) + ".") ||
+         m.name.contains("dbghelp.") || m.name.contains("symsrv."))
         continue;
 
       // if we're not interactive, just continue

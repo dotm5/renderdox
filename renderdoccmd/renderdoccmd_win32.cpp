@@ -29,6 +29,7 @@
 #include <windows.h>
 #include <string>
 #include <vector>
+#include "../renderdoc/generated/product_identity.h"
 #include "miniz/miniz.h"
 #include "resource.h"
 
@@ -434,7 +435,7 @@ public:
     // run original UI exe (as admin still) and tell it an update succeeded so that it can do any last updates
     std::wstring cmdline = L"\"";
     cmdline += wide_path;
-    cmdline += L"/qrenderdoc.exe\" ";
+    cmdline += L"/" RDOC_UI_FILENAME_W L"\" ";
     if(successful)
       cmdline += L"--updatedone_admin";
     else
@@ -509,7 +510,7 @@ public:
           show.vt = VT_I4;
           show.lVal = SW_SHOWNORMAL;
 
-          std::wstring qrenderdoc = wide_path + L"/qrenderdoc.exe";
+          std::wstring qrenderdoc = wide_path + L"/" RDOC_UI_FILENAME_W;
 
           BSTR path = SysAllocStringLen(qrenderdoc.c_str(), (UINT)qrenderdoc.size());
           memcpy(path, qrenderdoc.c_str(), qrenderdoc.size());
@@ -533,7 +534,7 @@ public:
 
     cmdline = L"\"";
     cmdline += wide_path;
-    cmdline += L"/qrenderdoc.exe\" --updatedone";
+    cmdline += L"/" RDOC_UI_FILENAME_W L"\" --updatedone";
     ZeroMemory(paramsAlloc, sizeof(wchar_t) * 512);
     wcscpy_s(paramsAlloc, 511, cmdline.c_str());
 
@@ -729,8 +730,8 @@ public:
 
           ZeroMemory(paramsAlloc, sizeof(wchar_t) * 512);
 
-          _snwprintf_s(paramsAlloc, 511, 511, L"%s/qrenderdoc.exe --crash %s", exepath.c_str(),
-                       destjson.c_str());
+          _snwprintf_s(paramsAlloc, 511, 511, L"%s/" RDOC_UI_FILENAME_W L" --crash %s",
+                       exepath.c_str(), destjson.c_str());
 
           PROCESS_INFORMATION pi;
           STARTUPINFOW si;
@@ -814,12 +815,12 @@ public:
 
     wchar_t rdocpath[1024];
 
-    // fetch path to our matching renderdoc.dll
-    HMODULE rdoc = GetModuleHandleA("renderdoc.dll");
+    // fetch the path to our matching core DLL
+    HMODULE rdoc = GetModuleHandleA(RDOC_CORE_FILENAME);
 
     if(rdoc == NULL)
     {
-      std::cerr << "globalhook couldn't find renderdoc.dll!" << std::endl;
+      std::cerr << "globalhook couldn't find " RDOC_CORE_FILENAME "!" << std::endl;
       return 1;
     }
 
@@ -943,7 +944,7 @@ int main(int, char *)
 #endif
 
   // this installs a global windows hook pointing at renderdocshim*.dll that filters all running
-  // processes and loads renderdoc.dll in the target one. In any other process it unloads as soon as
+  // processes and loads the core DLL in the target one. In any other process it unloads as soon as
   // possible
   add_command("globalhook", new GlobalHookCommand());
 

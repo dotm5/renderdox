@@ -36,6 +36,7 @@
 #include "api/replay/data_types.h"
 #include "common/common.h"
 #include "common/formatting.h"
+#include "generated/product_identity.h"
 #include "os/os_specific.h"
 #include "strings/string_utils.h"
 
@@ -174,7 +175,7 @@ void GetExecutableFilename(rdcstr &selfName)
 void GetLibraryFilename(rdcstr &selfName)
 {
   wchar_t curFile[512] = {0};
-  GetModuleFileNameW(GetModuleHandleA(STRINGIZE(RDOC_BASE_NAME) ".dll"), curFile, 511);
+  GetModuleFileNameW(GetModuleHandleA(RDOC_CORE_FILENAME), curFile, 511);
 
   selfName = StringFormat::Wide2UTF8(curFile);
 }
@@ -286,7 +287,7 @@ rdcstr GetReplayAppFilename()
 
   rdcstr path = StringFormat::Wide2UTF8(curFile);
   path = get_dirname(path);
-  rdcstr exe = path + "/qrenderdoc.exe";
+  rdcstr exe = path + "/" RDOC_UI_FILENAME;
 
   FILE *f = FileIO::fopen(exe, FileIO::ReadBinary);
   if(f)
@@ -295,9 +296,9 @@ rdcstr GetReplayAppFilename()
     return exe;
   }
 
-  // if qrenderdoc.exe doesn't live in the same dir, we must be in x86/
+  // if the replay UI doesn't live in the same dir, we must be in x86/
   // so look one up the tree.
-  exe = path + "/../qrenderdoc.exe";
+  exe = path + "/../" RDOC_UI_FILENAME;
 
   f = FileIO::fopen(exe, FileIO::ReadBinary);
   if(f)

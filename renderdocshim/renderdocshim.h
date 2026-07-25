@@ -22,6 +22,8 @@
  * THE SOFTWARE.
  ******************************************************************************/
 
+#include "../renderdoc/generated/product_identity.h"
+
 struct ShimData
 {
   wchar_t pathmatchstring[2048];
@@ -34,8 +36,8 @@ struct ShimData
 
 #ifdef WIN64
 #define GLOBAL_HOOK_DATA_NAME "RenderDocGlobalHookData64"
-#define SHIM_DLL_NAME "renderdocshim64.dll"
+#define SHIM_DLL_NAME RDOC_SHIM64_FILENAME
 #else
 #define GLOBAL_HOOK_DATA_NAME "RenderDocGlobalHookData32"
-#define SHIM_DLL_NAME "renderdocshim32.dll"
+#define SHIM_DLL_NAME RDOC_SHIM32_FILENAME
 #endif

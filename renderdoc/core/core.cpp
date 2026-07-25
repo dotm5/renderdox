@@ -30,6 +30,7 @@
 #include "common/common.h"
 #include "common/threading.h"
 #include "core/settings.h"
+#include "generated/product_identity.h"
 #include "hooks/hooks.h"
 #include "jpeg-compressor/jpge.h"
 #include "maths/formatpacking.h"
@@ -523,9 +524,9 @@ void RenderDoc::RecreateCrashHandler()
   FileIO::GetExecutableFilename(exename);
   exename = strlower(exename);
 
-  // only create crash handler when we're not in renderdoccmd (to prevent infinite loop as
-  // the crash handler itself launches renderdoccmd)
-  if(exename.contains("renderdoccmd"))
+  // only create a crash handler when we're not in the command executable, to prevent an
+  // infinite loop as the crash handler itself launches that executable.
+  if(get_basename(exename) == strlower(RDOC_COMMAND_FILENAME))
     return;
 
 #if ENABLED(RDOC_WIN32)

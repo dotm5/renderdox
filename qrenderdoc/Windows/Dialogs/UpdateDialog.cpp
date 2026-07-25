@@ -32,6 +32,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QString>
+#include "../../../renderdoc/generated/product_identity.h"
 #include "Code/QRDUtils.h"
 #include "ui_UpdateDialog.h"
 #include "version.h"
@@ -255,8 +256,8 @@ void UpdateDialog::on_update_clicked()
 
       bool success = true;
 
-      QString dll = lit("renderdoc.dll");
-      QString cmd = lit("renderdoccmd.exe");
+      QString dll = lit(RDOC_CORE_FILENAME);
+      QString cmd = lit(RDOC_COMMAND_FILENAME);
 
       QFile::remove(dir.absoluteFilePath(dll));
       QFile::remove(dir.absoluteFilePath(cmd));

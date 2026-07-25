@@ -28,6 +28,8 @@
 
 #define RDOC_CRASH_HANDLER OPTION_ON
 
+#include "generated/product_identity.h"
+
 // breakpad
 #include "breakpad/client/windows/common/ipc_protocol.h"
 #include "breakpad/client/windows/handler/exception_handler.h"
@@ -135,7 +137,7 @@ public:
 
     rdcstr cmdline = "\"";
     cmdline += get_dirname(dllpath);
-    cmdline += "/renderdoccmd.exe\" crashhandle --pipe ";
+    cmdline += "/" RDOC_COMMAND_FILENAME "\" crashhandle --pipe ";
     cmdline += m_PipeName;
 
     rdcwstr params = StringFormat::UTF82Wide(cmdline);

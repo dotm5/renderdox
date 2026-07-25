@@ -25,6 +25,7 @@
 
 #include <winsock2.h>
 #include "core/core.h"
+#include "generated/product_identity.h"
 #include "hooks/hooks.h"
 #include "os/os_specific.h"
 #include "strings/string_utils.h"
@@ -337,7 +338,7 @@ private:
     {
       rdcstr app = strlower(StringFormat::Wide2UTF8(lpApplicationName));
 
-      if(app.contains("renderdoccmd.exe") || app.contains("qrenderdoc.exe"))
+      if(app.contains(strlower(RDOC_COMMAND_FILENAME)) || app.contains(strlower(RDOC_UI_FILENAME)))
       {
         inject = false;
       }
@@ -346,7 +347,7 @@ private:
     {
       rdcstr cmd = strlower(StringFormat::Wide2UTF8(lpCommandLine));
 
-      if(cmd.contains("renderdoccmd.exe") || cmd.contains("qrenderdoc.exe"))
+      if(cmd.contains(strlower(RDOC_COMMAND_FILENAME)) || cmd.contains(strlower(RDOC_UI_FILENAME)))
       {
         inject = false;
       }
