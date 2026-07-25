@@ -32,4 +32,3 @@ No measured runtime operation showed a material, reproducible regression that
 justifies blocking the integration. Startup performance should be measured
 with a controlled repeated cold/warm protocol only if it becomes a release
 criterion.
-

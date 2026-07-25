@@ -37,4 +37,3 @@ The small API captures establish open/replay and API identity, not broad draw
 coverage. The owned UE5 capture is the substantive D3D12 baseline. Capture
 format version is `UNKNOWN` because v1.45's public CaptureFile API does not
 expose it.
-

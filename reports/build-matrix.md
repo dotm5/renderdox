@@ -34,4 +34,3 @@ UUID string slice. The final Development and Release builds both passed.
 
 Both output directories contain the expected Core, UI, command, shim, and
 Python-binding artifacts.
-

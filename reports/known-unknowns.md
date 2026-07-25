@@ -17,4 +17,3 @@
 None of these items is silently promoted to `PASS`. The first release-blocking
 follow-up should be Blender import if GLB-to-DCC delivery is required; D3D12
 feature work should wait for a minimal owned failing capture.
-
