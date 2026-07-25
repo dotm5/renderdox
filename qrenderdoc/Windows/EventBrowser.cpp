@@ -25,16 +25,27 @@
 #include "EventBrowser.h"
 #include <QAbstractItemModel>
 #include <QAbstractSpinBox>
+#include <QApplication>
 #include <QComboBox>
 #include <QCompleter>
+#include <QCryptographicHash>
+#include <QDateTime>
 #include <QDialogButtonBox>
+#include <QFile>
+#include <QFileInfo>
 #include <QInputDialog>
+#include <QItemSelectionModel>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QKeyEvent>
 #include <QLineEdit>
 #include <QMenu>
+#include <QProgressDialog>
 #include <QPushButton>
 #include <QRegularExpression>
 #include <QRegularExpressionMatch>
+#include <QSaveFile>
 #include <QScrollBar>
 #include <QShortcut>
 #include <QSignalBlocker>
@@ -171,6 +182,7 @@ enum
   COL_ACTION,
   COL_DURATION,
   COL_ANNOTATION,
+  COL_VISIBILITY,
   COL_COUNT,
 };
 
@@ -182,6 +194,89 @@ enum
   ROLE_EXACT_ACTION,
   ROLE_CHUNK,
 };
+
+static bool DecodeActionVisibilityPreset(const QJsonDocument &document,
+                                         const QString &currentCaptureSHA256,
+                                         QSet<uint32_t> &eventIds, QString &error)
+{
+  if(!document.isObject())
+  {
+    error = QObject::tr("Action Visibility preset root must be a JSON object.");
+    return false;
+  }
+
+  const QJsonObject root = document.object();
+  if(root.value(lit("schemaVersion")).toInt(-1) != 1 ||
+     root.value(lit("kind")).toString() != lit("renderdoc-action-visibility-preset") ||
+     !root.value(lit("loadable")).toBool(false))
+  {
+    error = QObject::tr("This file is not a loadable Action Visibility preset schemaVersion 1.");
+    return false;
+  }
+
+  if(root.value(lit("captureSHA256"))
+         .toString()
+         .compare(currentCaptureSHA256, Qt::CaseInsensitive) != 0)
+  {
+    error = QObject::tr("Preset capture SHA-256 does not match the currently loaded capture.");
+    return false;
+  }
+
+  const QJsonValue idsValue = root.value(lit("disabledEventIds"));
+  if(!idsValue.isArray())
+  {
+    error = QObject::tr("Preset disabledEventIds must be an array.");
+    return false;
+  }
+
+  eventIds.clear();
+  for(const QJsonValue &value : idsValue.toArray())
+  {
+    if(!value.isDouble())
+    {
+      error = QObject::tr("Preset contains a non-numeric event ID.");
+      return false;
+    }
+
+    const double raw = value.toDouble(-1.0);
+    const quint64 eid = quint64(raw);
+    if(raw < 0.0 || raw > double(UINT32_MAX) || raw != double(eid))
+    {
+      error = QObject::tr("Preset contains an invalid event ID.");
+      return false;
+    }
+    eventIds.insert(uint32_t(eid));
+  }
+
+  return true;
+}
+
+static bool WriteJsonAtomically(const QString &filename, const QJsonDocument &document,
+                                QString &error)
+{
+  QSaveFile file(filename);
+  if(!file.open(QIODevice::WriteOnly | QIODevice::Text))
+  {
+    error = QObject::tr("Couldn't open %1: %2").arg(filename).arg(file.errorString());
+    return false;
+  }
+
+  const QByteArray json = document.toJson(QJsonDocument::Indented);
+  if(file.write(json) != json.size())
+  {
+    error = QObject::tr("Couldn't write %1: %2").arg(filename).arg(file.errorString());
+    file.cancelWriting();
+    return false;
+  }
+
+  if(!file.commit())
+  {
+    error = QObject::tr("Couldn't atomically commit %1: %2").arg(filename).arg(file.errorString());
+    return false;
+  }
+
+  return true;
+}
 
 static uint32_t GetSelectedEID(QModelIndex idx)
 {
@@ -308,6 +403,17 @@ struct EventItemModel : public QAbstractItemModel
     m_View->viewport()->update();
   }
   rdcstr GetAnnotationPath() { return m_AnnotationPath; }
+
+  void SetDisabledActions(const QSet<uint32_t> &disabled)
+  {
+    if(m_DisabledActions == disabled)
+      return;
+
+    m_DisabledActions = disabled;
+    m_View->viewport()->update();
+  }
+
+  bool IsActionDisabled(uint32_t eventId) const { return m_DisabledActions.contains(eventId); }
 
   bool HasTimes() { return !m_Times.empty(); }
   void SetTimes(const rdcarray<CounterResult> &times)
@@ -733,6 +839,7 @@ struct EventItemModel : public QAbstractItemModel
         case COL_ANNOTATION:
           return m_AnnotationPath.empty() ? tr("Annotation")
                                           : tr("Annotation (%1)").arg(m_AnnotationPath);
+        case COL_VISIBILITY: return tr("Action");
         default: break;
       }
     }
@@ -744,6 +851,40 @@ struct EventItemModel : public QAbstractItemModel
   {
     if(!index.isValid())
       return QVariant();
+
+    if(index.column() == COL_VISIBILITY && index.internalId() != TagRoot &&
+       index.internalId() != TagCaptureStart)
+    {
+      uint32_t eid = (uint32_t)index.internalId();
+      if(eid < m_Actions.size())
+      {
+        const ActionDescription *action = m_Actions[eid];
+        const bool exact = action && action->eventId == eid;
+        const bool eligible = exact && action->IsActionVisibilityEligible();
+
+        if(role == Qt::DecorationRole && eligible)
+          return m_DisabledActions.contains(eid) ? Icons::cross() : Icons::tick();
+
+        if(role == Qt::DisplayRole && eligible)
+          return m_DisabledActions.contains(eid) ? tr("Disabled") : tr("Enabled");
+
+        if(role == Qt::TextAlignmentRole)
+          return int(Qt::AlignLeft | Qt::AlignVCenter);
+
+        if(role == Qt::ToolTipRole)
+        {
+          if(!exact)
+            return tr("Only the exact action event can be controlled.");
+          if(!eligible)
+            return tr("This action is protected from omission. Only direct leaf draw and compute "
+                      "dispatch actions are eligible; indirect, multi-action, automatic, mesh, and "
+                      "ray dispatch actions are never omitted.");
+          return m_DisabledActions.contains(eid)
+                     ? tr("This action is omitted from replay. Click to enable it.")
+                     : tr("This action is replayed normally. Click to review impact and disable it.");
+        }
+      }
+    }
 
     if(role == Qt::DecorationRole)
     {
@@ -967,6 +1108,7 @@ private:
   QString m_FindString;
   rdcarray<QModelIndex> m_FindResults;
   bool m_FindEIDSearch = false;
+  QSet<uint32_t> m_DisabledActions;
 
   int32_t m_RenameCacheID = 0;
   QString m_ParamColCode;
@@ -3796,6 +3938,7 @@ EventBrowser::EventBrowser(ICaptureContext &ctx, QWidget *parent)
   ui->events->header()->setSectionResizeMode(COL_ACTION, QHeaderView::Interactive);
   ui->events->header()->setSectionResizeMode(COL_DURATION, QHeaderView::Interactive);
   ui->events->header()->setSectionResizeMode(COL_ANNOTATION, QHeaderView::Interactive);
+  ui->events->header()->setSectionResizeMode(COL_VISIBILITY, QHeaderView::Interactive);
 
   ui->events->header()->setMinimumSectionSize(40);
 
@@ -3814,12 +3957,14 @@ EventBrowser::EventBrowser(ICaptureContext &ctx, QWidget *parent)
   ui->events->header()->resizeSection(COL_NAME, 200);
   ui->events->header()->resizeSection(COL_DURATION, 80);
   ui->events->header()->resizeSection(COL_ANNOTATION, 100);
+  ui->events->header()->resizeSection(COL_VISIBILITY, 96);
 
   ui->events->header()->hideSection(COL_ACTION);
   ui->events->header()->hideSection(COL_DURATION);
   ui->events->header()->hideSection(COL_ANNOTATION);
 
   ui->events->header()->moveSection(COL_NAME, 2);
+  ui->events->header()->moveSection(ui->events->header()->visualIndex(COL_VISIBILITY), 1);
 
   UpdateDurationColumn();
 
@@ -3834,6 +3979,7 @@ EventBrowser::EventBrowser(ICaptureContext &ctx, QWidget *parent)
   connect(m_FilterTimeout, &QTimer::timeout, this, &EventBrowser::filter_apply);
 
   QObject::connect(ui->events, &RDTreeView::keyPress, this, &EventBrowser::events_keyPress);
+  QObject::connect(ui->events, &RDTreeView::clicked, this, &EventBrowser::events_clicked);
   QObject::connect(ui->events->selectionModel(), &QItemSelectionModel::currentChanged, this,
                    &EventBrowser::events_currentChanged);
   ui->find->setChecked(false);
@@ -4052,6 +4198,10 @@ void EventBrowser::SetHighlightedAnnotation(const rdcstr &annotationPath)
 
 void EventBrowser::OnCaptureLoaded()
 {
+  // Action visibility is a replay-session-only counterfactual. Never carry state between captures.
+  m_DisabledActions.clear();
+  m_Model->SetDisabledActions(m_DisabledActions);
+
   ui->events->setIgnoreBackgroundColors(!m_Ctx.Config().EventBrowser_ColorEventRow);
 
   m_FilterModel->ResetCache();
@@ -4088,6 +4238,9 @@ void EventBrowser::OnCaptureLoaded()
 
 void EventBrowser::OnCaptureClosed()
 {
+  m_DisabledActions.clear();
+  m_Model->SetDisabledActions(m_DisabledActions);
+
   clearBookmarks();
 
   on_HideFind();
@@ -5593,10 +5746,501 @@ void EventBrowser::setPersistData(const QVariant &persistData)
   }
 }
 
+bool EventBrowser::VisibilityBackendSupported() const
+{
+  if(!m_Ctx.IsCaptureLoaded())
+    return false;
+
+  const GraphicsAPI api = m_Ctx.APIProps().pipelineType;
+  return api == GraphicsAPI::D3D11 || api == GraphicsAPI::D3D12 || api == GraphicsAPI::Vulkan;
+}
+
+rdcarray<uint32_t> EventBrowser::SelectedVisibilityActions(const QModelIndex &fallback) const
+{
+  rdcarray<uint32_t> selected;
+
+  const QModelIndexList rows = ui->events->selectionModel()->selectedRows(COL_NAME);
+  for(const QModelIndex &row : rows)
+  {
+    const uint32_t eid = GetSelectedEID(row);
+    const ActionDescription *action = m_Ctx.GetAction(eid);
+    if(action && action->eventId == eid && action->IsActionVisibilityEligible())
+      selected.push_back(eid);
+  }
+
+  if(fallback.isValid())
+  {
+    const uint32_t fallbackEID = GetSelectedEID(fallback);
+    if(std::find(selected.begin(), selected.end(), fallbackEID) == selected.end())
+    {
+      selected.clear();
+      const ActionDescription *action = m_Ctx.GetAction(fallbackEID);
+      if(action && action->eventId == fallbackEID && action->IsActionVisibilityEligible())
+        selected.push_back(fallbackEID);
+    }
+  }
+
+  std::sort(selected.begin(), selected.end());
+  selected.resize(std::unique(selected.begin(), selected.end()) - selected.begin());
+  return selected;
+}
+
+bool EventBrowser::ConfirmVisibilityRisk(const rdcarray<uint32_t> &eventIds)
+{
+  if(eventIds.empty())
+    return true;
+
+  struct ImpactResource
+  {
+    ResourceId id;
+    uint32_t earliestEvent = ~0U;
+    bool downstreamUse = false;
+  };
+
+  rdcarray<ImpactResource> resources;
+  uint32_t drawCount = 0;
+  uint32_t dispatchCount = 0;
+
+  for(uint32_t eid : eventIds)
+  {
+    const ActionDescription *action = m_Ctx.GetAction(eid);
+    if(!action || action->eventId != eid)
+      continue;
+
+    if(action->flags & ActionFlags::Drawcall)
+      drawCount++;
+    if(action->flags & ActionFlags::Dispatch)
+      dispatchCount++;
+
+    auto addResource = [&resources, eid](ResourceId id) {
+      if(id == ResourceId())
+        return;
+
+      for(ImpactResource &resource : resources)
+      {
+        if(resource.id == id)
+        {
+          resource.earliestEvent = qMin(resource.earliestEvent, eid);
+          return;
+        }
+      }
+
+      ImpactResource resource;
+      resource.id = id;
+      resource.earliestEvent = eid;
+      resources.push_back(resource);
+    };
+
+    for(ResourceId output : action->outputs)
+      addResource(output);
+    addResource(action->depthOut);
+  }
+
+  if(!resources.empty())
+  {
+    m_Ctx.Replay().BlockInvoke([&resources](IReplayController *replay) {
+      for(ImpactResource &resource : resources)
+      {
+        const rdcarray<EventUsage> usage = replay->GetUsage(resource.id);
+        for(const EventUsage &use : usage)
+        {
+          if(use.eventId > resource.earliestEvent)
+          {
+            resource.downstreamUse = true;
+            break;
+          }
+        }
+      }
+    });
+  }
+
+  uint32_t downstreamCount = 0;
+  QStringList resourceNames;
+  for(const ImpactResource &resource : resources)
+  {
+    if(resource.downstreamUse)
+      downstreamCount++;
+
+    if(resourceNames.count() < 12)
+    {
+      QString name = m_Ctx.GetResourceName(resource.id);
+      if(name.isEmpty())
+        name = ToQStr(resource.id);
+      if(resource.downstreamUse)
+        name += tr(" (used later)");
+      resourceNames.push_back(name);
+    }
+  }
+
+  QString details =
+      tr("Disable %1 action(s) for this replay session?\n\n"
+         "Direct draws: %2\nCompute dispatches: %3\n"
+         "Known color/depth outputs: %4\nKnown outputs used later: %5")
+          .arg(eventIds.size())
+          .arg(drawCount)
+          .arg(dispatchCount)
+          .arg(resources.size())
+          .arg(downstreamCount);
+
+  if(!resourceNames.isEmpty())
+    details += tr("\n\nAffected output resources:\n- %1").arg(resourceNames.join(lit("\n- ")));
+
+  if(resources.size() > (size_t)resourceNames.count())
+    details += tr("\n- ... and %1 more").arg(resources.size() - resourceNames.count());
+
+  details += tr("\n\nDisabling work can change color, depth/stencil, UAV/storage, stream-output, "
+                "and downstream data flow. Compute UAV/storage resources may not be listed above. "
+                "The capture file is not modified, and Clear Disabled Actions restores normal "
+                "replay.");
+
+  return RDDialog::question(this, tr("Confirm Action Visibility Change"), details,
+                            QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes;
+}
+
+void EventBrowser::ApplyDisabledActions(const QSet<uint32_t> &requested, bool confirmRisk)
+{
+  if(!m_Ctx.IsCaptureLoaded())
+    return;
+
+  if(!VisibilityBackendSupported())
+  {
+    RDDialog::critical(this, tr("Action Visibility Unsupported"),
+                       tr("Action Visibility is supported only for D3D11, D3D12, and Vulkan "
+                          "captures."));
+    return;
+  }
+
+  rdcarray<uint32_t> newlyDisabled;
+  for(uint32_t eid : requested)
+    if(!m_DisabledActions.contains(eid))
+      newlyDisabled.push_back(eid);
+  std::sort(newlyDisabled.begin(), newlyDisabled.end());
+
+  if(confirmRisk && !ConfirmVisibilityRisk(newlyDisabled))
+    return;
+
+  rdcarray<uint32_t> requestedArray;
+  requestedArray.reserve(requested.size());
+  for(uint32_t eid : requested)
+    requestedArray.push_back(eid);
+  std::sort(requestedArray.begin(), requestedArray.end());
+
+  const uint32_t selectedEID = m_Ctx.CurSelectedEvent();
+  const uint32_t effectiveEID = m_Ctx.CurEvent();
+  const int scrollPosition = ui->events->verticalScrollBar()->value();
+
+  rdcarray<uint32_t> selectedRows;
+  for(const QModelIndex &row : ui->events->selectionModel()->selectedRows(COL_NAME))
+    selectedRows.push_back(GetSelectedEID(row));
+
+  rdcarray<uint32_t> accepted;
+  m_Ctx.Replay().BlockInvoke([&accepted, requestedArray](IReplayController *replay) {
+    accepted = replay->SetDisabledActions(requestedArray);
+  });
+
+  QSet<uint32_t> canonical;
+  for(uint32_t eid : accepted)
+    canonical.insert(eid);
+
+  m_DisabledActions = canonical;
+  m_Model->SetDisabledActions(m_DisabledActions);
+
+  // Re-run the current event so all pipeline, texture, mesh, and analysis viewers observe the
+  // counterfactual outputs. This is a replay-only refresh and never serialises state into the RDC.
+  m_Ctx.SetEventID({}, selectedEID, effectiveEID, true);
+
+  QItemSelectionModel *selection = ui->events->selectionModel();
+  for(uint32_t eid : selectedRows)
+  {
+    const QModelIndex row = m_FilterModel->mapFromSource(m_Model->GetIndexForEID(eid));
+    if(row.isValid())
+      selection->select(row, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+  }
+  ui->events->verticalScrollBar()->setValue(scrollPosition);
+
+  if(canonical.size() != requested.size())
+  {
+    RDDialog::information(
+        this, tr("Some Actions Were Protected"),
+        tr("%1 of %2 requested event IDs were accepted. Unsupported, stale, indirect, "
+           "multi-action, automatic, mesh, or ray-dispatch actions remain enabled.")
+            .arg(canonical.size())
+            .arg(requested.size()));
+  }
+}
+
+void EventBrowser::DisableSelectedActions(const QModelIndex &fallback)
+{
+  QSet<uint32_t> requested = m_DisabledActions;
+  for(uint32_t eid : SelectedVisibilityActions(fallback))
+    requested.insert(eid);
+  ApplyDisabledActions(requested, true);
+}
+
+void EventBrowser::EnableSelectedActions(const QModelIndex &fallback)
+{
+  QSet<uint32_t> requested = m_DisabledActions;
+  for(uint32_t eid : SelectedVisibilityActions(fallback))
+    requested.remove(eid);
+  ApplyDisabledActions(requested, false);
+}
+
+void EventBrowser::ClearDisabledActions()
+{
+  if(m_DisabledActions.isEmpty())
+    return;
+  ApplyDisabledActions({}, false);
+}
+
+bool EventBrowser::CaptureSHA256(QString &sha256, QString &error) const
+{
+  const QString capturePath = m_Ctx.IsCaptureLoaded() ? QString(m_Ctx.GetCaptureFilename()) : QString();
+  if(capturePath.isEmpty())
+  {
+    error = tr("The current capture has no file path, so a capture-bound preset cannot be created.");
+    return false;
+  }
+
+  QFile capture(capturePath);
+  if(!capture.open(QIODevice::ReadOnly))
+  {
+    error = tr("Couldn't open the capture for SHA-256 hashing: %1").arg(capture.errorString());
+    return false;
+  }
+
+  QProgressDialog progress(tr("Hashing capture for Action Visibility provenance..."), tr("Cancel"),
+                           0, 1000, const_cast<EventBrowser *>(this));
+  progress.setWindowModality(Qt::WindowModal);
+  progress.setMinimumDuration(500);
+
+  QCryptographicHash hash(QCryptographicHash::Sha256);
+  const qint64 total = qMax<qint64>(1, capture.size());
+  qint64 completed = 0;
+  while(!capture.atEnd())
+  {
+    const QByteArray block = capture.read(4 * 1024 * 1024);
+    if(block.isEmpty() && capture.error() != QFile::NoError)
+    {
+      error = tr("Capture hash read failed: %1").arg(capture.errorString());
+      return false;
+    }
+
+    hash.addData(block);
+    completed += block.size();
+    progress.setValue(int((completed * 1000) / total));
+    QApplication::processEvents();
+    if(progress.wasCanceled())
+    {
+      error = tr("Capture hashing was cancelled.");
+      return false;
+    }
+  }
+
+  progress.setValue(1000);
+  sha256 = QString::fromLatin1(hash.result().toHex().toUpper());
+  return true;
+}
+
+bool EventBrowser::WriteVisibilityPreset(const QString &filename, const QString &kind,
+                                         QString &error) const
+{
+  QString sha256;
+  if(!CaptureSHA256(sha256, error))
+    return false;
+
+  QJsonObject root;
+  root[lit("schemaVersion")] = 1;
+  root[lit("kind")] = kind;
+  root[lit("loadable")] = kind == lit("renderdoc-action-visibility-preset");
+  root[lit("captureSHA256")] = sha256;
+  root[lit("captureFileName")] = QFileInfo(QString(m_Ctx.GetCaptureFilename())).fileName();
+  root[lit("api")] = ToQStr(m_Ctx.APIProps().pipelineType);
+  root[lit("renderDocVersion")] = QString::fromLatin1(RENDERDOC_GetVersionString());
+  root[lit("portCommit")] = QString::fromLatin1(RENDERDOC_GetCommitHash());
+  root[lit("generatedAt")] = QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs);
+
+  QList<uint32_t> sorted = m_DisabledActions.values();
+  std::sort(sorted.begin(), sorted.end());
+
+  QJsonArray disabled;
+  QJsonArray actions;
+  for(uint32_t eid : sorted)
+  {
+    disabled.push_back(double(eid));
+
+    QJsonObject record;
+    record[lit("eventId")] = double(eid);
+    const ActionDescription *action = m_Ctx.GetAction(eid);
+    if(action && action->eventId == eid)
+    {
+      QString name = action->GetName(m_Ctx.GetStructuredFile());
+      if(name.isEmpty())
+        name = tr("Action EID %1").arg(eid);
+      record[lit("name")] = name;
+      record[lit("flags")] = ToQStr(action->flags);
+
+      QJsonArray outputs;
+      for(ResourceId id : action->outputs)
+      {
+        if(id == ResourceId())
+          continue;
+        QJsonObject output;
+        output[lit("id")] = ToQStr(id);
+        output[lit("name")] = QString(m_Ctx.GetResourceName(id));
+        output[lit("kind")] = lit("color");
+        outputs.push_back(output);
+      }
+      if(action->depthOut != ResourceId())
+      {
+        QJsonObject output;
+        output[lit("id")] = ToQStr(action->depthOut);
+        output[lit("name")] = QString(m_Ctx.GetResourceName(action->depthOut));
+        output[lit("kind")] = lit("depth-stencil");
+        outputs.push_back(output);
+      }
+      record[lit("knownOutputs")] = outputs;
+    }
+    else
+    {
+      record[lit("name")] = tr("Unknown or stale action");
+      record[lit("flags")] = lit("UNKNOWN");
+      record[lit("knownOutputs")] = QJsonArray();
+    }
+    actions.push_back(record);
+  }
+
+  root[lit("disabledEventIds")] = disabled;
+  root[lit("actions")] = actions;
+  root[lit("limitations")] =
+      tr("Known outputs come from ActionDescription color/depth fields. UAV/storage, "
+         "stream-output, and downstream effects require runtime inspection and may not be listed.");
+
+  return WriteJsonAtomically(filename, QJsonDocument(root), error);
+}
+
+bool EventBrowser::ReadVisibilityPreset(const QString &filename, QSet<uint32_t> &eventIds,
+                                        QString &error) const
+{
+  QFile file(filename);
+  if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
+  {
+    error = tr("Couldn't open %1: %2").arg(filename).arg(file.errorString());
+    return false;
+  }
+
+  if(file.size() > 16 * 1024 * 1024)
+  {
+    error = tr("Preset is larger than the 16 MiB safety limit.");
+    return false;
+  }
+
+  QJsonParseError parseError;
+  const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &parseError);
+  if(parseError.error != QJsonParseError::NoError || !document.isObject())
+  {
+    error = tr("Invalid JSON preset: %1").arg(parseError.errorString());
+    return false;
+  }
+
+  QString currentSHA256;
+  if(!CaptureSHA256(currentSHA256, error))
+    return false;
+  return DecodeActionVisibilityPreset(document, currentSHA256, eventIds, error);
+}
+
+void EventBrowser::SaveVisibilityPreset()
+{
+  QString suggested = QFileInfo(QString(m_Ctx.GetCaptureFilename())).completeBaseName();
+  suggested += lit("-action-visibility.json");
+  QString filename =
+      RDDialog::getSaveFileName(this, tr("Save Action Visibility Preset"), suggested,
+                                tr("Action Visibility preset (*.json);;All files (*)"));
+  if(filename.isEmpty())
+    return;
+  if(QFileInfo(filename).suffix().isEmpty())
+    filename += lit(".json");
+
+  QString error;
+  if(!WriteVisibilityPreset(filename, lit("renderdoc-action-visibility-preset"), error))
+    RDDialog::critical(this, tr("Couldn't Save Action Visibility Preset"), error);
+}
+
+void EventBrowser::LoadVisibilityPreset()
+{
+  const QString filename =
+      RDDialog::getOpenFileName(this, tr("Load Action Visibility Preset"), QString(),
+                                tr("Action Visibility preset (*.json);;All files (*)"));
+  if(filename.isEmpty())
+    return;
+
+  QSet<uint32_t> eventIds;
+  QString error;
+  if(!ReadVisibilityPreset(filename, eventIds, error))
+  {
+    RDDialog::critical(this, tr("Couldn't Load Action Visibility Preset"), error);
+    return;
+  }
+
+  ApplyDisabledActions(eventIds, true);
+}
+
+void EventBrowser::ExportDisabledActionList()
+{
+  QString suggested = QFileInfo(QString(m_Ctx.GetCaptureFilename())).completeBaseName();
+  suggested += lit("-disabled-actions.json");
+  QString filename =
+      RDDialog::getSaveFileName(this, tr("Export Disabled Action List"), suggested,
+                                tr("Disabled action report (*.json);;All files (*)"));
+  if(filename.isEmpty())
+    return;
+  if(QFileInfo(filename).suffix().isEmpty())
+    filename += lit(".json");
+
+  QString error;
+  if(!WriteVisibilityPreset(filename, lit("renderdoc-disabled-action-report"), error))
+    RDDialog::critical(this, tr("Couldn't Export Disabled Action List"), error);
+}
+
+void EventBrowser::events_clicked(const QModelIndex &index)
+{
+  if(!index.isValid() || index.column() != COL_VISIBILITY)
+    return;
+
+  const uint32_t eid = GetSelectedEID(index);
+  const ActionDescription *action = m_Ctx.GetAction(eid);
+  if(!action || action->eventId != eid || !action->IsActionVisibilityEligible())
+    return;
+
+  QSet<uint32_t> requested = m_DisabledActions;
+  const bool disabled = requested.contains(eid);
+  if(disabled)
+    requested.remove(eid);
+  else
+    requested.insert(eid);
+  ApplyDisabledActions(requested, !disabled);
+}
+
 void EventBrowser::events_keyPress(QKeyEvent *event)
 {
   if(!m_Ctx.IsCaptureLoaded())
     return;
+
+  if(event->key() == Qt::Key_Space && event->modifiers() == Qt::NoModifier)
+  {
+    const rdcarray<uint32_t> selected = SelectedVisibilityActions();
+    bool hasEnabled = false;
+    for(uint32_t eid : selected)
+      hasEnabled |= !m_DisabledActions.contains(eid);
+
+    if(hasEnabled)
+      DisableSelectedActions();
+    else if(!selected.empty())
+      EnableSelectedActions();
+
+    if(!selected.empty())
+      event->accept();
+    return;
+  }
 
   if(event->key() == Qt::Key_F3)
   {
@@ -5635,22 +6279,61 @@ void EventBrowser::events_contextMenu(const QPoint &pos)
   QAction collapseAll(tr("&Collapse All"), this);
   QAction toggleBookmark(tr("Toggle &Bookmark"), this);
   QAction selectCols(tr("&Select Columns..."), this);
+  QMenu visibilityMenu(tr("Action &Visibility"), this);
+  QAction disableSelected(tr("&Disable Selected Direct Actions"), this);
+  QAction enableSelected(tr("&Enable Selected Direct Actions"), this);
+  QAction clearDisabled(tr("&Clear All Disabled Actions"), this);
+  QAction savePreset(tr("&Save Capture-Bound Preset..."), this);
+  QAction loadPreset(tr("&Load Capture-Bound Preset..."), this);
+  QAction exportDisabled(tr("E&xport Disabled Action List..."), this);
   QAction rgpSelect(tr("Select &RGP Event"), this);
   rgpSelect.setIcon(Icons::connect());
 
   contextMenu.addAction(&expandAll);
   contextMenu.addAction(&collapseAll);
   contextMenu.addAction(&toggleBookmark);
+  contextMenu.addMenu(&visibilityMenu);
   contextMenu.addAction(&selectCols);
+
+  visibilityMenu.addAction(&disableSelected);
+  visibilityMenu.addAction(&enableSelected);
+  visibilityMenu.addAction(&clearDisabled);
+  visibilityMenu.addSeparator();
+  visibilityMenu.addAction(&savePreset);
+  visibilityMenu.addAction(&loadPreset);
+  visibilityMenu.addAction(&exportDisabled);
 
   expandAll.setIcon(Icons::arrow_out());
   collapseAll.setIcon(Icons::arrow_in());
   toggleBookmark.setIcon(Icons::asterisk_orange());
+  disableSelected.setIcon(Icons::cross());
+  enableSelected.setIcon(Icons::tick());
+  clearDisabled.setIcon(Icons::arrow_undo());
+  savePreset.setIcon(Icons::save());
+  loadPreset.setIcon(Icons::folder_page_white());
+  exportDisabled.setIcon(Icons::page_go());
   selectCols.setIcon(Icons::timeline_marker());
 
   expandAll.setEnabled(index.isValid() && ui->events->model()->rowCount(index) > 0);
   collapseAll.setEnabled(expandAll.isEnabled());
   toggleBookmark.setEnabled(m_Ctx.IsCaptureLoaded());
+
+  const rdcarray<uint32_t> visibilityActions = SelectedVisibilityActions(index);
+  bool hasEnabled = false;
+  bool hasDisabled = false;
+  for(uint32_t eid : visibilityActions)
+  {
+    hasEnabled |= !m_DisabledActions.contains(eid);
+    hasDisabled |= m_DisabledActions.contains(eid);
+  }
+
+  const bool visibilitySupported = VisibilityBackendSupported();
+  disableSelected.setEnabled(visibilitySupported && hasEnabled);
+  enableSelected.setEnabled(visibilitySupported && hasDisabled);
+  clearDisabled.setEnabled(visibilitySupported && !m_DisabledActions.isEmpty());
+  savePreset.setEnabled(visibilitySupported && m_Ctx.IsCaptureLoaded());
+  loadPreset.setEnabled(visibilitySupported && m_Ctx.IsCaptureLoaded());
+  exportDisabled.setEnabled(visibilitySupported && !m_DisabledActions.isEmpty());
 
   QObject::connect(&expandAll, &QAction::triggered,
                    [this, index]() { ui->events->expandAll(index); });
@@ -5659,6 +6342,18 @@ void EventBrowser::events_contextMenu(const QPoint &pos)
                    [this, index]() { ui->events->collapseAll(index); });
 
   QObject::connect(&toggleBookmark, &QAction::triggered, this, &EventBrowser::on_bookmark_clicked);
+  QObject::connect(&disableSelected, &QAction::triggered,
+                   [this, index]() { DisableSelectedActions(index); });
+  QObject::connect(&enableSelected, &QAction::triggered,
+                   [this, index]() { EnableSelectedActions(index); });
+  QObject::connect(&clearDisabled, &QAction::triggered, this,
+                   &EventBrowser::ClearDisabledActions);
+  QObject::connect(&savePreset, &QAction::triggered, this,
+                   &EventBrowser::SaveVisibilityPreset);
+  QObject::connect(&loadPreset, &QAction::triggered, this,
+                   &EventBrowser::LoadVisibilityPreset);
+  QObject::connect(&exportDisabled, &QAction::triggered, this,
+                   &EventBrowser::ExportDisabledActionList);
 
   QObject::connect(&selectCols, &QAction::triggered, this, &EventBrowser::on_colSelect_clicked);
 
@@ -6124,3 +6819,106 @@ void EventBrowser::SetEmptyRegionsVisible(bool show)
 {
   m_FilterModel->SetEmptyRegionsVisible(show);
 }
+
+#if ENABLE_UNIT_TESTS
+
+#include <QTemporaryDir>
+#include "3rdparty/catch/catch.hpp"
+
+TEST_CASE("Action Visibility presets are capture-bound and type-safe", "[action-visibility]")
+{
+  QJsonObject root;
+  root[lit("schemaVersion")] = 1;
+  root[lit("kind")] = lit("renderdoc-action-visibility-preset");
+  root[lit("loadable")] = true;
+  root[lit("captureSHA256")] = lit("AABBCC");
+  root[lit("disabledEventIds")] = QJsonArray({42.0, 7.0, 42.0, 4294967295.0});
+
+  QSet<uint32_t> ids;
+  QString error;
+  REQUIRE(DecodeActionVisibilityPreset(QJsonDocument(root), lit("aabbcc"), ids, error));
+  CHECK(ids == QSet<uint32_t>({7U, 42U, UINT32_MAX}));
+
+  SECTION("atomic disk round-trip preserves the preset")
+  {
+    QTemporaryDir temp;
+    REQUIRE(temp.isValid());
+    const QString path = temp.filePath(lit("preset.json"));
+    REQUIRE(WriteJsonAtomically(path, QJsonDocument(root), error));
+
+    QFile stored(path);
+    REQUIRE(stored.open(QIODevice::ReadOnly | QIODevice::Text));
+    QJsonParseError parseError;
+    const QJsonDocument roundTrip = QJsonDocument::fromJson(stored.readAll(), &parseError);
+    REQUIRE(int(parseError.error) == int(QJsonParseError::NoError));
+
+    QSet<uint32_t> roundTripIDs;
+    REQUIRE(DecodeActionVisibilityPreset(roundTrip, lit("AABBCC"), roundTripIDs, error));
+    CHECK(roundTripIDs == ids);
+  }
+
+  SECTION("capture mismatch is rejected")
+  {
+    CHECK_FALSE(DecodeActionVisibilityPreset(QJsonDocument(root), lit("DIFFERENT"), ids, error));
+    CHECK(error.contains(lit("SHA-256")));
+  }
+
+  SECTION("non-loadable reports are rejected")
+  {
+    root[lit("kind")] = lit("renderdoc-disabled-action-report");
+    root[lit("loadable")] = false;
+    CHECK_FALSE(DecodeActionVisibilityPreset(QJsonDocument(root), lit("AABBCC"), ids, error));
+  }
+
+  SECTION("fractional, negative, overflowing, and string IDs are rejected")
+  {
+    const QList<QJsonValue> invalid = {
+        QJsonValue(1.5),
+        QJsonValue(-1.0),
+        QJsonValue(4294967296.0),
+        QJsonValue(lit("42")),
+    };
+
+    for(const QJsonValue &value : invalid)
+    {
+      root[lit("disabledEventIds")] = QJsonArray({value});
+      INFO("value " << value.toVariant().toString().toStdString());
+      CHECK_FALSE(DecodeActionVisibilityPreset(QJsonDocument(root), lit("AABBCC"), ids, error));
+    }
+  }
+}
+
+TEST_CASE("Action Visibility eligibility protects compound work", "[action-visibility]")
+{
+  ActionDescription draw;
+  draw.eventId = 10;
+  draw.flags = ActionFlags::Drawcall;
+  CHECK(draw.IsActionVisibilityEligible());
+
+  ActionDescription dispatch;
+  dispatch.eventId = 20;
+  dispatch.flags = ActionFlags::Dispatch;
+  CHECK(dispatch.IsActionVisibilityEligible());
+
+  ActionDescription indirect;
+  indirect.eventId = 30;
+  indirect.flags = ActionFlags::Drawcall | ActionFlags::Indirect;
+  CHECK_FALSE(indirect.IsActionVisibilityEligible());
+
+  ActionDescription compound;
+  compound.eventId = 40;
+  compound.flags = ActionFlags::Drawcall | ActionFlags::MultiAction;
+  compound.children.resize(1);
+  compound.children[0].eventId = 41;
+  compound.children[0].flags = ActionFlags::Drawcall;
+  compound.children[0].parent = &compound;
+  CHECK_FALSE(compound.IsActionVisibilityEligible());
+  CHECK_FALSE(compound.children[0].IsActionVisibilityEligible());
+
+  ActionDescription mesh;
+  mesh.eventId = 50;
+  mesh.flags = ActionFlags::MeshDispatch;
+  CHECK_FALSE(mesh.IsActionVisibilityEligible());
+}
+
+#endif
