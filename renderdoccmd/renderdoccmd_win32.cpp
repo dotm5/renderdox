@@ -147,7 +147,7 @@ WindowingData DisplayRemoteServerPreview(bool active, const rdcarray<WindowingSy
       AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
 
       HWND wnd =
-          CreateWindowEx(WS_EX_CLIENTEDGE, L"renderdoccmd", L"Remote Server Preview",
+          CreateWindowEx(WS_EX_CLIENTEDGE, RDOC_COMMAND_BASE_NAME_W, L"Remote Server Preview",
                          WS_OVERLAPPED | WS_CAPTION | WS_MINIMIZEBOX, CW_USEDEFAULT, CW_USEDEFAULT,
                          wr.right - wr.left, wr.bottom - wr.top, NULL, NULL, hInstance, NULL);
 
@@ -194,9 +194,9 @@ void DisplayRendererPreview(IReplayController *renderer, TextureDisplay &display
   RECT wr = {0, 0, (LONG)width, (LONG)height};
   AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
 
-  HWND wnd = CreateWindowEx(WS_EX_CLIENTEDGE, L"renderdoccmd", L"renderdoccmd", WS_OVERLAPPEDWINDOW,
-                            CW_USEDEFAULT, CW_USEDEFAULT, wr.right - wr.left, wr.bottom - wr.top,
-                            NULL, NULL, hInstance, NULL);
+  HWND wnd = CreateWindowEx(WS_EX_CLIENTEDGE, RDOC_COMMAND_BASE_NAME_W, RDOC_COMMAND_BASE_NAME_W,
+                            WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, wr.right - wr.left,
+                            wr.bottom - wr.top, NULL, NULL, hInstance, NULL);
 
   if(wnd == NULL)
     return;
@@ -560,16 +560,24 @@ struct CrashHandlerCommand : public Command
 {
 private:
   std::wstring pipe;
+  std::wstring readyEvent;
 
 public:
   CrashHandlerCommand() {}
-  virtual void AddOptions(cmdline::parser &parser) { parser.add<std::string>("pipe", 0, ""); }
+  virtual void AddOptions(cmdline::parser &parser)
+  {
+    parser.add<std::string>("pipe", 0, "");
+    parser.add<std::string>("ready-event", 0, "");
+  }
   virtual const char *Description() { return "Internal use only!"; }
   virtual bool IsInternalOnly() { return true; }
   virtual bool IsCaptureCommand() { return false; }
   virtual bool Parse(cmdline::parser &parser, GlobalEnvironment &)
   {
     pipe = conv(parser.get<std::string>("pipe"));
+    readyEvent = conv(parser.get<std::string>("ready-event"));
+    if(readyEvent.empty())
+      readyEvent = L"RENDERDOC_CRASHHANDLE";
     return true;
   }
   virtual rdcarray<rdcstr> ReplayArgs() { return {"--crash"}; }
@@ -584,7 +592,7 @@ public:
 
     // create each parent directory separately, and use \\s
 
-    dumpFolder += L"RenderDoc";
+    dumpFolder += RDOC_LOG_NAMESPACE_W;
     CreateDirectoryW(dumpFolder.c_str(), NULL);
 
     dumpFolder += L"\\dumps";
@@ -601,13 +609,13 @@ public:
       return 1;
     }
 
-    HANDLE readyEvent = CreateEventA(NULL, TRUE, FALSE, "RENDERDOC_CRASHHANDLE");
+    HANDLE readyEventHandle = CreateEventW(NULL, TRUE, FALSE, readyEvent.c_str());
 
-    if(readyEvent != NULL)
+    if(readyEventHandle != NULL)
     {
-      SetEvent(readyEvent);
+      SetEvent(readyEventHandle);
 
-      CloseHandle(readyEvent);
+      CloseHandle(readyEventHandle);
     }
 
     const int loopSleep = 100;
@@ -925,7 +933,7 @@ int main(int, char *)
   wc.hCursor = LoadCursor(NULL, IDC_ARROW);
   wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
   wc.lpszMenuName = NULL;
-  wc.lpszClassName = L"renderdoccmd";
+  wc.lpszClassName = RDOC_COMMAND_BASE_NAME_W;
   wc.hIconSm = LoadIcon(NULL, MAKEINTRESOURCE(IDI_ICON));
 
   if(!RegisterClassEx(&wc))

@@ -9,6 +9,8 @@
     <RDocCommandBaseName>rendertestcmd</RDocCommandBaseName>
     <RDocUIStubBaseName>rendertestui</RDocUIStubBaseName>
     <RDocShimBaseName>rendertestshim</RDocShimBaseName>
+    <RDocConfigNamespace>RenderTest</RDocConfigNamespace>
+    <RDocLogNamespace>RenderTest</RDocLogNamespace>
     <RDocReplayBaseName>renderdoc</RDocReplayBaseName>
     <RDocVulkanJsonBaseName>renderdoc</RDocVulkanJsonBaseName>
     <RDocVulkanLayerName>VK_LAYER_RENDERDOC_Capture</RDocVulkanLayerName>

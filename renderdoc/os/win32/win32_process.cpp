@@ -1375,12 +1375,17 @@ RDResult BackupAndChangeRegistry(GlobalHookData &hookdata, const rdcstr &shimpat
   keyNative = keyWow32 = NULL;
 
   // write it to disk but don't fail if we can't, just print it to the log and keep going.
-  wchar_t reg_backup[MAX_PATH];
-  GetTempPathW(MAX_PATH, reg_backup);
-  wcscat_s(reg_backup, L"RenderDoc_RestoreGlobalHook.reg");
+  rdcstr reg_backup = FileIO::GetTempFolderFilename();
+  if(reg_backup.empty())
+    reg_backup = ".";
+  if(reg_backup.back() != '/' && reg_backup.back() != '\\')
+    reg_backup += "\\";
+  reg_backup += RDOC_LOG_NAMESPACE "_RestoreGlobalHook.reg";
+
+  rdcwstr wide_reg_backup = StringFormat::UTF82Wide(reg_backup);
 
   FILE *f = NULL;
-  _wfopen_s(&f, reg_backup, L"w");
+  _wfopen_s(&f, wide_reg_backup.c_str(), L"w");
   if(f)
   {
     fputws(backup.c_str(), f);
@@ -1388,7 +1393,7 @@ RDResult BackupAndChangeRegistry(GlobalHookData &hookdata, const rdcstr &shimpat
   }
   else
   {
-    RDCERR("Error opening registry backup file %ls", reg_backup);
+    RDCERR("Error opening registry backup file %s", reg_backup.c_str());
     RDCERR("Backup registry data is:\n\n%ls\n\n", backup.c_str());
   }
 

@@ -23,9 +23,11 @@ BASENAME_FIELDS = (
     "uiStubBaseName",
     "shimBaseName",
 )
-EXPECTED_FIELDS = {"schemaVersion", *DISPLAY_FIELDS, *BASENAME_FIELDS}
+NAMESPACE_FIELDS = ("configNamespace", "logNamespace")
+EXPECTED_FIELDS = {"schemaVersion", *DISPLAY_FIELDS, *BASENAME_FIELDS, *NAMESPACE_FIELDS}
 VALID_BASENAME = re.compile(r"^[a-z][a-z0-9_]*$")
 VALID_DISPLAY_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 ._+()&'\-]{0,63}$")
+VALID_NAMESPACE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 WINDOWS_RESERVED_NAMES = {
     "con",
     "prn",
@@ -89,6 +91,17 @@ def load_identity():
         if value.casefold() in WINDOWS_RESERVED_NAMES:
             raise IdentityError("{} is a reserved Windows device name".format(field))
 
+    for field in NAMESPACE_FIELDS:
+        value = identity[field]
+        if not isinstance(value, str) or not VALID_NAMESPACE.fullmatch(value):
+            raise IdentityError(
+                "{} must match {}".format(field, VALID_NAMESPACE.pattern)
+            )
+        if value.endswith("."):
+            raise IdentityError("{} must not end with a period".format(field))
+        if value.split(".", 1)[0].casefold() in WINDOWS_RESERVED_NAMES:
+            raise IdentityError("{} is a reserved Windows device name".format(field))
+
     if len(set(identity[field].lower() for field in BASENAME_FIELDS)) != len(BASENAME_FIELDS):
         raise IdentityError("Every output basename must be unique")
 
@@ -119,6 +132,8 @@ def render_props(identity):
         ("RDocCommandBaseName", identity["commandBaseName"]),
         ("RDocUIStubBaseName", identity["uiStubBaseName"]),
         ("RDocShimBaseName", identity["shimBaseName"]),
+        ("RDocConfigNamespace", identity["configNamespace"]),
+        ("RDocLogNamespace", identity["logNamespace"]),
         # These identifiers are public compatibility contracts, not configurable branding.
         ("RDocReplayBaseName", "renderdoc"),
         ("RDocVulkanJsonBaseName", "renderdoc"),
@@ -146,6 +161,8 @@ def render_header(identity):
     command = identity["commandBaseName"]
     ui_stub = identity["uiStubBaseName"]
     shim = identity["shimBaseName"]
+    config_namespace = identity["configNamespace"]
+    log_namespace = identity["logNamespace"]
 
     values = (
         ("RDOC_PRODUCT_DISPLAY_NAME", product),
@@ -155,12 +172,17 @@ def render_header(identity):
         ("RDOC_COMMAND_BASE_NAME", command),
         ("RDOC_UI_STUB_BASE_NAME", ui_stub),
         ("RDOC_SHIM_BASE_NAME", shim),
+        ("RDOC_CONFIG_NAMESPACE", config_namespace),
+        ("RDOC_LOG_NAMESPACE", log_namespace),
         ("RDOC_CORE_FILENAME", core + ".dll"),
         ("RDOC_UI_FILENAME", ui + ".exe"),
         ("RDOC_COMMAND_FILENAME", command + ".exe"),
         ("RDOC_UI_STUB_FILENAME", ui_stub + ".exe"),
         ("RDOC_SHIM32_FILENAME", shim + "32.dll"),
         ("RDOC_SHIM64_FILENAME", shim + "64.dll"),
+        ("RDOC_CANONICAL_UI_FILENAME", "qrenderdoc.exe"),
+        ("RDOC_CANONICAL_COMMAND_FILENAME", "renderdoccmd.exe"),
+        ("RDOC_CANONICAL_UI_STUB_FILENAME", "renderdocui.exe"),
         ("RDOC_CORE_FILE_DESCRIPTION", "Core DLL for " + product),
         ("RDOC_UI_FILE_DESCRIPTION", product),
         ("RDOC_COMMAND_FILE_DESCRIPTION", command + " - https://renderdoc.org/"),
@@ -176,9 +198,28 @@ def render_header(identity):
         "// Edit build/product_identity.json, then regenerate this file.",
         "",
     ]
+    wide_values = {
+        "RDOC_CORE_BASE_NAME",
+        "RDOC_UI_BASE_NAME",
+        "RDOC_COMMAND_BASE_NAME",
+        "RDOC_UI_STUB_BASE_NAME",
+        "RDOC_SHIM_BASE_NAME",
+        "RDOC_CONFIG_NAMESPACE",
+        "RDOC_LOG_NAMESPACE",
+        "RDOC_CORE_FILENAME",
+        "RDOC_UI_FILENAME",
+        "RDOC_COMMAND_FILENAME",
+        "RDOC_UI_STUB_FILENAME",
+        "RDOC_SHIM32_FILENAME",
+        "RDOC_SHIM64_FILENAME",
+        "RDOC_CANONICAL_UI_FILENAME",
+        "RDOC_CANONICAL_COMMAND_FILENAME",
+        "RDOC_CANONICAL_UI_STUB_FILENAME",
+    }
+
     for name, value in values:
         lines.append("#define {} {}".format(name, c_string(value)))
-        if name.endswith("_FILENAME"):
+        if name in wide_values:
             lines.append("#define {}_W L{}".format(name, c_string(value)))
     lines.extend(("", "#endif    // RENDERDOC_GENERATED_PRODUCT_IDENTITY_H", ""))
     return "\n".join(lines)

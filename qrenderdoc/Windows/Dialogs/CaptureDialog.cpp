@@ -28,6 +28,7 @@
 #include <QSortFilterProxyModel>
 #include <QStandardItemModel>
 #include <QStandardPaths>
+#include "../../../renderdoc/generated/product_identity.h"
 #include "Code/QRDUtils.h"
 #include "Code/qprocessinfo.h"
 #include "Windows/Dialogs/EnvironmentEditor.h"
@@ -1131,7 +1132,8 @@ void CaptureDialog::UpdateGlobalHook()
     QString text = tr("Global hooking is risky!\nBe sure you know what you're doing.");
 
     if(ui->toggleGlobal->isChecked())
-      text += tr("\nEmergency restore @ %TEMP%\\RenderDoc_RestoreGlobalHook.reg");
+      text +=
+          tr("\nEmergency restore @ %TEMP%\\%1_RestoreGlobalHook.reg").arg(lit(RDOC_LOG_NAMESPACE));
 
     ui->globalLabel->setText(text);
   }

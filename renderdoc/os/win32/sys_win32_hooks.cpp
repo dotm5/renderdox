@@ -71,6 +71,81 @@ typedef BOOL(WINAPI *PFN_CREATE_PROCESS_WITH_LOGON_W)(LPCWSTR lpUsername, LPCWST
                                                       LPSTARTUPINFOW lpStartupInfo,
                                                       LPPROCESS_INFORMATION lpProcessInformation);
 
+static rdcstr GetExecutableBasename(LPCWSTR lpApplicationName, LPCWSTR lpCommandLine)
+{
+  const bool useApplicationName = lpApplicationName != NULL && lpApplicationName[0] != L'\0';
+  const wchar_t *value = useApplicationName ? lpApplicationName : lpCommandLine;
+
+  if(value == NULL)
+    return "";
+
+  while(*value == L' ' || *value == L'\t')
+    value++;
+
+  const wchar_t *begin = value;
+  const wchar_t *end = value;
+
+  if(*begin == L'"')
+  {
+    begin++;
+    end = begin;
+    while(*end != L'\0' && *end != L'"')
+      end++;
+  }
+  else if(useApplicationName)
+  {
+    while(*end != L'\0')
+      end++;
+    while(end > begin && (end[-1] == L' ' || end[-1] == L'\t'))
+      end--;
+  }
+  else
+  {
+    while(*end != L'\0' && *end != L' ' && *end != L'\t')
+      end++;
+  }
+
+  if(end == begin)
+    return "";
+
+  return strlower(get_basename(StringFormat::Wide2UTF8(rdcwstr(begin, end - begin))));
+}
+
+static bool IsExcludedChildTool(LPCWSTR lpApplicationName, LPCWSTR lpCommandLine)
+{
+  const rdcstr executable = GetExecutableBasename(lpApplicationName, lpCommandLine);
+  const char *excluded[] = {
+      RDOC_UI_FILENAME,           RDOC_COMMAND_FILENAME,           RDOC_UI_STUB_FILENAME,
+      RDOC_CANONICAL_UI_FILENAME, RDOC_CANONICAL_COMMAND_FILENAME, RDOC_CANONICAL_UI_STUB_FILENAME,
+  };
+
+  for(const char *filename : excluded)
+    if(executable == filename)
+      return true;
+
+  return false;
+}
+
+#if ENABLED(ENABLE_UNIT_TESTS)
+
+#include "catch/catch.hpp"
+
+TEST_CASE("Win32 child-tool exclusion parses only the executable token", "[win32][process]")
+{
+  CHECK(IsExcludedChildTool(L"C:\\Tools\\qrendertest.exe", NULL));
+  CHECK(IsExcludedChildTool(L"C:\\TOOLS\\RENDERTESTCMD.EXE", L"ignored.exe"));
+  CHECK(IsExcludedChildTool(NULL, L"  \"C:\\Program Files\\RenderTest\\rendertestui.exe\" --foo"));
+  CHECK(IsExcludedChildTool(NULL, L"C:\\Tools\\qrenderdoc.exe --foo"));
+
+  CHECK_FALSE(
+      IsExcludedChildTool(NULL, L"\"C:\\Games\\owned.exe\" --viewer C:\\Tools\\qrenderdoc.exe"));
+  CHECK_FALSE(IsExcludedChildTool(NULL, L"C:\\qrenderdoc.exe\\owned.exe --foo"));
+  CHECK_FALSE(IsExcludedChildTool(NULL, L"'C:\\Tools\\qrenderdoc.exe' --foo"));
+  CHECK_FALSE(IsExcludedChildTool(L"C:\\Games\\owned.exe", L"qrenderdoc.exe --foo"));
+}
+
+#endif
+
 class SysHook : LibraryHook
 {
 public:
@@ -330,30 +405,9 @@ private:
     if(!RenderDoc::Inst().GetCaptureOptions().hookIntoChildren)
       return false;
 
-    bool inject = true;
-
     // sanity check to make sure we're not going to go into an infinity loop injecting into
     // ourselves.
-    if(lpApplicationName)
-    {
-      rdcstr app = strlower(StringFormat::Wide2UTF8(lpApplicationName));
-
-      if(app.contains(strlower(RDOC_COMMAND_FILENAME)) || app.contains(strlower(RDOC_UI_FILENAME)))
-      {
-        inject = false;
-      }
-    }
-    if(lpCommandLine)
-    {
-      rdcstr cmd = strlower(StringFormat::Wide2UTF8(lpCommandLine));
-
-      if(cmd.contains(strlower(RDOC_COMMAND_FILENAME)) || cmd.contains(strlower(RDOC_UI_FILENAME)))
-      {
-        inject = false;
-      }
-    }
-
-    return inject;
+    return !IsExcludedChildTool(lpApplicationName, lpCommandLine);
   }
 
   static bool ShouldInject(LPCSTR lpApplicationName, LPCSTR lpCommandLine)

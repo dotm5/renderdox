@@ -328,47 +328,30 @@ rdcstr GetReplayAppFilename()
 void GetDefaultFiles(const rdcstr &logBaseName, rdcstr &capture_filename, rdcstr &logging_filename,
                      rdcstr &target)
 {
-  wchar_t temp_filename[MAX_PATH];
-
-  GetTempPathW(MAX_PATH, temp_filename);
-
-  wchar_t curFile[512];
-  GetModuleFileNameW(NULL, curFile, 512);
-
-  wchar_t fn[MAX_PATH];
-  wcscpy_s(fn, MAX_PATH, curFile);
-
-  wchar_t *mod = wcsrchr(fn, L'.');
-  if(mod)
-    *mod = 0;
-  mod = wcsrchr(fn, L'/');
-  if(!mod)
-    mod = fn;
-  mod = wcsrchr(mod, L'\\');
-
-  mod++;    // now points to base filename without extension
-
-  target = StringFormat::Wide2UTF8(mod);
+  rdcstr executable;
+  GetExecutableFilename(executable);
+  target = strip_extension(get_basename(executable));
+  if(target.empty())
+    target = "unknown";
 
   time_t t = time(NULL);
   tm now;
   localtime_s(&now, &t);
 
-  wchar_t *filename_start = temp_filename + wcslen(temp_filename);
+  rdcstr tempPath = GetTempFolderFilename();
+  if(tempPath.empty())
+    tempPath = ".";
+  if(tempPath.back() != '/' && tempPath.back() != '\\')
+    tempPath += "\\";
 
-  wsprintf(filename_start, L"RenderDoc\\%ls_%04d.%02d.%02d_%02d.%02d.rdc", mod, 1900 + now.tm_year,
-           now.tm_mon + 1, now.tm_mday, now.tm_hour, now.tm_min);
+  capture_filename = StringFormat::Fmt("%s%s\\%s_%04d.%02d.%02d_%02d.%02d.rdc", tempPath.c_str(),
+                                       RDOC_LOG_NAMESPACE, target.c_str(), 1900 + now.tm_year,
+                                       now.tm_mon + 1, now.tm_mday, now.tm_hour, now.tm_min);
 
-  capture_filename = StringFormat::Wide2UTF8(temp_filename);
-
-  *filename_start = 0;
-
-  rdcwstr wbase = StringFormat::UTF82Wide(logBaseName);
-
-  wsprintf(filename_start, L"RenderDoc\\%ls_%04d.%02d.%02d_%02d.%02d.%02d.log", wbase.c_str(),
-           1900 + now.tm_year, now.tm_mon + 1, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec);
-
-  logging_filename = StringFormat::Wide2UTF8(temp_filename);
+  logging_filename =
+      StringFormat::Fmt("%s%s\\%s_%04d.%02d.%02d_%02d.%02d.%02d.log", tempPath.c_str(),
+                        RDOC_LOG_NAMESPACE, logBaseName.c_str(), 1900 + now.tm_year, now.tm_mon + 1,
+                        now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec);
 }
 
 rdcstr GetHomeFolderFilename()
@@ -401,7 +384,7 @@ rdcstr GetAppFolderFilename(const rdcstr &filename)
   while(ret.back() == '/' || ret.back() == '\\')
     ret.pop_back();
 
-  ret += "\\renderdoc\\" + filename;
+  ret += "\\" RDOC_CONFIG_NAMESPACE "\\" + filename;
 
   CreateParentDirectory(ret);
 
@@ -410,11 +393,17 @@ rdcstr GetAppFolderFilename(const rdcstr &filename)
 
 rdcstr GetTempFolderFilename()
 {
-  wchar_t temp_filename[MAX_PATH];
+  const DWORD required = GetTempPathW(0, NULL);
+  if(required == 0)
+    return "";
 
-  GetTempPathW(MAX_PATH, temp_filename);
+  rdcwstr tempPath(required - 1);
 
-  return StringFormat::Wide2UTF8(temp_filename);
+  const DWORD length = GetTempPathW(required, tempPath.data());
+  if(length == 0 || length >= required)
+    return "";
+
+  return StringFormat::Wide2UTF8(tempPath);
 }
 
 uint64_t GetModifiedTimestamp(const rdcstr &filename)

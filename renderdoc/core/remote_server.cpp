@@ -31,6 +31,7 @@
 #include "common/threading.h"
 #include "core/core.h"
 #include "core/settings.h"
+#include "generated/product_identity.h"
 #include "os/os_specific.h"
 #include "replay/replay_controller.h"
 #include "serialise/rdcfile.h"
@@ -44,6 +45,15 @@ RDOC_CONFIG(uint32_t, RemoteServer_TimeoutMS, 5000,
 RDOC_CONFIG(bool, RemoteServer_DebugLogging, false,
             "Output a verbose logging file in the system's temporary folder containing the "
             "traffic to and from the remote server.");
+
+static const char *RemoteServerLogNamespace()
+{
+#if ENABLED(RDOC_WIN32)
+  return RDOC_LOG_NAMESPACE;
+#else
+  return "RenderDoc";
+#endif
+}
 
 #define MAKE_REMOTE_SERVER_VERSION(maj, min) uint32_t((maj)*1000) + (min)
 
@@ -308,11 +318,13 @@ static void ActiveRemoteClientThread(ClientThread *threadData,
     reader.ConfigureStructuredExport(&GetRemoteServerChunkName, false, 0, 1.0);
     writer.ConfigureStructuredExport(&GetRemoteServerChunkName, false, 0, 1.0);
 
-    rdcstr filename = FileIO::GetTempFolderFilename() + "/RenderDoc/RemoteServer_Server.log";
+    rdcstr filename = FileIO::GetTempFolderFilename() + "/" + RemoteServerLogNamespace() +
+                      "/RemoteServer_Server.log";
 
     RDCLOG("Logging remote server work to '%s'", filename.c_str());
 
     // truncate the log
+    FileIO::CreateParentDirectory(filename);
     debugLog = FileIO::logfile_open(filename);
     FileIO::logfile_close(debugLog, filename);
     debugLog = FileIO::logfile_open(filename);
@@ -1075,7 +1087,8 @@ void RenderDoc::BecomeRemoteServer(const rdcstr &listenhost, uint16_t port,
   rdcarray<rdcpair<uint32_t, uint32_t> > listenRanges;
   bool allowExecution = true;
 
-  FILE *f = FileIO::fopen(FileIO::GetAppFolderFilename("remoteserver.conf"), FileIO::ReadText);
+  const rdcstr configFilename = FileIO::GetAppFolderFilename("remoteserver.conf");
+  FILE *f = FileIO::fopen(configFilename, FileIO::ReadText);
 
   rdcstr configFile;
 
@@ -1137,9 +1150,9 @@ void RenderDoc::BecomeRemoteServer(const rdcstr &listenhost, uint16_t port,
   {
     RDCLOG("No whitelist IP ranges configured - using default private IP ranges.");
     RDCLOG(
-        "Create a config file remoteserver.conf in ~/.renderdoc or %%APPDATA%%/renderdoc to "
-        "narrow "
-        "this down or accept connections from more ranges.");
+        "Create a config file at '%s' to narrow this down or accept connections from more "
+        "ranges.",
+        configFilename.c_str());
 
     listenRanges.push_back(make_rdcpair(Network::MakeIP(10, 0, 0, 0), 0xff000000));
     listenRanges.push_back(make_rdcpair(Network::MakeIP(172, 16, 0, 0), 0xfff00000));
@@ -1416,11 +1429,13 @@ RemoteServer::RemoteServer(Network::Socket *sock, const rdcstr &deviceID)
     reader->ConfigureStructuredExport(&GetRemoteServerChunkName, false, 0, 1.0);
     writer->ConfigureStructuredExport(&GetRemoteServerChunkName, false, 0, 1.0);
 
-    rdcstr filename = FileIO::GetTempFolderFilename() + "/RenderDoc/RemoteServer_Client.log";
+    rdcstr filename = FileIO::GetTempFolderFilename() + "/" + RemoteServerLogNamespace() +
+                      "/RemoteServer_Client.log";
 
     RDCLOG("Logging remote server work to '%s'", filename.c_str());
 
     // truncate the log
+    FileIO::CreateParentDirectory(filename);
     debugLog = FileIO::logfile_open(filename);
     FileIO::logfile_close(debugLog, filename);
     debugLog = FileIO::logfile_open(filename);

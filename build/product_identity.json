@@ -6,5 +6,7 @@
   "uiBaseName": "qrendertest",
   "commandBaseName": "rendertestcmd",
   "uiStubBaseName": "rendertestui",
-  "shimBaseName": "rendertestshim"
+  "shimBaseName": "rendertestshim",
+  "configNamespace": "RenderTest",
+  "logNamespace": "RenderTest"
 }

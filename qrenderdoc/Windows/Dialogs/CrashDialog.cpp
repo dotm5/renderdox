@@ -36,6 +36,7 @@
 #include <QSslSocket>
 #include <QString>
 #include <QUrlQuery>
+#include "../../../renderdoc/generated/product_identity.h"
 #include "Code/QRDUtils.h"
 #include "ui_CrashDialog.h"
 
@@ -206,10 +207,11 @@ CrashDialog::CrashDialog(PersistantConfig &cfg, QVariantMap crashReportJSON, QWi
 
 #if defined(Q_OS_WIN32)
 #if QT_POINTER_SIZE == 8
-    text +=
-        tr("you have libcrypto-1_1-64.dll and libssl-1_1-64.dll available next to qrenderdoc.exe.");
+    text += tr("you have libcrypto-1_1-64.dll and libssl-1_1-64.dll available next to %1.")
+                .arg(lit(RDOC_UI_FILENAME));
 #else
-    text += tr("you have libcrypto-1_1.dll and libssl-1_1.dll available next to qrenderdoc.exe.");
+    text += tr("you have libcrypto-1_1.dll and libssl-1_1.dll available next to %1.")
+                .arg(lit(RDOC_UI_FILENAME));
 #endif
 #else
     text += tr("you have the runtime libopenssl library >= 1.1.1 available in your system.");
@@ -218,7 +220,8 @@ CrashDialog::CrashDialog(PersistantConfig &cfg, QVariantMap crashReportJSON, QWi
 #else
 
 #if defined(Q_OS_WIN32)
-    text += tr("you have libeay32.dll and ssleay32.dll available next to qrenderdoc.exe.");
+    text +=
+        tr("you have libeay32.dll and ssleay32.dll available next to %1.").arg(lit(RDOC_UI_FILENAME));
 #else
     text += tr("you have the runtime libopenssl library >= 1.0.0 available in your system.");
 #endif

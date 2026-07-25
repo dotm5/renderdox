@@ -31,13 +31,13 @@
 #include <QRegularExpressionMatch>
 #include <QStandardPaths>
 #include <QSysInfo>
+#include "../../renderdoc/generated/product_identity.h"
 #include "Code/CaptureContext.h"
 #include "Code/QRDUtils.h"
 #include "Code/Resources.h"
 #include "Code/pyrenderdoc/PythonContext.h"
 #include "Windows/Dialogs/CrashDialog.h"
 #include "Windows/MainWindow.h"
-#include "../../renderdoc/generated/product_identity.h"
 #include "version.h"
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 9, 0)
@@ -324,9 +324,16 @@ int main(int argc, char *argv[])
 #endif
 
   QApplication application(argc, argv);
+#if defined(Q_OS_WIN32)
+  QCoreApplication::setApplicationName(lit(RDOC_CONFIG_NAMESPACE));
+#endif
 
   QCommandLineParser parser;
+#if defined(Q_OS_WIN32)
+  parser.setApplicationDescription(tr("Qt UI for %1").arg(lit(RDOC_PRODUCT_DISPLAY_NAME)));
+#else
   parser.setApplicationDescription(tr("Qt UI for RenderDoc"));
+#endif
   QCommandLineOption helpOption = parser.addHelpOption();
   QCommandLineOption versionOption = parser.addVersionOption();
 

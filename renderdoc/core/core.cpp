@@ -691,7 +691,11 @@ void RenderDoc::Initialise()
   {
     rdcstr capture_filename;
 
+#if ENABLED(RDOC_WIN32)
+    const rdcstr base = IsReplayApp() ? RDOC_LOG_NAMESPACE : RDOC_LOG_NAMESPACE "_app";
+#else
     const rdcstr base = IsReplayApp() ? "RenderDoc" : "RenderDoc_app";
+#endif
 
     FileIO::GetDefaultFiles(base, capture_filename, m_LoggingFilename, m_Target);
 
@@ -700,6 +704,12 @@ void RenderDoc::Initialise()
 
     RDCLOGFILE(m_LoggingFilename.c_str());
   }
+
+#if ENABLED(RDOC_WIN32)
+  const char *productDisplayName = RDOC_PRODUCT_DISPLAY_NAME;
+#else
+  const char *productDisplayName = "RenderDoc";
+#endif
 
   const char *platform =
 #if ENABLED(RDOC_WIN32)
@@ -714,7 +724,7 @@ void RenderDoc::Initialise()
       "Unknown";
 #endif
 
-  RDCLOG("RenderDoc v%s %s %s %s (%s) %s", MAJOR_MINOR_VERSION_STRING, platform,
+  RDCLOG("%s v%s %s %s %s (%s) %s", productDisplayName, MAJOR_MINOR_VERSION_STRING, platform,
          sizeof(uintptr_t) == sizeof(uint64_t) ? "64-bit" : "32-bit",
          ENABLED(RDOC_RELEASE) ? "Release" : "Development", GitVersionHash,
          IsReplayApp() ? "loaded in replay application" : "capturing application");

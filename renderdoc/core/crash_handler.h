@@ -61,7 +61,7 @@ public:
 
     ///////////////////
 
-    rdcstr dumpFolder = FileIO::GetTempFolderFilename() + "RenderDoc\\dumps\\a";
+    rdcstr dumpFolder = FileIO::GetTempFolderFilename() + RDOC_LOG_NAMESPACE "\\dumps\\a";
     FileIO::CreateParentDirectory(dumpFolder);
     dumpFolder.pop_back();
     dumpFolder.pop_back();
@@ -130,7 +130,12 @@ public:
     si.dwFlags |= STARTF_USESHOWWINDOW;
     si.wShowWindow = SW_HIDE;
 
-    HANDLE waitEvent = CreateEventA(NULL, TRUE, FALSE, "RENDERDOC_CRASHHANDLE");
+    const rdcstr readyEventName = StringFormat::Fmt(RDOC_LOG_NAMESPACE "CrashHandlerReady%u_%llu",
+                                                    Process::GetCurrentPID(), Timing::GetTick());
+    HANDLE waitEvent = CreateEventA(NULL, TRUE, FALSE, readyEventName.c_str());
+
+    if(waitEvent == NULL)
+      RDCERR("Failed to create crash-handler ready event: %d", GetLastError());
 
     rdcstr dllpath;
     FileIO::GetLibraryFilename(dllpath);
@@ -139,6 +144,8 @@ public:
     cmdline += get_dirname(dllpath);
     cmdline += "/" RDOC_COMMAND_FILENAME "\" crashhandle --pipe ";
     cmdline += m_PipeName;
+    cmdline += " --ready-event ";
+    cmdline += readyEventName;
 
     rdcwstr params = StringFormat::UTF82Wide(cmdline);
 
@@ -148,12 +155,18 @@ public:
     if(!ret)
       RDCERR("Failed to create crashhandle server: %d", GetLastError());
 
+    if(ret && waitEvent)
     {
       SCOPED_TIMER("Waiting for crash handling server");
-      WaitForSingleObject(waitEvent, 400);
+      const DWORD waitResult = WaitForSingleObject(waitEvent, 400);
+      if(waitResult == WAIT_TIMEOUT)
+        RDCWARN("Timed out waiting for the crash-handler ready event");
+      else if(waitResult == WAIT_FAILED)
+        RDCERR("Failed waiting for the crash-handler ready event: %d", GetLastError());
     }
 
-    CloseHandle(waitEvent);
+    if(waitEvent)
+      CloseHandle(waitEvent);
 
     RDCLOG("Created crash-handling server %s", m_PipeName.c_str());
   }
@@ -167,7 +180,8 @@ private:
 
   rdcstr NewPipeName()
   {
-    return StringFormat::Fmt("\\\\.\\pipe\\RenderDocBreakpadServer%llu", Timing::GetTick());
+    return StringFormat::Fmt("\\\\.\\pipe\\" RDOC_LOG_NAMESPACE "BreakpadServer%u_%llu",
+                             Process::GetCurrentPID(), Timing::GetTick());
   }
 };
 

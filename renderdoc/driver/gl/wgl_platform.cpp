@@ -22,10 +22,11 @@
  * THE SOFTWARE.
  ******************************************************************************/
 
+#include "generated/product_identity.h"
 #include "gl_common.h"
 #include "wgl_dispatch_table.h"
 
-#define WINDOW_CLASS_NAME L"renderdocGLclass"
+#define WINDOW_CLASS_NAME RDOC_CORE_BASE_NAME_W L"GLclass"
 
 class WGLPlatform : public GLPlatform
 {
