@@ -547,7 +547,8 @@ def export_action_evidence(
     final_directory = os.path.join(os.path.abspath(output_root), package_name)
     if os.path.exists(final_directory):
         raise FileExistsError("Evidence package already exists: {}".format(final_directory))
-    staging = final_directory + ".partial-" + uuid.uuid4().hex
+    # Keep the unpublished suffix short enough for deeply nested Windows worker roots.
+    staging = final_directory + ".partial-" + uuid.uuid4().hex[:8]
     os.makedirs(staging)
 
     try:
