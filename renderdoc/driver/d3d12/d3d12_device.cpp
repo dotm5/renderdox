@@ -1049,7 +1049,7 @@ WrappedID3D12Device *WrappedID3D12Device::Create(ID3D12Device *realDevice, D3D12
 
 HRESULT WrappedID3D12Device::QueryInterface(REFIID riid, void **ppvObject)
 {
-  // RenderDoc UUID {A7AA6116-9C8D-4BBA-9083-B4D816B71B78}
+  // DComp UUID {A7AA6116-9C8D-4BBA-9083-B4D816B71B78}
   static const GUID IRenderDoc_uuid = {
       0xa7aa6116, 0x9c8d, 0x4bba, {0x90, 0x83, 0xb4, 0xd8, 0x16, 0xb7, 0x1b, 0x78}};
 
@@ -4981,7 +4981,7 @@ ID3D12GraphicsCommandListX *WrappedID3D12Device::GetInitialStateList()
     if(IsReplayMode(m_State))
     {
       D3D12MarkerRegion::Begin(initStateCurList,
-                               "!!!!RenderDoc Internal: ApplyInitialContents batched list");
+                               "!!!!DComp Internal: ApplyInitialContents batched list");
     }
   }
 
@@ -5700,7 +5700,7 @@ void WrappedID3D12Device::ReplayLog(uint32_t startEventID, uint32_t endEventID,
   if(!partial)
   {
     {
-      D3D12MarkerRegion apply(GetQueue(), "!!!!RenderDoc Internal: ApplyInitialContents");
+      D3D12MarkerRegion apply(GetQueue(), "!!!!DComp Internal: ApplyInitialContents");
       ApplyInitialContents();
     }
 
@@ -5726,7 +5726,7 @@ void WrappedID3D12Device::ReplayLog(uint32_t startEventID, uint32_t endEventID,
   m_State = CaptureState::ActiveReplaying;
 
   D3D12MarkerRegion::Set(
-      GetQueue(), StringFormat::Fmt("!!!!RenderDoc Internal: RenderDoc Replay %d (%d): %u->%u",
+      GetQueue(), StringFormat::Fmt("!!!!DComp Internal: DComp Replay %d (%d): %u->%u",
                                     (int)replayType, (int)partial, startEventID, endEventID));
 
   if(!partial)
@@ -5825,7 +5825,7 @@ void WrappedID3D12Device::ReplayLog(uint32_t startEventID, uint32_t endEventID,
     }
   }
 
-  D3D12MarkerRegion::Set(GetQueue(), "!!!!RenderDoc Internal: Done replay");
+  D3D12MarkerRegion::Set(GetQueue(), "!!!!DComp Internal: Done replay");
 
   // ensure all UAV writes have finished before subsequent work
   ID3D12GraphicsCommandList *list = GetNewList();

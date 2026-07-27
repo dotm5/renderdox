@@ -845,7 +845,7 @@ void D3D12RTManager::Verify(PatchedRayDispatch &r)
 
   UINT internalExecsRequired = 0;
 
-  // this loop emulates/verifies RENDERDOC_PrepareRayIndirectExecuteCS
+  // this loop emulates/verifies DCOMP_PrepareRayIndirectExecuteCS
   for(UINT cmd = 0; cmd < cmdCount; cmd++)
   {
     D3D12_DISPATCH_RAYS_DESC *wrappedDisp =
@@ -2831,7 +2831,7 @@ void D3D12RTManager::InitRayDispatchPatchingResources()
     // PipelineState
     ID3DBlob *shader = NULL;
     rdcstr hlsl = GetEmbeddedResource(raytracing_hlsl);
-    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_PatchShaderTableCS",
+    shaderCache->GetShaderBlob(hlsl.c_str(), "DCOMP_PatchShaderTableCS",
                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "cs_5_0", &shader);
 
     if(shader)
@@ -2850,7 +2850,7 @@ void D3D12RTManager::InitRayDispatchPatchingResources()
         RDCERR("Unable to create pipeline for dispatch patching");
 
       if(m_RayPatchingData.shaderTablePatchPipe)
-        m_RayPatchingData.shaderTablePatchPipe->SetName(L"RENDERDOC_PatchShaderTableCS");
+        m_RayPatchingData.shaderTablePatchPipe->SetName(L"DCOMP_PatchShaderTableCS");
     }
     else
     {
@@ -2859,7 +2859,7 @@ void D3D12RTManager::InitRayDispatchPatchingResources()
 
     SAFE_RELEASE(shader);
 
-    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_CopyShaderTableCS",
+    shaderCache->GetShaderBlob(hlsl.c_str(), "DCOMP_CopyShaderTableCS",
                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "cs_5_0", &shader);
 
     if(shader)
@@ -2878,7 +2878,7 @@ void D3D12RTManager::InitRayDispatchPatchingResources()
         RDCERR("Unable to create pipeline for dispatch patching");
 
       if(m_RayPatchingData.shaderTableCopyPipe)
-        m_RayPatchingData.shaderTableCopyPipe->SetName(L"RENDERDOC_CopyShaderTableCS");
+        m_RayPatchingData.shaderTableCopyPipe->SetName(L"DCOMP_CopyShaderTableCS");
     }
     else
     {
@@ -2975,7 +2975,7 @@ void D3D12RTManager::InitRayDispatchPatchingResources()
     // PipelineState
     ID3DBlob *shader = NULL;
     rdcstr hlsl = GetEmbeddedResource(raytracing_hlsl);
-    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_PrepareRayIndirectExecuteCS",
+    shaderCache->GetShaderBlob(hlsl.c_str(), "DCOMP_PrepareRayIndirectExecuteCS",
                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "cs_5_0", &shader);
 
     if(shader)
@@ -2991,7 +2991,7 @@ void D3D12RTManager::InitRayDispatchPatchingResources()
           &pipeline, __uuidof(ID3D12PipelineState), (void **)&m_RayPatchingData.indirectPrepPipe);
 
       if(m_RayPatchingData.indirectPrepPipe)
-        m_RayPatchingData.indirectPrepPipe->SetName(L"RENDERDOC_PrepareRayIndirectExecuteCS");
+        m_RayPatchingData.indirectPrepPipe->SetName(L"DCOMP_PrepareRayIndirectExecuteCS");
 
       if(!SUCCEEDED(result))
         RDCERR("Unable to create pipeline for indirect execute patching");
@@ -3116,7 +3116,7 @@ void D3D12RTManager::InitTLASInstanceCopyingResources()
     // PipelineState
     ID3DBlob *shader = NULL;
     rdcstr hlsl = GetEmbeddedResource(raytracing_hlsl);
-    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_PrepareTLASCopyIndirectExecuteCS",
+    shaderCache->GetShaderBlob(hlsl.c_str(), "DCOMP_PrepareTLASCopyIndirectExecuteCS",
                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "cs_5_0", &shader);
 
     if(shader)
@@ -3132,7 +3132,7 @@ void D3D12RTManager::InitTLASInstanceCopyingResources()
           &pipeline, __uuidof(ID3D12PipelineState), (void **)&m_TLASCopyingData.PreparePipe);
 
       if(m_TLASCopyingData.PreparePipe)
-        m_TLASCopyingData.PreparePipe->SetName(L"RENDERDOC_PrepareTLASCopyIndirectExecuteCS");
+        m_TLASCopyingData.PreparePipe->SetName(L"DCOMP_PrepareTLASCopyIndirectExecuteCS");
 
       if(!SUCCEEDED(result))
         RDCERR("Unable to create pipeline for TLAS instance copying");
@@ -3144,7 +3144,7 @@ void D3D12RTManager::InitTLASInstanceCopyingResources()
 
     SAFE_RELEASE(shader);
 
-    shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_CopyBLASInstanceCS",
+    shaderCache->GetShaderBlob(hlsl.c_str(), "DCOMP_CopyBLASInstanceCS",
                                D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "cs_5_0", &shader);
 
     if(shader)
@@ -3160,7 +3160,7 @@ void D3D12RTManager::InitTLASInstanceCopyingResources()
           &pipeline, __uuidof(ID3D12PipelineState), (void **)&m_TLASCopyingData.CopyPipe);
 
       if(m_TLASCopyingData.CopyPipe)
-        m_TLASCopyingData.CopyPipe->SetName(L"RENDERDOC_CopyBLASInstanceCS");
+        m_TLASCopyingData.CopyPipe->SetName(L"DCOMP_CopyBLASInstanceCS");
 
       if(!SUCCEEDED(result))
         RDCERR("Unable to create pipeline for TLAS instance copying");
@@ -3253,7 +3253,7 @@ void D3D12RTManager::InitReplayBlasPatchingResources()
       // PipelineState
       ID3DBlob *shader = NULL;
       rdcstr hlsl = GetEmbeddedResource(raytracing_hlsl);
-      shaderCache->GetShaderBlob(hlsl.c_str(), "RENDERDOC_PatchAccStructAddressCS",
+      shaderCache->GetShaderBlob(hlsl.c_str(), "DCOMP_PatchAccStructAddressCS",
                                  D3DCOMPILE_WARNINGS_ARE_ERRORS, {}, "cs_5_0", &shader);
 
       if(shader)
@@ -3269,7 +3269,7 @@ void D3D12RTManager::InitReplayBlasPatchingResources()
             &pipeline, __uuidof(ID3D12PipelineState), (void **)&m_accStructPatchInfo.m_pipeline);
 
         if(m_accStructPatchInfo.m_pipeline)
-          m_accStructPatchInfo.m_pipeline->SetName(L"RENDERDOC_PatchAccStructAddressCS");
+          m_accStructPatchInfo.m_pipeline->SetName(L"DCOMP_PatchAccStructAddressCS");
 
         if(!SUCCEEDED(result))
           RDCERR("Unable to create pipeline for patching the BLAS");

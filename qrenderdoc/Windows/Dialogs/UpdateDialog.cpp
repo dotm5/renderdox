@@ -146,14 +146,14 @@ void UpdateDialog::on_update_clicked()
       // just a sanity check to make sure we don't hit some unexpected case and infinite loop
       uint32_t prevIdent = nextIdent;
 
-      nextIdent = RENDERDOC_EnumerateRemoteTargets("localhost", nextIdent);
+      nextIdent = DCOMP_EnumerateRemoteTargets("localhost", nextIdent);
 
       if(nextIdent == 0 || prevIdent >= nextIdent)
         break;
 
       running++;
 
-      ITargetControl *conn = RENDERDOC_CreateTargetControl("localhost", nextIdent, "updater", false);
+      ITargetControl *conn = DCOMP_CreateTargetControl("localhost", nextIdent, "updater", false);
 
       if(conn)
       {

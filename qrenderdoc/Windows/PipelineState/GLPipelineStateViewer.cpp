@@ -1535,7 +1535,7 @@ void GLPipelineStateViewer::setState()
           iformat = lit("uint");
 
         iformat +=
-            lit(" indices[%1]").arg(RENDERDOC_NumVerticesPerPrimitive(state.vertexInput.topology));
+            lit(" indices[%1]").arg(DCOMP_NumVerticesPerPrimitive(state.vertexInput.topology));
       }
 
       node->setTag(QVariant::fromValue(GLVBIBTag(
@@ -1572,7 +1572,7 @@ void GLPipelineStateViewer::setState()
           iformat = lit("uint");
 
         iformat +=
-            lit(" indices[%1]").arg(RENDERDOC_NumVerticesPerPrimitive(state.vertexInput.topology));
+            lit(" indices[%1]").arg(DCOMP_NumVerticesPerPrimitive(state.vertexInput.topology));
       }
 
       node->setTag(QVariant::fromValue(GLVBIBTag(

@@ -213,7 +213,7 @@ extern "C" __declspec(dllexport) void __cdecl INTERNAL_SetCaptureFile(const char
 
 extern "C" __declspec(dllexport) void __cdecl INTERNAL_SetDebugLogFile(const char *logfile)
 {
-  RENDERDOC_SetDebugLogFile(logfile ? logfile : rdcstr());
+  DCOMP_SetDebugLogFile(logfile ? logfile : rdcstr());
 }
 
 static EnvironmentModification tempEnvMod;
@@ -608,7 +608,7 @@ rdcpair<RDResult, uint32_t> Process::InjectIntoProcess(uint32_t pid,
       RDCDEBUG("Timed out waiting for debugger, gave up after %u s", opts.delayForDebugger);
   }
 
-  RDCLOG("Injecting renderdoc into process %lu", pid);
+  RDCLOG("Injecting dgcore into process %lu", pid);
 
   wchar_t renderdocPath[MAX_PATH] = {0};
   GetModuleFileNameW(GetModuleHandleA(RDOC_CORE_FILENAME), &renderdocPath[0], MAX_PATH - 1);
@@ -711,8 +711,8 @@ rdcpair<RDResult, uint32_t> Process::InjectIntoProcess(uint32_t pid,
       CloseHandle(hProcess);
       RDResult result;
       SET_ERROR_RESULT(result, ResultCode::IncompatibleProcess,
-                       "Can't capture 64-bit program with 32-bit build of RenderDoc. Please run a "
-                       "64-bit build of RenderDoc");
+                       "Can't capture 64-bit program with 32-bit build of DComp. Please run a "
+                       "64-bit build of DComp");
       return {result, 0};
     }
   }
@@ -926,12 +926,12 @@ rdcpair<RDResult, uint32_t> Process::InjectIntoProcess(uint32_t pid,
       RDResult result;
 #if RENDERDOC_OFFICIAL_BUILD
       SET_ERROR_RESULT(result, ResultCode::InternalError,
-                       "Can't run 32-bit renderdoccmd to capture 32-bit program.");
+                       "Can't run 32-bit dgcorecmd to capture 32-bit program.");
 #else
       SET_ERROR_RESULT(
           result, ResultCode::InternalError,
-          "Can't run 32-bit renderdoccmd to capture 32-bit program."
-          "If this is a locally built RenderDoc you must build both 32-bit and 64-bit versions.");
+          "Can't run 32-bit dgcorecmd to capture 32-bit program."
+          "If this is a locally built DComp you must build both 32-bit and 64-bit versions.");
 #endif
       CloseHandle(hProcess);
       return {result, 0};
@@ -963,7 +963,7 @@ rdcpair<RDResult, uint32_t> Process::InjectIntoProcess(uint32_t pid,
       ResultCode code = (ResultCode)exitCode;
 
       RDResult result;
-      SET_ERROR_RESULT(result, code, "32-bit renderdoccmd returned '%s'", ToStr(code).c_str());
+      SET_ERROR_RESULT(result, code, "32-bit dgcorecmd returned '%s'", ToStr(code).c_str());
       return {code, 0};
     }
 
@@ -1146,7 +1146,7 @@ rdcpair<RDResult, uint32_t> Process::LaunchAndInjectIntoProcess(
     RDResult result;
     SET_ERROR_RESULT(
         result, ResultCode::InjectionFailed,
-        "For safety reasons RenderDoc does not support capturing executables with a "
+        "For safety reasons DComp does not support capturing executables with a "
         "reserved system filename such as '%s'. Please rename your executable to capture.",
         get_basename(app).c_str());
     return {result, 0};
@@ -1219,7 +1219,7 @@ static RDResult HandleRegError(HKEY keyNative, HKEY keyWow32, LSTATUS ret, const
 
   RETURN_ERROR_RESULT(ResultCode::InjectionFailed,
                       "Error updating registry to enable global hook.\n"
-                      "Check that RenderDoc is correctly running as administrator.");
+                      "Check that DComp is correctly running as administrator.");
 }
 
 #define REG_CHECK(msg)                                    \
@@ -1245,8 +1245,8 @@ RDResult BackupAndChangeRegistry(GlobalHookData &hookdata, const rdcstr &shimpat
   {
     RETURN_ERROR_RESULT(
         ResultCode::FileIOFailed,
-        "RenderDoc is installed on a volume or system that has short paths disabled.\n"
-        "For the global hook, short paths must be enabled where RenderDoc is installed.");
+        "DComp is installed on a volume or system that has short paths disabled.\n"
+        "For the global hook, short paths must be enabled where DComp is installed.");
   }
 
   if(!shimpathWow32.empty())
@@ -1258,8 +1258,8 @@ RDResult BackupAndChangeRegistry(GlobalHookData &hookdata, const rdcstr &shimpat
     {
       RETURN_ERROR_RESULT(
           ResultCode::FileIOFailed,
-          "RenderDoc is installed on a volume or system that has short paths disabled.\n"
-          "For the global hook, short paths must be enabled where RenderDoc is installed.");
+          "DComp is installed on a volume or system that has short paths disabled.\n"
+          "For the global hook, short paths must be enabled where DComp is installed.");
     }
   }
 
@@ -1633,7 +1633,7 @@ RDResult Process::StartGlobalHook(const rdcstr &pathmatch, const rdcstr &capture
   {
     CloseHandle(hookdata.dataNative.pipe);
     RestoreRegistry(hookdata);
-    RETURN_ERROR_RESULT(ResultCode::InternalError, "Can't launch renderdoccmd from '%s' (err %u)",
+    RETURN_ERROR_RESULT(ResultCode::InternalError, "Can't launch dgcorecmd from '%s' (err %u)",
                         cmdpathNative.c_str(), err);
   }
 
@@ -1694,7 +1694,7 @@ RDResult Process::StartGlobalHook(const rdcstr &pathmatch, const rdcstr &capture
     CloseHandle(hookdata.dataNative.pipe);
     CloseHandle(hookdata.dataWow32.pipe);
     RestoreRegistry(hookdata);
-    RETURN_ERROR_RESULT(ResultCode::InternalError, "Can't launch renderdoccmd from '%s' (err %u)",
+    RETURN_ERROR_RESULT(ResultCode::InternalError, "Can't launch dgcorecmd from '%s' (err %u)",
                         cmdpathWow32.c_str(), err);
   }
 

@@ -27,7 +27,7 @@
 #include "apidefs.h"
 #include "stringise.h"
 
-#ifdef RENDERDOC_EXPORTS
+#ifdef DCOMP_EXPORTS
 struct ResourceId;
 
 namespace ResourceIDGen
@@ -77,7 +77,7 @@ struct ResourceId
 private:
   uint64_t id;
 
-#ifdef RENDERDOC_EXPORTS
+#ifdef DCOMP_EXPORTS
   friend ResourceId ResourceIDGen::GetNewUniqueID();
   friend struct std::hash<ResourceId>;
 #endif
@@ -92,7 +92,7 @@ Q_DECLARE_METATYPE(ResourceId);
 DECLARE_REFLECTION_STRUCT(ResourceId);
 
 // add a std::hash overload so ResourceId can be used in hashmaps
-#ifdef RENDERDOC_EXPORTS
+#ifdef DCOMP_EXPORTS
 namespace std
 {
 template <>

@@ -7,18 +7,18 @@ Make sure to use a matching API header for your build - if you use a newer heade
 
 This page describes the RenderDoc API exposed to applications being captured, both in overall organisation as well as a specific reference on each function.
 
-To begin using the API you need to fetch the ``RENDERDOC_GetAPI`` function. You should do this dynamically, it is not recommended to actually link against RenderDoc's DLL as it's intended to be injected or loaded at runtime. The header does not declare ``RENDERDOC_GetAPI``, it declares a function pointer typedef ``pRENDERDOC_GetAPI`` that you can use.
+To begin using the API you need to fetch the ``DCOMP_GetAPI`` function. You should do this dynamically, it is not recommended to actually link against DComp's DLL as it's intended to be injected or loaded at runtime. The header does not declare ``DCOMP_GetAPI``, it declares a function pointer typedef ``pDCOMP_GetAPI`` that you can use.
 
 The recommended way to access the RenderDoc API is to passively check if the module is loaded, and use the API if it is. This lets you continue to use RenderDoc entirely as normal, launching your program through the UI, but you can access additional functionality to e.g. trigger captures at custom times. When your program is launched independently it will see that the RenderDoc module is not present and safely fall back.
 
-To do this you'll use your platforms dynamic library functions to see if the library is open already - e.g. ``GetModuleHandle`` on Windows, or ``dlopen`` with the ``RTLD_NOW | RTLD_NOLOAD`` flags if available on \*nix systems. On most platforms you can just search for the module name - ``renderdoc.dll`` on Windows, or ``librenderdoc.so`` on Linux, or ``libVkLayer_GLES_RenderDoc.so`` on Android should be sufficient here, so you don't need to know the path to where RenderDoc is running from. This will vary by platform however so consult your platform's OS documentation. Then you can use ``GetProcAddress`` or ``dlsym`` to fetch the ``RENDERDOC_GetAPI`` function using the typedef above.
+To do this you'll use your platforms dynamic library functions to see if the library is open already - e.g. ``GetModuleHandle`` on Windows, or ``dlopen`` with the ``RTLD_NOW | RTLD_NOLOAD`` flags if available on \*nix systems. On most platforms you can just search for the module name - ``dcomp.dll`` on Windows, or ``libdcomp.so`` on Linux, or ``libVkLayer_GLES_RenderDoc.so`` on Android should be sufficient here, so you don't need to know the path to where DComp is running from. This will vary by platform however so consult your platform's OS documentation. Then you can use ``GetProcAddress`` or ``dlsym`` to fetch the ``DCOMP_GetAPI`` function using the typedef above.
 
 .. _renderdoc-api-example:
 
-.. cpp:function:: int RENDERDOC_GetAPI(RENDERDOC_Version version, void **outAPIPointers)
+.. cpp:function:: int DCOMP_GetAPI(DCOMP_Version version, void **outAPIPointers)
 
 
-    This function is the only entry point actually exported from the RenderDoc module. You call this function with the desired API version, and pass it the address of a pointer to the appropriate struct type. If successful, RenderDoc will set the pointer to point to a struct containing the function pointers for the API functions (detailed below) and return 1.
+    This function is the only application API entry point exported from the DComp module. You call this function with the desired API version, and pass it the address of a pointer to the appropriate struct type. If successful, DComp will set the pointer to point to a struct containing the function pointers for the API functions (detailed below) and return 1.
 
     Note that version numbers follow `semantic versioning <http://semver.org>`_ which means the implementation returned may have a higher minor and/or patch version than requested.
 
@@ -32,20 +32,20 @@ To do this you'll use your platforms dynamic library functions to see if the lib
        RENDERDOC_API_1_1_2 *rdoc_api = NULL;
 
        // At init, on windows
-       if(HMODULE mod = GetModuleHandleA("renderdoc.dll"))
+       if(HMODULE mod = GetModuleHandleA("dcomp.dll"))
        {
-           pRENDERDOC_GetAPI RENDERDOC_GetAPI =
-               (pRENDERDOC_GetAPI)GetProcAddress(mod, "RENDERDOC_GetAPI");
-           int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_1_2, (void **)&rdoc_api);
+           pDCOMP_GetAPI DCOMP_GetAPI =
+               (pDCOMP_GetAPI)GetProcAddress(mod, "DCOMP_GetAPI");
+           int ret = DCOMP_GetAPI(eDCOMP_API_Version_1_1_2, (void **)&rdoc_api);
            assert(ret == 1);
        }
 
        // At init, on linux/android.
-       // For android replace librenderdoc.so with libVkLayer_GLES_RenderDoc.so
-       if(void *mod = dlopen("librenderdoc.so", RTLD_NOW | RTLD_NOLOAD))
+       // For android replace libdcomp.so with libVkLayer_GLES_RenderDoc.so
+       if(void *mod = dlopen("libdcomp.so", RTLD_NOW | RTLD_NOLOAD))
        {
-           pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)dlsym(mod, "RENDERDOC_GetAPI");
-           int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_1_2, (void **)&rdoc_api);
+           pDCOMP_GetAPI DCOMP_GetAPI = (pDCOMP_GetAPI)dlsym(mod, "DCOMP_GetAPI");
+           int ret = DCOMP_GetAPI(eDCOMP_API_Version_1_1_2, (void **)&rdoc_api);
            assert(ret == 1);
        }
 
@@ -61,7 +61,7 @@ To do this you'll use your platforms dynamic library functions to see if the lib
        if(rdoc_api) rdoc_api->EndFrameCapture(NULL, NULL);
 
 
-    :param RENDERDOC_Version version: is the version number of the API for which you want the interface struct.
+    :param DCOMP_Version version: is the version number of the API for which you want the interface struct.
     :param void** outAPIPointers: will be filled with the address of the API's function pointer struct, if supported. E.g. if ``eRENDERDOC_API_Version_1_1_1`` is requested, outAPIPointers will be filled with ``RENDERDOC_API_1_1_1*`` or any newer version that is compatible with API 1.1.1, but nothing lower.
     :return: The function returns 1 if the API version is valid and available, and the struct pointer is filled. The function returns 0 if the API version is invalid or not supported, or the pointer parameter is invalid.
 

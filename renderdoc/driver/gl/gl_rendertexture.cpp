@@ -402,20 +402,20 @@ bool GLReplay::RenderTextureInternal(TextureDisplay cfg, TexDisplayFlags flags)
 
       GLint loc = -1;
 
-      loc = drv.glGetUniformLocation(customProgram, "RENDERDOC_TexDim");
+      loc = drv.glGetUniformLocation(customProgram, "DCOMP_TexDim");
       if(loc >= 0)
         drv.glProgramUniform4ui(customProgram, loc, texDetails.width, texDetails.height,
                                 texDetails.depth, (uint32_t)numMips);
 
-      loc = drv.glGetUniformLocation(customProgram, "RENDERDOC_SelectedMip");
+      loc = drv.glGetUniformLocation(customProgram, "DCOMP_SelectedMip");
       if(loc >= 0)
         drv.glProgramUniform1ui(customProgram, loc, cfg.subresource.mip);
 
-      loc = drv.glGetUniformLocation(customProgram, "RENDERDOC_SelectedSliceFace");
+      loc = drv.glGetUniformLocation(customProgram, "DCOMP_SelectedSliceFace");
       if(loc >= 0)
         drv.glProgramUniform1ui(customProgram, loc, cfg.subresource.slice);
 
-      loc = drv.glGetUniformLocation(customProgram, "RENDERDOC_SelectedSample");
+      loc = drv.glGetUniformLocation(customProgram, "DCOMP_SelectedSample");
       if(loc >= 0)
       {
         if(cfg.subresource.sample == ~0U)
@@ -426,15 +426,15 @@ bool GLReplay::RenderTextureInternal(TextureDisplay cfg, TexDisplayFlags flags)
               (int)RDCCLAMP(cfg.subresource.sample, 0U, (uint32_t)texDetails.samples - 1));
       }
 
-      loc = drv.glGetUniformLocation(customProgram, "RENDERDOC_TextureType");
+      loc = drv.glGetUniformLocation(customProgram, "DCOMP_TextureType");
       if(loc >= 0)
         drv.glProgramUniform1ui(customProgram, loc, resType);
 
-      loc = drv.glGetUniformLocation(customProgram, "RENDERDOC_SelectedRangeMin");
+      loc = drv.glGetUniformLocation(customProgram, "DCOMP_SelectedRangeMin");
       if(loc >= 0)
         drv.glProgramUniform1f(customProgram, loc, cfg.rangeMin);
 
-      loc = drv.glGetUniformLocation(customProgram, "RENDERDOC_SelectedRangeMax");
+      loc = drv.glGetUniformLocation(customProgram, "DCOMP_SelectedRangeMax");
       if(loc >= 0)
         drv.glProgramUniform1f(customProgram, loc, cfg.rangeMax);
     }

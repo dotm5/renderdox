@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "productDisplayName": "RenderTest",
-  "uiDisplayName": "QRenderTest",
-  "coreBaseName": "rendertest",
-  "uiBaseName": "qrendertest",
-  "commandBaseName": "rendertestcmd",
-  "uiStubBaseName": "rendertestui",
-  "shimBaseName": "rendertestshim",
-  "configNamespace": "RenderTest",
-  "logNamespace": "RenderTest"
+  "productDisplayName": "DComp",
+  "uiDisplayName": "DCompUI",
+  "coreBaseName": "dgcore",
+  "uiBaseName": "dgcoreui",
+  "commandBaseName": "dgcorecmd",
+  "uiStubBaseName": "dgcorestub",
+  "shimBaseName": "dgcoreshim",
+  "configNamespace": "DComp",
+  "logNamespace": "DComp"
 }

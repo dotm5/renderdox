@@ -888,7 +888,7 @@ rdcarray<rdcstr> CaptureFile::GetPendingDependenciesNicknames()
   return RenderDoc::Inst().GetTrackedFileNicknames();
 }
 
-extern "C" RENDERDOC_API ICaptureFile *RENDERDOC_CC RENDERDOC_OpenCaptureFile()
+extern "C" RENDERDOC_API ICaptureFile *RENDERDOC_CC DCOMP_OpenCaptureFile()
 {
   return new CaptureFile();
 }

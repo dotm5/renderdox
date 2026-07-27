@@ -174,7 +174,7 @@ float4 getMeshletColor(uint vid)
   return col;
 }
 
-meshV2F RENDERDOC_MeshVS(meshA2V IN, uint vid : SV_VertexID)
+meshV2F DCOMP_MeshVS(meshA2V IN, uint vid : SV_VertexID)
 {
   meshV2F OUT = (meshV2F)0;
 
@@ -211,7 +211,7 @@ cbuffer viewportCBuf : register(b0)
   float4 viewport;
 };
 
-[maxvertexcount(3)] void RENDERDOC_TriangleSizeGS(triangle meshV2F input[3],
+[maxvertexcount(3)] void DCOMP_TriangleSizeGS(triangle meshV2F input[3],
                                                   inout TriangleStream<triSizeV2F> TriStream) {
   triSizeV2F output;
 
@@ -240,13 +240,13 @@ cbuffer viewportCBuf : register(b0)
   TriStream.RestartStrip();
 }
 
-float4 RENDERDOC_TriangleSizePS(triSizeV2F IN)
+float4 DCOMP_TriangleSizePS(triSizeV2F IN)
     : SV_Target0
 {
   return float4(max(IN.pixarea, 0.001f).xxx, 1.0f);
 }
 
-[maxvertexcount(3)] void RENDERDOC_MeshGS(triangle meshV2F input[3],
+[maxvertexcount(3)] void DCOMP_MeshGS(triangle meshV2F input[3],
                                           inout TriangleStream<meshV2F> TriStream) {
   meshV2F output;
 
@@ -264,7 +264,7 @@ float4 RENDERDOC_TriangleSizePS(triSizeV2F IN)
   TriStream.RestartStrip();
 }
 
-float4 RENDERDOC_MeshPS(meshV2F IN)
+float4 DCOMP_MeshPS(meshV2F IN)
     : SV_Target0
 {
   uint type = MeshDisplayFormat;
@@ -453,7 +453,7 @@ void defaultPath(uint threadID)
   }
 }
 
-[numthreads(1024, 1, 1)] void RENDERDOC_MeshPickCS(uint3 tid
+[numthreads(1024, 1, 1)] void DCOMP_MeshPickCS(uint3 tid
                                                    : SV_DispatchThreadID) {
   if(PickMeshMode == MESH_OTHER)
   {

@@ -240,13 +240,13 @@ void RemoteManager::refreshHost(RDTreeWidgetItem *node)
       // just a sanity check to make sure we don't hit some unexpected case and infinite loop
       uint32_t prevIdent = nextIdent;
 
-      nextIdent = RENDERDOC_EnumerateRemoteTargets(host.Hostname(), nextIdent);
+      nextIdent = DCOMP_EnumerateRemoteTargets(host.Hostname(), nextIdent);
 
       if(nextIdent == 0 || prevIdent >= nextIdent)
         break;
 
       ITargetControl *conn =
-          RENDERDOC_CreateTargetControl(host.Hostname(), nextIdent, username.data(), false);
+          DCOMP_CreateTargetControl(host.Hostname(), nextIdent, username.data(), false);
 
       if(conn)
       {

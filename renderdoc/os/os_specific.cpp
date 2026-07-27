@@ -228,12 +228,12 @@ TEST_CASE("Test OS-specific functions", "[osspecific]")
     CHECK(!var.empty());
     CHECK(var.length() > 1);
 
-    var = Process::GetEnvVariable("__renderdoc__unit_test_var");
+    var = Process::GetEnvVariable("__dgcore__unit_test_var");
 
     CHECK(var.empty());
 
     EnvironmentModification mod;
-    mod.name = "__renderdoc__unit_test_var";
+    mod.name = "__dgcore__unit_test_var";
     mod.value = "test_value";
     mod.sep = EnvSep::SemiColon;
     mod.mod = EnvMod::Append;
@@ -241,14 +241,14 @@ TEST_CASE("Test OS-specific functions", "[osspecific]")
     Process::RegisterEnvironmentModification(mod);
     Process::ApplyEnvironmentModification();
 
-    var = Process::GetEnvVariable("__renderdoc__unit_test_var");
+    var = Process::GetEnvVariable("__dgcore__unit_test_var");
 
     CHECK(var == "test_value");
 
     Process::RegisterEnvironmentModification(mod);
     Process::ApplyEnvironmentModification();
 
-    var = Process::GetEnvVariable("__renderdoc__unit_test_var");
+    var = Process::GetEnvVariable("__dgcore__unit_test_var");
 
     CHECK(var == rdcstr("test_value;test_value"));
 
@@ -257,7 +257,7 @@ TEST_CASE("Test OS-specific functions", "[osspecific]")
     Process::RegisterEnvironmentModification(mod);
     Process::ApplyEnvironmentModification();
 
-    var = Process::GetEnvVariable("__renderdoc__unit_test_var");
+    var = Process::GetEnvVariable("__dgcore__unit_test_var");
 
     CHECK(var == rdcstr("test_value;test_value:test_value"));
 
@@ -274,7 +274,7 @@ TEST_CASE("Test OS-specific functions", "[osspecific]")
     Process::RegisterEnvironmentModification(mod);
     Process::ApplyEnvironmentModification();
 
-    var = Process::GetEnvVariable("__renderdoc__unit_test_var");
+    var = Process::GetEnvVariable("__dgcore__unit_test_var");
 
     CHECK(var == rdcstr("prepend1;test_value;test_value:test_value;prepend2"));
 
@@ -285,7 +285,7 @@ TEST_CASE("Test OS-specific functions", "[osspecific]")
     Process::RegisterEnvironmentModification(mod);
     Process::ApplyEnvironmentModification();
 
-    var = Process::GetEnvVariable("__renderdoc__unit_test_var");
+    var = Process::GetEnvVariable("__dgcore__unit_test_var");
 
     CHECK(var == rdcstr("reset"));
   };

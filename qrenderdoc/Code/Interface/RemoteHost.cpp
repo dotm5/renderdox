@@ -61,7 +61,7 @@ RemoteHost::RemoteHost(const QVariant &var)
   if(map.contains(lit("lastCapturePath")))
     m_data->m_lastCapturePath = map[lit("lastCapturePath")].toString();
 
-  m_protocol = RENDERDOC_GetDeviceProtocolController(m_hostname);
+  m_protocol = DCOMP_GetDeviceProtocolController(m_hostname);
 }
 
 RemoteHost::RemoteHost()
@@ -75,7 +75,7 @@ RemoteHost::RemoteHost(const rdcstr &host)
   m_hostname = host;
   m_data = new RemoteHostData();
 
-  m_protocol = RENDERDOC_GetDeviceProtocolController(m_hostname);
+  m_protocol = DCOMP_GetDeviceProtocolController(m_hostname);
 }
 
 RemoteHost::RemoteHost(const RemoteHost &o)
@@ -126,13 +126,13 @@ void RemoteHost::CheckStatus()
     return;
   }
 
-  UpdateStatus(RENDERDOC_CheckRemoteServerConnection(m_hostname));
+  UpdateStatus(DCOMP_CheckRemoteServerConnection(m_hostname));
 }
 
 ResultDetails RemoteHost::Connect(IRemoteServer **server)
 {
   QMutexLocker autolock(&m_data->mutex);
-  return RENDERDOC_CreateRemoteServerConnection(m_hostname, server);
+  return DCOMP_CreateRemoteServerConnection(m_hostname, server);
 }
 
 void RemoteHost::SetConnected(bool connected)

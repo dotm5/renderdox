@@ -762,7 +762,7 @@ Win32CallstackResolver::Win32CallstackResolver(bool interactive, byte *moduleDB,
     for(;;)
     {
       DWORD read =
-          GetPrivateProfileStringW(L"renderdoc", L"ignores", NULL, inputBuf, sz, configPath.c_str());
+          GetPrivateProfileStringW(L"dcomp", L"ignores", NULL, inputBuf, sz, configPath.c_str());
 
       if(read == sz - 1)
       {
@@ -778,7 +778,7 @@ Win32CallstackResolver::Win32CallstackResolver(bool interactive, byte *moduleDB,
     rdcstr ignores = StringFormat::Wide2UTF8(inputBuf);
 
     {
-      DWORD read = GetPrivateProfileStringW(L"renderdoc", L"msdiapath", NULL, inputBuf, sz,
+      DWORD read = GetPrivateProfileStringW(L"dcomp", L"msdiapath", NULL, inputBuf, sz,
                                             configPath.c_str());
 
       if(read > 0)
@@ -1045,7 +1045,7 @@ Win32CallstackResolver::Win32CallstackResolver(bool interactive, byte *moduleDB,
   RenderDoc::Inst().SetConfigSetting("Win32.Callstacks.MSDIAPath")->data.str =
       StringFormat::Wide2UTF8(DIA2::msdiapath);
 
-  RENDERDOC_SaveConfigSettings();
+  DCOMP_SaveConfigSettings();
 }
 
 Win32CallstackResolver::~Win32CallstackResolver()

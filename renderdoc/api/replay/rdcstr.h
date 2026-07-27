@@ -28,7 +28,7 @@
 #include <string.h>     // for memcpy, etc
 #include <algorithm>    // for std::swap
 
-#ifdef RENDERDOC_EXPORTS
+#ifdef DCOMP_EXPORTS
 #include <stdlib.h>    // for malloc/free
 void RENDERDOC_OutOfMemory(uint64_t sz);
 #endif
@@ -142,21 +142,21 @@ private:
   static char *allocate(size_t count)
   {
     char *ret = NULL;
-#ifdef RENDERDOC_EXPORTS
+#ifdef DCOMP_EXPORTS
     ret = (char *)malloc(count);
     if(ret == NULL)
       RENDERDOC_OutOfMemory(count);
 #else
-    ret = (char *)RENDERDOC_AllocArrayMem(count);
+    ret = (char *)DCOMP_AllocArrayMem(count);
 #endif
     return ret;
   }
   static void deallocate(char *p)
   {
-#ifdef RENDERDOC_EXPORTS
+#ifdef DCOMP_EXPORTS
     free((void *)p);
 #else
-    RENDERDOC_FreeArrayMem((void *)p);
+    DCOMP_FreeArrayMem((void *)p);
 #endif
   }
 
@@ -961,21 +961,21 @@ class rdcinflexiblestr
   static char *allocate(size_t count)
   {
     char *ret = NULL;
-#ifdef RENDERDOC_EXPORTS
+#ifdef DCOMP_EXPORTS
     ret = (char *)malloc(count);
     if(ret == NULL)
       RENDERDOC_OutOfMemory(count);
 #else
-    ret = (char *)RENDERDOC_AllocArrayMem(count);
+    ret = (char *)DCOMP_AllocArrayMem(count);
 #endif
     return ret;
   }
   static void deallocate(char *p)
   {
-#ifdef RENDERDOC_EXPORTS
+#ifdef DCOMP_EXPORTS
     free((void *)p);
 #else
-    RENDERDOC_FreeArrayMem((void *)p);
+    DCOMP_FreeArrayMem((void *)p);
 #endif
   }
 
@@ -1172,7 +1172,7 @@ public:
 };
 
 // add a std::hash overload so rdcstr can be used in hashmaps
-#ifdef RENDERDOC_EXPORTS
+#ifdef DCOMP_EXPORTS
 
 #include <functional>
 

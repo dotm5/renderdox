@@ -1459,7 +1459,7 @@ void D3D11PipelineStateViewer::setState()
         iformat = lit("uint");
 
       iformat +=
-          lit(" indices[%1]").arg(RENDERDOC_NumVerticesPerPrimitive(state.inputAssembly.topology));
+          lit(" indices[%1]").arg(DCOMP_NumVerticesPerPrimitive(state.inputAssembly.topology));
 
       node->setTag(QVariant::fromValue(D3D11VBIBTag(
           state.inputAssembly.indexBuffer.resourceId,
@@ -1496,7 +1496,7 @@ void D3D11PipelineStateViewer::setState()
         iformat = lit("uint");
 
       iformat +=
-          lit(" indices[%1]").arg(RENDERDOC_NumVerticesPerPrimitive(state.inputAssembly.topology));
+          lit(" indices[%1]").arg(DCOMP_NumVerticesPerPrimitive(state.inputAssembly.topology));
 
       node->setTag(QVariant::fromValue(D3D11VBIBTag(
           state.inputAssembly.indexBuffer.resourceId,

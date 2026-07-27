@@ -32,24 +32,28 @@
 
 #if defined(RDOC_SELFCAPTURE_LIMITEDAPI)
 
-#define RENDERDOC_AllocArrayMem RDOCSELF_AllocArrayMem
-#define RENDERDOC_FreeArrayMem RDOCSELF_FreeArrayMem
-#define RENDERDOC_GetDefaultCaptureOptions RDOCSELF_GetDefaultCaptureOptions
-#define RENDERDOC_NeedVulkanLayerRegistration RDOCSELF_NeedVulkanLayerRegistration
-#define RENDERDOC_UpdateVulkanLayerRegistration RDOCSELF_UpdateVulkanLayerRegistration
-#define RENDERDOC_ExecuteAndInject RDOCSELF_ExecuteAndInject
-#define RENDERDOC_InjectIntoProcess RDOCSELF_InjectIntoProcess
-#define RENDERDOC_GetCommitHash RDOCSELF_GetCommitHash
-#define RENDERDOC_InitialiseReplay RDOCSELF_InitialiseReplay
-#define RENDERDOC_ShutdownReplay RDOCSELF_ShutdownReplay
+#define DCOMP_AllocArrayMem RDOCSELF_AllocArrayMem
+#define DCOMP_FreeArrayMem RDOCSELF_FreeArrayMem
+#define DCOMP_GetDefaultCaptureOptions RDOCSELF_GetDefaultCaptureOptions
+#define DCOMP_NeedVulkanLayerRegistration RDOCSELF_NeedVulkanLayerRegistration
+#define DCOMP_UpdateVulkanLayerRegistration RDOCSELF_UpdateVulkanLayerRegistration
+#define DCOMP_ExecuteAndInject RDOCSELF_ExecuteAndInject
+#define DCOMP_InjectIntoProcess RDOCSELF_InjectIntoProcess
+#define DCOMP_GetCommitHash RDOCSELF_GetCommitHash
+#define DCOMP_InitialiseReplay RDOCSELF_InitialiseReplay
+#define DCOMP_ShutdownReplay RDOCSELF_ShutdownReplay
 
 #endif
 
 // this #define can be used to mark a program as a 'replay' program which should not be captured.
 // Any program used for such purpose must define and export this symbol in the main exe or one dll
 // that will be loaded before renderdoc.dll is loaded.
+#if !defined(RDOC_REPLAY_PROGRAM_MARKER)
+#define RDOC_REPLAY_PROGRAM_MARKER renderdoc__replay__marker
+#endif
+
 #define REPLAY_PROGRAM_MARKER()                                                 \
-  extern "C" RENDERDOC_EXPORT_API void RENDERDOC_CC renderdoc__replay__marker() \
+  extern "C" RENDERDOC_EXPORT_API void RENDERDOC_CC RDOC_REPLAY_PROGRAM_MARKER() \
   {                                                                             \
   }
 // declare ResourceId extremely early so that it can be referenced in structured_data.h
@@ -59,11 +63,11 @@ typedef uint8_t byte;
 
 #if !defined(SWIG)
 // needs to be declared up here for reference in rdcarray/rdcstr
-extern "C" RENDERDOC_API void RENDERDOC_CC RENDERDOC_FreeArrayMem(void *mem);
-typedef void(RENDERDOC_CC *pRENDERDOC_FreeArrayMem)(void *mem);
+extern "C" RENDERDOC_API void RENDERDOC_CC DCOMP_FreeArrayMem(void *mem);
+typedef void(RENDERDOC_CC *pDCOMP_FreeArrayMem)(void *mem);
 
-extern "C" RENDERDOC_API void *RENDERDOC_CC RENDERDOC_AllocArrayMem(uint64_t sz);
-typedef void *(RENDERDOC_CC *pRENDERDOC_AllocArrayMem)(uint64_t sz);
+extern "C" RENDERDOC_API void *RENDERDOC_CC DCOMP_AllocArrayMem(uint64_t sz);
+typedef void *(RENDERDOC_CC *pDCOMP_AllocArrayMem)(uint64_t sz);
 #endif
 
 // declare base types and stringise interface
@@ -1915,7 +1919,7 @@ DOCUMENT(R"(Create a new camera of a given type.
 :return: The handle to the new camera.
 :rtype: Camera
 )");
-extern "C" RENDERDOC_API ICamera *RENDERDOC_CC RENDERDOC_InitCamera(CameraType type);
+extern "C" RENDERDOC_API ICamera *RENDERDOC_CC DCOMP_InitCamera(CameraType type);
 
 //////////////////////////////////////////////////////////////////////////
 // Maths/format/misc related exports
@@ -1928,7 +1932,7 @@ float.
 :return: The floating point equivalent.
 :rtype: float
 )");
-extern "C" RENDERDOC_API float RENDERDOC_CC RENDERDOC_HalfToFloat(uint16_t half);
+extern "C" RENDERDOC_API float RENDERDOC_CC DCOMP_HalfToFloat(uint16_t half);
 
 DOCUMENT(R"(A utility function that converts a float to a half (stored in a 16-bit unsigned
 integer).
@@ -1937,7 +1941,7 @@ integer).
 :return: The nearest half-float equivalent stored as an int.
 :rtype: int
 )");
-extern "C" RENDERDOC_API uint16_t RENDERDOC_CC RENDERDOC_FloatToHalf(float flt);
+extern "C" RENDERDOC_API uint16_t RENDERDOC_CC DCOMP_FloatToHalf(float flt);
 
 DOCUMENT(R"(A utility function that returns the number of vertices in a primitive of a given
 topology.
@@ -1948,7 +1952,7 @@ topology.
 :return: The number of vertices in a single primitive.
 :rtype: int
 )");
-extern "C" RENDERDOC_API uint32_t RENDERDOC_CC RENDERDOC_NumVerticesPerPrimitive(Topology topology);
+extern "C" RENDERDOC_API uint32_t RENDERDOC_CC DCOMP_NumVerticesPerPrimitive(Topology topology);
 
 DOCUMENT(R"(A utility function that returns the offset in the list of vertices of the first vertex
 in a particular primitive of a given topology. This calculation is simple but not trivial for the
@@ -1959,7 +1963,7 @@ case of strip topologies.
 :return: The vertex offset where the primitive starts.
 :rtype: int
 )");
-extern "C" RENDERDOC_API uint32_t RENDERDOC_CC RENDERDOC_VertexOffset(Topology topology,
+extern "C" RENDERDOC_API uint32_t RENDERDOC_CC DCOMP_VertexOffset(Topology topology,
                                                                       uint32_t primitive);
 
 //////////////////////////////////////////////////////////////////////////
@@ -1974,7 +1978,7 @@ can only be shut-down, it is not re-usable.
 :return: A handle to the specified path.
 :rtype: CaptureFile
 )");
-extern "C" RENDERDOC_API ICaptureFile *RENDERDOC_CC RENDERDOC_OpenCaptureFile();
+extern "C" RENDERDOC_API ICaptureFile *RENDERDOC_CC DCOMP_OpenCaptureFile();
 
 //////////////////////////////////////////////////////////////////////////
 // Target Control
@@ -1994,7 +1998,7 @@ This function will block until the control connection is ready, or an error occu
 :return: A handle to the target control connection, or ``None`` if something went wrong.
 :rtype: TargetControl
 )");
-extern "C" RENDERDOC_API ITargetControl *RENDERDOC_CC RENDERDOC_CreateTargetControl(
+extern "C" RENDERDOC_API ITargetControl *RENDERDOC_CC DCOMP_CreateTargetControl(
     const rdcstr &URL, uint32_t ident, const rdcstr &clientName, bool forceConnection);
 
 DOCUMENT(R"(Repeatedly query to enumerate which targets are active on a given machine and their
@@ -2012,7 +2016,7 @@ This function will block for a variable timeout depending on how many targets ar
 :return: The ident of the next active target, or ``0`` if no other targets exist.
 :rtype: int
 )");
-extern "C" RENDERDOC_API uint32_t RENDERDOC_CC RENDERDOC_EnumerateRemoteTargets(const rdcstr &URL,
+extern "C" RENDERDOC_API uint32_t RENDERDOC_CC DCOMP_EnumerateRemoteTargets(const rdcstr &URL,
                                                                                 uint32_t nextIdent);
 
 //////////////////////////////////////////////////////////////////////////
@@ -2028,7 +2032,7 @@ DOCUMENT(R"(Create a connection to a remote server running on given hostname.
 :rtype: Tuple[ResultDetails,RemoteServer]
 )");
 extern "C" RENDERDOC_API ResultDetails RENDERDOC_CC
-RENDERDOC_CreateRemoteServerConnection(const rdcstr &URL, IRemoteServer **rend);
+DCOMP_CreateRemoteServerConnection(const rdcstr &URL, IRemoteServer **rend);
 
 DOCUMENT(R"(Check the connection to a remote server running on given hostname.
 
@@ -2041,7 +2045,7 @@ the status can be checked without interfering with making connections.
 :rtype: ResultDetails
 )");
 extern "C" RENDERDOC_API ResultDetails RENDERDOC_CC
-RENDERDOC_CheckRemoteServerConnection(const rdcstr &URL);
+DCOMP_CheckRemoteServerConnection(const rdcstr &URL);
 
 DOCUMENT(R"(This launches a remote server which will continually run in a loop to server requests
 from external sources.
@@ -2058,7 +2062,7 @@ This function will block until a remote connection tells the server to shut down
   when the server wants to display some preview of the ongoing replay.
   Callback function signature must match :func:`PreviewWindowCallback`.
 )");
-extern "C" RENDERDOC_API void RENDERDOC_CC RENDERDOC_BecomeRemoteServer(
+extern "C" RENDERDOC_API void RENDERDOC_CC DCOMP_BecomeRemoteServer(
     const rdcstr &listenhost, uint16_t port, RENDERDOC_KillCallback killReplay,
     RENDERDOC_PreviewWindowCallback previewWindow);
 
@@ -2072,7 +2076,7 @@ DOCUMENT(R"(Retrieve the default and recommended set of capture options.
 :rtype: CaptureOptions
 )");
 extern "C" RENDERDOC_API void RENDERDOC_CC
-RENDERDOC_GetDefaultCaptureOptions(CaptureOptions *defaultOpts);
+DCOMP_GetDefaultCaptureOptions(CaptureOptions *defaultOpts);
 
 DOCUMENT(R"(Begin injecting speculatively into all new processes started on the system. Where
 supported by platform, configuration, and setup begin injecting speculatively into all new processes
@@ -2092,7 +2096,7 @@ This function must be called when the process is running with administrator/supe
 :return: The result of the operation, if the result succeeded the hook is now active.
 :rtype: ResultDetails
 )");
-extern "C" RENDERDOC_API ResultDetails RENDERDOC_CC RENDERDOC_StartGlobalHook(
+extern "C" RENDERDOC_API ResultDetails RENDERDOC_CC DCOMP_StartGlobalHook(
     const rdcstr &pathmatch, const rdcstr &logfile, const CaptureOptions &opts);
 
 DOCUMENT(R"(Stop the global hook that was activated by :func:`StartGlobalHook`.
@@ -2100,7 +2104,7 @@ DOCUMENT(R"(Stop the global hook that was activated by :func:`StartGlobalHook`.
 This function can only be called if global hooking is supported (see :func:`CanGlobalHook`) and if
 global hooking is active (see :func:`IsGlobalHookActive`).
 )");
-extern "C" RENDERDOC_API void RENDERDOC_CC RENDERDOC_StopGlobalHook();
+extern "C" RENDERDOC_API void RENDERDOC_CC DCOMP_StopGlobalHook();
 
 DOCUMENT(R"(Determines if the global hook is active or not.
 
@@ -2109,14 +2113,14 @@ This function can only be called if global hooking is supported (see :func:`CanG
 :return: ``True`` if the hook is active, or ``False`` if the hook is inactive.
 :rtype: bool
 )");
-extern "C" RENDERDOC_API bool RENDERDOC_CC RENDERDOC_IsGlobalHookActive();
+extern "C" RENDERDOC_API bool RENDERDOC_CC DCOMP_IsGlobalHookActive();
 
 DOCUMENT(R"(Determines if the global hook is supported on the current platform and configuration.
 
 :return: ``True`` if global hooking can be used on the platform, ``False`` if not.
 :rtype: bool
 )");
-extern "C" RENDERDOC_API bool RENDERDOC_CC RENDERDOC_CanGlobalHook();
+extern "C" RENDERDOC_API bool RENDERDOC_CC DCOMP_CanGlobalHook();
 
 DOCUMENT(R"(Launch an application and inject into it to allow capturing.
 
@@ -2136,7 +2140,7 @@ DOCUMENT(R"(Launch an application and inject into it to allow capturing.
 :rtype: ExecuteResult
 )");
 extern "C" RENDERDOC_API ExecuteResult RENDERDOC_CC
-RENDERDOC_ExecuteAndInject(const rdcstr &app, const rdcstr &workingDir, const rdcstr &cmdLine,
+DCOMP_ExecuteAndInject(const rdcstr &app, const rdcstr &workingDir, const rdcstr &cmdLine,
                            const rdcarray<EnvironmentModification> &env, const rdcstr &capturefile,
                            const CaptureOptions &opts, bool waitForExit);
 
@@ -2154,7 +2158,7 @@ DOCUMENT(R"(Where supported by operating system and permissions, inject into a r
 :rtype: ExecuteResult
 )");
 extern "C" RENDERDOC_API ExecuteResult RENDERDOC_CC
-RENDERDOC_InjectIntoProcess(uint32_t pid, const rdcarray<EnvironmentModification> &env,
+DCOMP_InjectIntoProcess(uint32_t pid, const rdcarray<EnvironmentModification> &env,
                             const rdcstr &capturefile, const CaptureOptions &opts, bool waitForExit);
 
 DOCUMENT(R"(When debugging RenderDoc it can be useful to capture itself by doing a side-build with a
@@ -2164,21 +2168,21 @@ temporary name. This function checks to see if a given self-hosted DLL is availa
 :return: Whether the specified dll is loaded, ready for self-hosted capture.
 :rtype: bool
 )");
-extern "C" RENDERDOC_API bool RENDERDOC_CC RENDERDOC_CanSelfHostedCapture(const rdcstr &dllname);
+extern "C" RENDERDOC_API bool RENDERDOC_CC DCOMP_CanSelfHostedCapture(const rdcstr &dllname);
 
 DOCUMENT(R"(When debugging RenderDoc it can be useful to capture itself by doing a side-build with a
 temporary name. This function wraps up the use of the in-application API to start a capture.
 
 :param str dllname: The name of the self-hosted capture module.
 )");
-extern "C" RENDERDOC_API void RENDERDOC_CC RENDERDOC_StartSelfHostCapture(const rdcstr &dllname);
+extern "C" RENDERDOC_API void RENDERDOC_CC DCOMP_StartSelfHostCapture(const rdcstr &dllname);
 
 DOCUMENT(R"(When debugging RenderDoc it can be useful to capture itself by doing a side-build with a
 temporary name. This function wraps up the use of the in-application API to end a capture.
 
 :param str dllname: The name of the self-hosted capture module.
 )");
-extern "C" RENDERDOC_API void RENDERDOC_CC RENDERDOC_EndSelfHostCapture(const rdcstr &dllname);
+extern "C" RENDERDOC_API void RENDERDOC_CC DCOMP_EndSelfHostCapture(const rdcstr &dllname);
 
 //////////////////////////////////////////////////////////////////////////
 // Vulkan layer handling
@@ -2208,10 +2212,10 @@ struct VulkanLayerRegistrationInfo
 
 DOCUMENT("INTERNAL: Determine vulkan layer registration status.");
 extern "C" RENDERDOC_API bool RENDERDOC_CC
-RENDERDOC_NeedVulkanLayerRegistration(VulkanLayerRegistrationInfo *info);
+DCOMP_NeedVulkanLayerRegistration(VulkanLayerRegistrationInfo *info);
 
 DOCUMENT("INTERNAL: Update vulkan layer registration.");
-extern "C" RENDERDOC_API void RENDERDOC_CC RENDERDOC_UpdateVulkanLayerRegistration(bool systemLevel);
+extern "C" RENDERDOC_API void RENDERDOC_CC DCOMP_UpdateVulkanLayerRegistration(bool systemLevel);
 
 //////////////////////////////////////////////////////////////////////////
 // Miscellaneous!
@@ -2219,7 +2223,7 @@ extern "C" RENDERDOC_API void RENDERDOC_CC RENDERDOC_UpdateVulkanLayerRegistrati
 
 #if !defined(SWIG)
 DOCUMENT("INTERNAL: Update installed version number in windows registry.");
-extern "C" RENDERDOC_API void RENDERDOC_CC RENDERDOC_UpdateInstalledVersionNumber();
+extern "C" RENDERDOC_API void RENDERDOC_CC DCOMP_UpdateInstalledVersionNumber();
 #endif
 
 DOCUMENT(R"(Initialises RenderDoc for replay. Replay API functions should not be called before this
@@ -2229,7 +2233,7 @@ has been called. It should be called exactly once, and before shutdown you must 
 :param GlobalEnvironment globalEnv: The path to the new log file.
 :param List[str] args: Any extra command-line arguments.
 )");
-extern "C" RENDERDOC_API void RENDERDOC_CC RENDERDOC_InitialiseReplay(GlobalEnvironment globalEnv,
+extern "C" RENDERDOC_API void RENDERDOC_CC DCOMP_InitialiseReplay(GlobalEnvironment globalEnv,
                                                                       const rdcarray<rdcstr> &args);
 
 DOCUMENT(R"(Shutdown RenderDoc for replay. Replay API functions should not be called after this
@@ -2237,19 +2241,19 @@ has been called. It is not safe to re-initialise replay after this function has 
 should only be called at program shutdown. This function must only be called if
 :func:`InitialiseReplay` was previously called.
 )");
-extern "C" RENDERDOC_API void RENDERDOC_CC RENDERDOC_ShutdownReplay();
+extern "C" RENDERDOC_API void RENDERDOC_CC DCOMP_ShutdownReplay();
 
 #if !defined(SWIG)
 DOCUMENT("INTERNAL: Create a bug report zip.");
-extern "C" RENDERDOC_API void RENDERDOC_CC RENDERDOC_CreateBugReport(const rdcstr &logfile,
+extern "C" RENDERDOC_API void RENDERDOC_CC DCOMP_CreateBugReport(const rdcstr &logfile,
                                                                      const rdcstr &dumpfile,
                                                                      rdcstr &report);
 
 DOCUMENT("INTERNAL: Register a memory region to be saved with crash dumps.");
-extern "C" RENDERDOC_API void RENDERDOC_CC RENDERDOC_RegisterMemoryRegion(void *base, size_t size);
+extern "C" RENDERDOC_API void RENDERDOC_CC DCOMP_RegisterMemoryRegion(void *base, size_t size);
 
 DOCUMENT("INTERNAL: Unregister a memory region to be saved with crash dumps.");
-extern "C" RENDERDOC_API void RENDERDOC_CC RENDERDOC_UnregisterMemoryRegion(void *base);
+extern "C" RENDERDOC_API void RENDERDOC_CC DCOMP_UnregisterMemoryRegion(void *base);
 #endif
 
 DOCUMENT(R"(Sets the location for the diagnostic log output, shared by captured programs and the
@@ -2257,7 +2261,7 @@ analysis program.
 
 :param str filename: The path to the new log file.
 )");
-extern "C" RENDERDOC_API void RENDERDOC_CC RENDERDOC_SetDebugLogFile(const rdcstr &filename);
+extern "C" RENDERDOC_API void RENDERDOC_CC DCOMP_SetDebugLogFile(const rdcstr &filename);
 
 DOCUMENT(R"(Gets the location for the diagnostic log output, shared by captured programs and the
 analysis program.
@@ -2265,11 +2269,11 @@ analysis program.
 :return: The path to the current log file.
 :rtype: str
 )");
-extern "C" RENDERDOC_API const char *RENDERDOC_CC RENDERDOC_GetLogFile();
+extern "C" RENDERDOC_API const char *RENDERDOC_CC DCOMP_GetLogFile();
 
 #if !defined(SWIG)
 DOCUMENT("INTERNAL: Atomically fetch the contents of the log");
-extern "C" RENDERDOC_API void RENDERDOC_CC RENDERDOC_GetLogFileContents(uint64_t offset,
+extern "C" RENDERDOC_API void RENDERDOC_CC DCOMP_GetLogFileContents(uint64_t offset,
                                                                         rdcstr &logfile);
 #endif
 
@@ -2282,7 +2286,7 @@ DOCUMENT(R"(Add a message to RenderDoc's logfile.
 :param int line: The line number in :paramref:`file` where this log message came from.
 :param str text: The text of the message.
 )");
-extern "C" RENDERDOC_API void RENDERDOC_CC RENDERDOC_LogMessage(LogType type, const rdcstr &project,
+extern "C" RENDERDOC_API void RENDERDOC_CC DCOMP_LogMessage(LogType type, const rdcstr &project,
                                                                 const rdcstr &file, uint32_t line,
                                                                 const rdcstr &text);
 
@@ -2293,14 +2297,14 @@ This will be in the form "MAJOR.MINOR"
 :return: The version string.
 :rtype: str
 )");
-extern "C" RENDERDOC_API const char *RENDERDOC_CC RENDERDOC_GetVersionString();
+extern "C" RENDERDOC_API const char *RENDERDOC_CC DCOMP_GetVersionString();
 
 DOCUMENT(R"(Determines if this is a release build of RenderDoc or not.
 
 :return: ``True`` if the replay is running on a release build.
 :rtype: bool
 )");
-extern "C" RENDERDOC_API bool RENDERDOC_CC RENDERDOC_IsReleaseBuild();
+extern "C" RENDERDOC_API bool RENDERDOC_CC DCOMP_IsReleaseBuild();
 
 DOCUMENT(R"(Retrieves the commit hash used to build.
 
@@ -2309,7 +2313,7 @@ This will be in the form "0123456789abcdef0123456789abcdef01234567"
 :return: The commit hash.
 :rtype: str
 )");
-extern "C" RENDERDOC_API const char *RENDERDOC_CC RENDERDOC_GetCommitHash();
+extern "C" RENDERDOC_API const char *RENDERDOC_CC DCOMP_GetCommitHash();
 
 DOCUMENT(R"(Retrieves the driver information (if available) for a given graphics API.
 
@@ -2317,14 +2321,14 @@ DOCUMENT(R"(Retrieves the driver information (if available) for a given graphics
 :return: A :class:`DriverInformation` containing the driver information.
 :rtype: DriverInformation
 )");
-extern "C" RENDERDOC_API DriverInformation RENDERDOC_CC RENDERDOC_GetDriverInformation(GraphicsAPI api);
+extern "C" RENDERDOC_API DriverInformation RENDERDOC_CC DCOMP_GetDriverInformation(GraphicsAPI api);
 
 DOCUMENT(R"(Returns the current process's memory usage in bytes
 
 :return: The current memory usage in bytes.
 :rtype: int
 )");
-extern "C" RENDERDOC_API uint64_t RENDERDOC_CC RENDERDOC_GetCurrentProcessMemoryUsage();
+extern "C" RENDERDOC_API uint64_t RENDERDOC_CC DCOMP_GetCurrentProcessMemoryUsage();
 
 DOCUMENT(R"(Return a read-only handle to the :class:`SDObject` corresponding to a given setting's
 value object.
@@ -2339,7 +2343,7 @@ If no such setting exists, `None` is returned.
 :return: The specified setting.
 :rtype: SDObject
 )");
-extern "C" RENDERDOC_API const SDObject *RENDERDOC_CC RENDERDOC_GetConfigSetting(const rdcstr &name);
+extern "C" RENDERDOC_API const SDObject *RENDERDOC_CC DCOMP_GetConfigSetting(const rdcstr &name);
 
 DOCUMENT(R"(Return a mutable handle to the :class:`SDObject` corresponding to a given setting's
 value object.
@@ -2350,14 +2354,14 @@ If no such setting exists, `None` is returned.
 :return: The specified setting.
 :rtype: SDObject
 )");
-extern "C" RENDERDOC_API SDObject *RENDERDOC_CC RENDERDOC_SetConfigSetting(const rdcstr &name);
+extern "C" RENDERDOC_API SDObject *RENDERDOC_CC DCOMP_SetConfigSetting(const rdcstr &name);
 
 DOCUMENT(R"(Flush the current config settings as they are in memory to the config file on disk.
 
 Without calling this function, settings changes will only be temporary. The settings are **not**
 saved to disk on exit implicitly.
 )");
-extern "C" RENDERDOC_API void RENDERDOC_CC RENDERDOC_SaveConfigSettings();
+extern "C" RENDERDOC_API void RENDERDOC_CC DCOMP_SaveConfigSettings();
 
 DOCUMENT(R"(Configure the default colours used for checkerboards, this can broadly speaking help
 match the replay rendering to the overall theme of the replay application.
@@ -2367,12 +2371,12 @@ match the replay rendering to the overall theme of the replay application.
 :param bool darkTheme: ``True`` if the theme is a 'dark' theme, used to pick different contrasting
   colors. ``False`` if the theme is 'light' and normal colors are used.
 )");
-extern "C" RENDERDOC_API void RENDERDOC_CC RENDERDOC_SetColors(FloatVector darkChecker,
+extern "C" RENDERDOC_API void RENDERDOC_CC DCOMP_SetColors(FloatVector darkChecker,
                                                                FloatVector lightChecker,
                                                                bool darkTheme);
 
 DOCUMENT("INTERNAL: Check remote Android package for requirements");
-extern "C" RENDERDOC_API void RENDERDOC_CC RENDERDOC_CheckAndroidPackage(
+extern "C" RENDERDOC_API void RENDERDOC_CC DCOMP_CheckAndroidPackage(
     const rdcstr &URL, const rdcstr &packageAndActivity, AndroidFlags *flags);
 
 DOCUMENT("An interface for enumerating and controlling remote devices.");
@@ -2448,7 +2452,7 @@ DOCUMENT(R"(Retrieve the set of device protocols supported (see :func:`GetDevice
 :rtype: List[str]
 )");
 extern "C" RENDERDOC_API void RENDERDOC_CC
-RENDERDOC_GetSupportedDeviceProtocols(rdcarray<rdcstr> *supportedProtocols);
+DCOMP_GetSupportedDeviceProtocols(rdcarray<rdcstr> *supportedProtocols);
 
 DOCUMENT(R"(Creates a :class:`DeviceProtocolController` that provides device-specific controls.
 
@@ -2468,25 +2472,25 @@ immediate use of it may block.
 :rtype: DeviceProtocolController
 )");
 extern "C" RENDERDOC_API IDeviceProtocolController *RENDERDOC_CC
-RENDERDOC_GetDeviceProtocolController(const rdcstr &protocol);
+DCOMP_GetDeviceProtocolController(const rdcstr &protocol);
 
 #if !defined(SWIG)
 DOCUMENT("INTERNAL: Run unit tests.");
-extern "C" RENDERDOC_API int RENDERDOC_CC RENDERDOC_RunUnitTests(const rdcstr &command,
+extern "C" RENDERDOC_API int RENDERDOC_CC DCOMP_RunUnitTests(const rdcstr &command,
                                                                  const rdcarray<rdcstr> &args);
 
 DOCUMENT("INTERNAL: Run functional tests.");
-extern "C" RENDERDOC_API int RENDERDOC_CC RENDERDOC_RunFunctionalTests(const rdcarray<rdcstr> &args);
+extern "C" RENDERDOC_API int RENDERDOC_CC DCOMP_RunFunctionalTests(const rdcarray<rdcstr> &args);
 #endif
 
 #if !defined(SWIG)
 #include "version.h"
 
 DOCUMENT("INTERNAL: Begin a profile region.");
-extern "C" RENDERDOC_API void RENDERDOC_CC RENDERDOC_BeginProfileRegion(const rdcstr &name);
+extern "C" RENDERDOC_API void RENDERDOC_CC DCOMP_BeginProfileRegion(const rdcstr &name);
 
 DOCUMENT("INTERNAL: End a profile region.");
-extern "C" RENDERDOC_API void RENDERDOC_CC RENDERDOC_EndProfileRegion();
+extern "C" RENDERDOC_API void RENDERDOC_CC DCOMP_EndProfileRegion();
 
 // don't define profile regions in stable builds
 #if RENDERDOC_STABLE_BUILD
@@ -2497,15 +2501,15 @@ extern "C" RENDERDOC_API void RENDERDOC_CC RENDERDOC_EndProfileRegion();
 
 struct RENDERDOC_ProfileRegion
 {
-  RENDERDOC_ProfileRegion(const rdcstr &name) { RENDERDOC_BeginProfileRegion(name); }
-  ~RENDERDOC_ProfileRegion() { RENDERDOC_EndProfileRegion(); }
+  RENDERDOC_ProfileRegion(const rdcstr &name) { DCOMP_BeginProfileRegion(name); }
+  ~RENDERDOC_ProfileRegion() { DCOMP_EndProfileRegion(); }
 };
 
 #define RENDERDOC_PROFILEREGION(name) RENDERDOC_ProfileRegion profile##__LINE__(name);
 
 #endif
 
-#if defined(RENDERDOC_PLATFORM_WIN32)
+#if defined(DCOMP_PLATFORM_WIN32)
 #define RENDERDOC_PROFILEFUNCTION() RENDERDOC_PROFILEREGION(__FUNCSIG__);
 #else
 #define RENDERDOC_PROFILEFUNCTION() RENDERDOC_PROFILEREGION(__PRETTY_FUNCTION__);

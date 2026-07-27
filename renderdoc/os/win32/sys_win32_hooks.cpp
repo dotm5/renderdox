@@ -132,16 +132,16 @@ static bool IsExcludedChildTool(LPCWSTR lpApplicationName, LPCWSTR lpCommandLine
 
 TEST_CASE("Win32 child-tool exclusion parses only the executable token", "[win32][process]")
 {
-  CHECK(IsExcludedChildTool(L"C:\\Tools\\qrendertest.exe", NULL));
-  CHECK(IsExcludedChildTool(L"C:\\TOOLS\\RENDERTESTCMD.EXE", L"ignored.exe"));
-  CHECK(IsExcludedChildTool(NULL, L"  \"C:\\Program Files\\RenderTest\\rendertestui.exe\" --foo"));
-  CHECK(IsExcludedChildTool(NULL, L"C:\\Tools\\qrenderdoc.exe --foo"));
+  CHECK(IsExcludedChildTool(L"C:\\Tools\\dcompui.exe", NULL));
+  CHECK(IsExcludedChildTool(L"C:\\TOOLS\\DCOMPCMD.EXE", L"ignored.exe"));
+  CHECK(IsExcludedChildTool(NULL, L"  \"C:\\Program Files\\DComp\\dcompstub.exe\" --foo"));
+  CHECK(IsExcludedChildTool(NULL, L"C:\\Tools\\dgcoreui.exe --foo"));
 
   CHECK_FALSE(
-      IsExcludedChildTool(NULL, L"\"C:\\Games\\owned.exe\" --viewer C:\\Tools\\qrenderdoc.exe"));
-  CHECK_FALSE(IsExcludedChildTool(NULL, L"C:\\qrenderdoc.exe\\owned.exe --foo"));
-  CHECK_FALSE(IsExcludedChildTool(NULL, L"'C:\\Tools\\qrenderdoc.exe' --foo"));
-  CHECK_FALSE(IsExcludedChildTool(L"C:\\Games\\owned.exe", L"qrenderdoc.exe --foo"));
+      IsExcludedChildTool(NULL, L"\"C:\\Games\\owned.exe\" --viewer C:\\Tools\\dcompui.exe"));
+  CHECK_FALSE(IsExcludedChildTool(NULL, L"C:\\dcompui.exe\\owned.exe --foo"));
+  CHECK_FALSE(IsExcludedChildTool(NULL, L"'C:\\Tools\\dcompui.exe' --foo"));
+  CHECK_FALSE(IsExcludedChildTool(L"C:\\Games\\owned.exe", L"dcompui.exe --foo"));
 }
 
 #endif

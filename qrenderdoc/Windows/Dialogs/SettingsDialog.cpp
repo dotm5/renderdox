@@ -200,7 +200,7 @@ SettingsDialog::SettingsDialog(ICaptureContext &ctx, QWidget *parent)
   ui->AlwaysReplayLocally->setChecked(m_Ctx.Config().AlwaysReplayLocally);
 
   {
-    const SDObject *getPaths = RENDERDOC_GetConfigSetting("DXBC.Debug.SearchDirPaths");
+    const SDObject *getPaths = DCOMP_GetConfigSetting("DXBC.Debug.SearchDirPaths");
     if(!getPaths)
     {
       ui->chooseSearchPaths->setEnabled(false);
@@ -213,14 +213,14 @@ SettingsDialog::SettingsDialog(ICaptureContext &ctx, QWidget *parent)
 #endif
 
   {
-    const SDObject *getPaths = RENDERDOC_GetConfigSetting("Win32.Callstacks.IgnoreList");
+    const SDObject *getPaths = DCOMP_GetConfigSetting("Win32.Callstacks.IgnoreList");
     if(!getPaths)
     {
       ui->chooseIgnores->setEnabled(false);
     }
   }
 
-  if(const SDObject *setting = RENDERDOC_GetConfigSetting("DXBC.Disassembly.FriendlyNaming"))
+  if(const SDObject *setting = DCOMP_GetConfigSetting("DXBC.Disassembly.FriendlyNaming"))
   {
     ui->ShaderViewer_FriendlyNaming->setChecked(setting->AsBool());
   }
@@ -229,7 +229,7 @@ SettingsDialog::SettingsDialog(ICaptureContext &ctx, QWidget *parent)
     ui->ShaderViewer_FriendlyNaming->setEnabled(false);
   }
 
-  if(const SDObject *setting = RENDERDOC_GetConfigSetting("AMD.RGP.Enable"))
+  if(const SDObject *setting = DCOMP_GetConfigSetting("AMD.RGP.Enable"))
   {
     ui->ExternalTool_RGPIntegration->setChecked(setting->AsBool());
   }
@@ -238,7 +238,7 @@ SettingsDialog::SettingsDialog(ICaptureContext &ctx, QWidget *parent)
     ui->ExternalTool_RGPIntegration->setEnabled(false);
   }
 
-  if(const SDObject *setting = RENDERDOC_GetConfigSetting("Android.SDKDirPath"))
+  if(const SDObject *setting = DCOMP_GetConfigSetting("Android.SDKDirPath"))
   {
     ui->Android_SDKPath->setText(setting->AsString());
   }
@@ -248,7 +248,7 @@ SettingsDialog::SettingsDialog(ICaptureContext &ctx, QWidget *parent)
     ui->browseAndroidSDKPath->setEnabled(false);
   }
 
-  if(const SDObject *setting = RENDERDOC_GetConfigSetting("Android.JDKDirPath"))
+  if(const SDObject *setting = DCOMP_GetConfigSetting("Android.JDKDirPath"))
   {
     ui->Android_JDKPath->setText(setting->AsString());
   }
@@ -258,7 +258,7 @@ SettingsDialog::SettingsDialog(ICaptureContext &ctx, QWidget *parent)
     ui->browseJDKPath->setEnabled(false);
   }
 
-  if(const SDObject *setting = RENDERDOC_GetConfigSetting("Android.MaxConnectTimeout"))
+  if(const SDObject *setting = DCOMP_GetConfigSetting("Android.MaxConnectTimeout"))
   {
     ui->Android_MaxConnectTimeout->setValue(setting->AsUInt32());
   }
@@ -315,7 +315,7 @@ SettingsDialog::SettingsDialog(ICaptureContext &ctx, QWidget *parent)
   ui->Formatter_OffsetSizeDisplayMode->setCurrentIndex(
       (int)m_Ctx.Config().Formatter_OffsetSizeDisplayMode);
 
-  if(!RENDERDOC_CanGlobalHook())
+  if(!DCOMP_CanGlobalHook())
   {
     ui->AllowGlobalHook->setEnabled(false);
 
@@ -608,7 +608,7 @@ void SettingsDialog::on_configEditor_clicked()
 
   RDDialog::show(&editor);
 
-  RENDERDOC_SaveConfigSettings();
+  DCOMP_SaveConfigSettings();
 }
 
 void SettingsDialog::on_chooseSearchPaths_clicked()
@@ -640,7 +640,7 @@ void SettingsDialog::on_chooseSearchPaths_clicked()
   listEditor.setLayout(&layout);
   listEditor.resize(750, 500);
 
-  const SDObject *getPaths = RENDERDOC_GetConfigSetting("DXBC.Debug.SearchDirPaths");
+  const SDObject *getPaths = DCOMP_GetConfigSetting("DXBC.Debug.SearchDirPaths");
 
   QStringList items;
   QList<bool> recursive;
@@ -652,7 +652,7 @@ void SettingsDialog::on_chooseSearchPaths_clicked()
   }
 
   const SDObject *getLimitedPaths =
-      RENDERDOC_GetConfigSetting("Replay.Shader.LimitedSearchDirPaths");
+      DCOMP_GetConfigSetting("Replay.Shader.LimitedSearchDirPaths");
 
   for(const SDObject *c : *getLimitedPaths)
   {
@@ -670,7 +670,7 @@ void SettingsDialog::on_chooseSearchPaths_clicked()
     items = list.getItems();
     recursive = list.getItemProps();
 
-    SDObject *setPaths = RENDERDOC_SetConfigSetting("DXBC.Debug.SearchDirPaths");
+    SDObject *setPaths = DCOMP_SetConfigSetting("DXBC.Debug.SearchDirPaths");
 
     setPaths->DeleteChildren();
     setPaths->ReserveChildren(items.size());
@@ -678,7 +678,7 @@ void SettingsDialog::on_chooseSearchPaths_clicked()
     for(int i = 0; i < items.size(); i++)
       setPaths->AddAndOwnChild(makeSDString("$el"_lit, items[i]));
 
-    SDObject *setLimitedPaths = RENDERDOC_SetConfigSetting("Replay.Shader.LimitedSearchDirPaths");
+    SDObject *setLimitedPaths = DCOMP_SetConfigSetting("Replay.Shader.LimitedSearchDirPaths");
 
     QStringList limited;
 
@@ -692,7 +692,7 @@ void SettingsDialog::on_chooseSearchPaths_clicked()
     for(int i = 0; i < limited.size(); i++)
       setLimitedPaths->AddAndOwnChild(makeSDString("$el"_lit, limited[i]));
 
-    RENDERDOC_SaveConfigSettings();
+    DCOMP_SaveConfigSettings();
 
     if(m_Ctx.IsCaptureLoaded() && !m_Ctx.Replay().CurrentRemote().IsConnected())
     {
@@ -736,7 +736,7 @@ void SettingsDialog::on_chooseIgnores_clicked()
 
   listEditor.setLayout(&layout);
 
-  const SDObject *getPaths = RENDERDOC_GetConfigSetting("Win32.Callstacks.IgnoreList");
+  const SDObject *getPaths = DCOMP_GetConfigSetting("Win32.Callstacks.IgnoreList");
 
   QStringList items;
 
@@ -751,7 +751,7 @@ void SettingsDialog::on_chooseIgnores_clicked()
   {
     items = list.getItems();
 
-    SDObject *setPaths = RENDERDOC_SetConfigSetting("Win32.Callstacks.IgnoreList");
+    SDObject *setPaths = DCOMP_SetConfigSetting("Win32.Callstacks.IgnoreList");
 
     setPaths->DeleteChildren();
     setPaths->ReserveChildren(items.size());
@@ -759,15 +759,15 @@ void SettingsDialog::on_chooseIgnores_clicked()
     for(int i = 0; i < items.size(); i++)
       setPaths->AddAndOwnChild(makeSDString("$el"_lit, items[i]));
 
-    RENDERDOC_SaveConfigSettings();
+    DCOMP_SaveConfigSettings();
   }
 }
 
 void SettingsDialog::on_ExternalTool_RGPIntegration_toggled(bool checked)
 {
-  RENDERDOC_SetConfigSetting("AMD.RGP.Enable")->data.basic.b = checked;
+  DCOMP_SetConfigSetting("AMD.RGP.Enable")->data.basic.b = checked;
 
-  RENDERDOC_SaveConfigSettings();
+  DCOMP_SaveConfigSettings();
 }
 
 void SettingsDialog::on_ExternalTool_RadeonGPUProfiler_textEdited(const QString &rgp)
@@ -865,9 +865,9 @@ void SettingsDialog::on_TextureViewer_ResetRange_toggled(bool checked)
 // shader viewer
 void SettingsDialog::on_ShaderViewer_FriendlyNaming_toggled(bool checked)
 {
-  RENDERDOC_SetConfigSetting("DXBC.Disassembly.FriendlyNaming")->data.basic.b = checked;
+  DCOMP_SetConfigSetting("DXBC.Disassembly.FriendlyNaming")->data.basic.b = checked;
 
-  RENDERDOC_SaveConfigSettings();
+  DCOMP_SaveConfigSettings();
 }
 
 void SettingsDialog::addProcessor(const ShaderProcessingTool &tool)
@@ -1311,14 +1311,14 @@ void SettingsDialog::on_browseAndroidSDKPath_clicked()
 {
   QString sdk = RDDialog::getExistingDirectory(
       this, tr("Locate SDK root folder (containing build-tools, platform-tools)"),
-      QFileInfo(RENDERDOC_GetConfigSetting("Android.SDKDirPath")->AsString()).absoluteDir().path());
+      QFileInfo(DCOMP_GetConfigSetting("Android.SDKDirPath")->AsString()).absoluteDir().path());
 
   if(!sdk.isEmpty())
   {
     ui->Android_SDKPath->setText(sdk);
-    RENDERDOC_SetConfigSetting("Android.SDKDirPath")->data.str = sdk;
+    DCOMP_SetConfigSetting("Android.SDKDirPath")->data.str = sdk;
 
-    RENDERDOC_SaveConfigSettings();
+    DCOMP_SaveConfigSettings();
   }
 }
 
@@ -1326,9 +1326,9 @@ void SettingsDialog::on_Android_SDKPath_textEdited(const QString &sdk)
 {
   if(QFileInfo::exists(sdk) || sdk.isEmpty())
   {
-    RENDERDOC_SetConfigSetting("Android.SDKDirPath")->data.str = sdk;
+    DCOMP_SetConfigSetting("Android.SDKDirPath")->data.str = sdk;
 
-    RENDERDOC_SaveConfigSettings();
+    DCOMP_SaveConfigSettings();
   }
 }
 
@@ -1336,14 +1336,14 @@ void SettingsDialog::on_browseJDKPath_clicked()
 {
   QString jdk = RDDialog::getExistingDirectory(
       this, tr("Locate JDK root folder (containing bin, jre, lib)"),
-      QFileInfo(RENDERDOC_GetConfigSetting("Android.JDKDirPath")->AsString()).absoluteDir().path());
+      QFileInfo(DCOMP_GetConfigSetting("Android.JDKDirPath")->AsString()).absoluteDir().path());
 
   if(!jdk.isEmpty())
   {
     ui->Android_JDKPath->setText(jdk);
-    RENDERDOC_SetConfigSetting("Android.JDKDirPath")->data.str = jdk;
+    DCOMP_SetConfigSetting("Android.JDKDirPath")->data.str = jdk;
 
-    RENDERDOC_SaveConfigSettings();
+    DCOMP_SaveConfigSettings();
   }
 }
 
@@ -1351,18 +1351,18 @@ void SettingsDialog::on_Android_JDKPath_textEdited(const QString &jdk)
 {
   if(QFileInfo::exists(jdk) || jdk.isEmpty())
   {
-    RENDERDOC_SetConfigSetting("Android.JDKDirPath")->data.str = jdk;
+    DCOMP_SetConfigSetting("Android.JDKDirPath")->data.str = jdk;
 
-    RENDERDOC_SaveConfigSettings();
+    DCOMP_SaveConfigSettings();
   }
 }
 
 void SettingsDialog::on_Android_MaxConnectTimeout_valueChanged(double timeout)
 {
-  RENDERDOC_SetConfigSetting("Android.MaxConnectTimeout")->data.basic.u =
+  DCOMP_SetConfigSetting("Android.MaxConnectTimeout")->data.basic.u =
       (uint32_t)ui->Android_MaxConnectTimeout->value();
 
-  RENDERDOC_SaveConfigSettings();
+  DCOMP_SaveConfigSettings();
 }
 
 void SettingsDialog::on_UIStyle_currentIndexChanged(int index)

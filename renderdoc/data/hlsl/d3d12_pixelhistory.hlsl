@@ -57,9 +57,9 @@ RWBuffer<float> copyout_float : register(u2);
 RWBuffer<uint> copyout_uint : register(u3);
 RWBuffer<int> copyout_int : register(u4);
 
-[numthreads(1, 1, 1)] void RENDERDOC_PixelHistoryUnused() { copyout_depth[dst_slot] = -1.0f; }
+[numthreads(1, 1, 1)] void DCOMP_PixelHistoryUnused() { copyout_depth[dst_slot] = -1.0f; }
 
-    [numthreads(1, 1, 1)] void RENDERDOC_PixelHistoryCopyPixel()
+    [numthreads(1, 1, 1)] void DCOMP_PixelHistoryCopyPixel()
 {
   if(multisampled)
   {
@@ -143,7 +143,7 @@ RWBuffer<int> copyout_int : register(u4);
   }
 }
 
-float4 RENDERDOC_PrimitiveIDPS(uint prim : SV_PrimitiveID) : SV_Target0
+float4 DCOMP_PrimitiveIDPS(uint prim : SV_PrimitiveID) : SV_Target0
 {
   return asfloat(prim).xxxx;
 }
@@ -171,7 +171,7 @@ struct SelectedOutput
 #endif
 };
 
-SelectedOutput RENDERDOC_PixelHistoryFixedColPS()
+SelectedOutput DCOMP_PixelHistoryFixedColPS()
 {
   SelectedOutput OUT = (SelectedOutput)0;
 

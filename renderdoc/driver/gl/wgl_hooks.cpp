@@ -43,7 +43,7 @@ public:
   // when fetching dispatch tables or hooking.
   bool eglDisabled = false;
 
-  // we use this to check if we've seen a context be created. If we HAVEN'T then RenderDoc was
+  // we use this to check if we've seen a context be created. If we HAVEN'T then DComp was
   // probably injected after the start of the application so we should not call our hooked functions
   // - things will go wrong like missing context data, references to resources we don't know about
   // and hooked functions via wglGetProcAddress being NULL and never being called by the app.

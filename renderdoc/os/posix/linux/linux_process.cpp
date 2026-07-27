@@ -150,7 +150,7 @@ int GetIdentPort(pid_t childPid)
 
   if(ret == 0)
   {
-    RDCWARN("Couldn't locate renderdoc target control listening port between %u and %u in %s",
+    RDCWARN("Couldn't locate dgcore target control listening port between %u and %u in %s",
             (uint32_t)RenderDoc_FirstTargetControlPort, (uint32_t)RenderDoc_LastTargetControlPort,
             procfile.c_str());
 

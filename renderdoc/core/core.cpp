@@ -694,7 +694,7 @@ void RenderDoc::Initialise()
 #if ENABLED(RDOC_WIN32)
     const rdcstr base = IsReplayApp() ? RDOC_LOG_NAMESPACE : RDOC_LOG_NAMESPACE "_app";
 #else
-    const rdcstr base = IsReplayApp() ? "RenderDoc" : "RenderDoc_app";
+    const rdcstr base = IsReplayApp() ? "DComp" : "DComp_app";
 #endif
 
     FileIO::GetDefaultFiles(base, capture_filename, m_LoggingFilename, m_Target);
@@ -708,7 +708,7 @@ void RenderDoc::Initialise()
 #if ENABLED(RDOC_WIN32)
   const char *productDisplayName = RDOC_PRODUCT_DISPLAY_NAME;
 #else
-  const char *productDisplayName = "RenderDoc";
+  const char *productDisplayName = "DComp";
 #endif
 
   const char *platform =

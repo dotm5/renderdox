@@ -343,7 +343,7 @@ LogView::~LogView()
 
 void LogView::on_openExternal_clicked()
 {
-  QString logPath = QString::fromUtf8(RENDERDOC_GetLogFile());
+  QString logPath = QString::fromUtf8(DCOMP_GetLogFile());
   if(QFileInfo::exists(logPath))
     QDesktopServices::openUrl(QUrl::fromLocalFile(logPath));
 }
@@ -368,7 +368,7 @@ void LogView::on_save_clicked()
   }
 
   rdcstr contents;
-  RENDERDOC_GetLogFileContents(0, contents);
+  DCOMP_GetLogFileContents(0, contents);
 
   f->write(QByteArray(contents.c_str(), contents.count()));
 
@@ -486,7 +486,7 @@ void LogView::pidFilter_changed(QStandardItem *item)
 void LogView::messages_refresh()
 {
   rdcstr contents;
-  RENDERDOC_GetLogFileContents(prevOffset, contents);
+  DCOMP_GetLogFileContents(prevOffset, contents);
 
   if(contents.empty())
     return;

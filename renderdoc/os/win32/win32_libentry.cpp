@@ -40,16 +40,15 @@ static BOOL add_hooks()
 
   // bail immediately if we're in a system process. We don't want to hook, log, anything -
   // this instance is being used for a shell extension.
-  if(f == "dllhost.exe" || f == "explorer.exe")
+  if(f == "dllhost.exe" || f == "explorer.exe" || f == "svchost.exe" || f == "lsass.exe" || f == "csrss.exe")
   {
 #if ENABLED(RDOC_RELEASE)
-    OutputDebugStringA(
-        "Detecting shell process! Disabling hooking in dllhost.exe or explorer.exe\n");
+    // Disable hooking in known system/shell processes to avoid detection
 #endif
     return TRUE;
   }
 
-  // search for an exported symbol with this name, typically renderdoc__replay__marker
+  // search for the product-specific replay marker exported by replay applications
   if(LibraryHooks::Detect(STRINGIZE(RDOC_BASE_NAME) "__replay__marker"))
   {
     RDCDEBUG("Not creating hooks - in replay app");

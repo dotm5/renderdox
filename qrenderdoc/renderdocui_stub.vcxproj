@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Development|Win32">
@@ -30,9 +30,9 @@
   <PropertyGroup>
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
-    <OutputDirectory>$(SolutionDir)$(Platform)\$(Configuration)\</OutputDirectory>
-    <SolutionRelativeIntDir>$(Platform)\$(Configuration)\obj\$(ProjectName)\</SolutionRelativeIntDir>
+    <PlatformToolset>v143</PlatformToolset>
+    <OutputDirectory>$(SolutionDir)$(Platform)\$(RDocConfigurationName)\</OutputDirectory>
+    <SolutionRelativeIntDir>$(Platform)\$(RDocConfigurationName)\obj\$(ProjectName)\</SolutionRelativeIntDir>
     <CharacterSet>Unicode</CharacterSet>
     <PrimaryOutput>$(RDocUIStubBaseName)</PrimaryOutput>
     <TargetName>$(RDocUIStubBaseName)</TargetName>

@@ -65,7 +65,7 @@ v2f Text(float2 pos, int charidx, int glyphidx)
   return OUT;
 }
 
-v2f RENDERDOC_TextVS(uint vid : SV_VertexID, uint inst : SV_InstanceID)
+v2f DCOMP_TextVS(uint vid : SV_VertexID, uint inst : SV_InstanceID)
 {
   // easy-mode on FL10 and up, use vertex/instance index
   float2 verts[] = {
@@ -78,7 +78,7 @@ v2f RENDERDOC_TextVS(uint vid : SV_VertexID, uint inst : SV_InstanceID)
   return Text(verts[vid], int(inst), chars[inst].x);
 }
 
-v2f RENDERDOC_Text9VS(float4 pos : POSITION)
+v2f DCOMP_Text9VS(float4 pos : POSITION)
 {
   // hard mode on FL9, fetch from vertex inputs
   return Text(pos.xy, int(pos.z + 0.1f), int(pos.w + 0.1f));
@@ -89,7 +89,7 @@ SamplerState linearSample : register(s1);
 
 Texture2D fontTexture : register(t0);
 
-float4 RENDERDOC_TextPS(v2f IN) : SV_Target0
+float4 DCOMP_TextPS(v2f IN) : SV_Target0
 {
   float text = 0;
 

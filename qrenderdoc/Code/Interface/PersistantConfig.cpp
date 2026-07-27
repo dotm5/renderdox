@@ -275,7 +275,7 @@ void PersistantConfig::applyValues(const QVariantMap &values)
     m_Legacy->_##oldName = values[lit(#oldName)].value<variantType>(); \
     if(!processed)                                                     \
     {                                                                  \
-      SDObject *setting = RENDERDOC_SetConfigSetting(newName);         \
+      SDObject *setting = DCOMP_SetConfigSetting(newName);         \
       if(setting)                                                      \
         setting->data = m_Legacy->_##oldName;                          \
       saveConfig = true;                                               \
@@ -300,7 +300,7 @@ void PersistantConfig::applyValues(const QVariantMap &values)
         QStringList searchPaths = settings[lit("shader.debug.searchPaths")].toString().split(
             QLatin1Char(';'), QString::SkipEmptyParts);
 
-        SDObject *debug = RENDERDOC_SetConfigSetting("DXBC.Debug.SearchDirPaths");
+        SDObject *debug = DCOMP_SetConfigSetting("DXBC.Debug.SearchDirPaths");
 
         debug->DeleteChildren();
         debug->ReserveChildren(searchPaths.size());
@@ -317,7 +317,7 @@ void PersistantConfig::applyValues(const QVariantMap &values)
   }
 
   if(saveConfig)
-    RENDERDOC_SaveConfigSettings();
+    DCOMP_SaveConfigSettings();
 
   for(const rdcpair<rdcstr, CustomPersistentStorage *> &ps : GetCustomStorage())
     ps.second->load(values[QString(ps.first)]);
@@ -392,11 +392,11 @@ void PersistantConfig::UpdateEnumeratedProtocolDevices()
   rdcarray<RemoteHost> enumeratedDevices;
 
   rdcarray<rdcstr> protocols;
-  RENDERDOC_GetSupportedDeviceProtocols(&protocols);
+  DCOMP_GetSupportedDeviceProtocols(&protocols);
 
   for(const rdcstr &p : protocols)
   {
-    IDeviceProtocolController *protocol = RENDERDOC_GetDeviceProtocolController(p);
+    IDeviceProtocolController *protocol = DCOMP_GetDeviceProtocolController(p);
 
     rdcarray<rdcstr> devices = protocol->GetDevices();
 

@@ -1118,18 +1118,18 @@ rdcstr DoStringise(const SectionType &el)
 {
   BEGIN_ENUM_STRINGISE(SectionType);
   {
-    STRINGISE_ENUM_CLASS_NAMED(FrameCapture, "renderdoc/internal/framecapture");
-    STRINGISE_ENUM_CLASS_NAMED(ResolveDatabase, "renderdoc/internal/resolvedb");
-    STRINGISE_ENUM_CLASS_NAMED(Bookmarks, "renderdoc/ui/bookmarks");
-    STRINGISE_ENUM_CLASS_NAMED(Notes, "renderdoc/ui/notes");
-    STRINGISE_ENUM_CLASS_NAMED(ResourceRenames, "renderdoc/ui/resrenames");
+    STRINGISE_ENUM_CLASS_NAMED(FrameCapture, "dcomp/internal/framecapture");
+    STRINGISE_ENUM_CLASS_NAMED(ResolveDatabase, "dcomp/internal/resolvedb");
+    STRINGISE_ENUM_CLASS_NAMED(Bookmarks, "dcomp/ui/bookmarks");
+    STRINGISE_ENUM_CLASS_NAMED(Notes, "dcomp/ui/notes");
+    STRINGISE_ENUM_CLASS_NAMED(ResourceRenames, "dcomp/ui/resrenames");
     STRINGISE_ENUM_CLASS_NAMED(AMDRGPProfile, "amd/rgp/profile");
-    STRINGISE_ENUM_CLASS_NAMED(ExtendedThumbnail, "renderdoc/internal/exthumb");
-    STRINGISE_ENUM_CLASS_NAMED(EmbeddedLogfile, "renderdoc/internal/logfile");
-    STRINGISE_ENUM_CLASS_NAMED(EditedShaders, "renderdoc/ui/edits");
-    STRINGISE_ENUM_CLASS_NAMED(D3D12Core, "renderdoc/internal/d3d12core");
-    STRINGISE_ENUM_CLASS_NAMED(D3D12SDKLayers, "renderdoc/internal/d3d12sdklayers");
-    STRINGISE_ENUM_CLASS_NAMED(EmbeddedExternalFiles, "renderdoc/internal/embeddedexternalfiles");
+    STRINGISE_ENUM_CLASS_NAMED(ExtendedThumbnail, "dcomp/internal/exthumb");
+    STRINGISE_ENUM_CLASS_NAMED(EmbeddedLogfile, "dcomp/internal/logfile");
+    STRINGISE_ENUM_CLASS_NAMED(EditedShaders, "dcomp/ui/edits");
+    STRINGISE_ENUM_CLASS_NAMED(D3D12Core, "dcomp/internal/d3d12core");
+    STRINGISE_ENUM_CLASS_NAMED(D3D12SDKLayers, "dcomp/internal/d3d12sdklayers");
+    STRINGISE_ENUM_CLASS_NAMED(EmbeddedExternalFiles, "dcomp/internal/embeddedexternalfiles");
   }
   END_ENUM_STRINGISE();
 }

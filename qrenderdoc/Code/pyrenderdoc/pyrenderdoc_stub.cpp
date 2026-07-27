@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <algorithm>
 
+#include "../../../renderdoc/generated/product_identity.h"
 #include "renderdoc_replay.h"
 
 template <>

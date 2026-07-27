@@ -293,7 +293,7 @@ class GLXPlatform : public GLPlatform
       // on NV and AMD creating this window causes problems rendering to any widgets in Qt, with the
       // width/height queries failing to return any values and the framebuffer blitting not working.
       // For the moment, we use the passed-in drawable directly as this works in testing on
-      // renderdoccmd and qrenderdoc
+      // dgcorecmd and qdgcore
       wnd = draw;
       // glXCreateWindow(dpy, fbcfg[0], draw, 0);
     }
@@ -427,7 +427,7 @@ class GLXPlatform : public GLPlatform
       XFree(fbcfg);
       RETURN_ERROR_RESULT(
           ResultCode::APIHardwareUnsupported,
-          "Couldn't create 3.2 context - RenderDoc requires OpenGL 3.2 availability");
+          "Couldn't create 3.2 context - DComp requires OpenGL 3.2 availability");
     }
 
     GLCoreVersion = major * 10 + minor;
@@ -462,7 +462,7 @@ class GLXPlatform : public GLPlatform
         RDCLOG(
             "If you hit a crash after this message, try setting __GL_THREADED_OPTIMIZATIONS=0 or "
             "upgrade to 381.x or newer.");
-        RDCLOG("See https://github.com/baldurk/renderdoc/issues/609 for more information.");
+        RDCLOG("See https://github.com/baldurk/dgcore/issues/609 for more information.");
       }
     }
 

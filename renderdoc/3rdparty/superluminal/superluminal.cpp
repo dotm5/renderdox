@@ -103,7 +103,7 @@ void Init()
 void BeginProfileRange(const rdcstr &name)
 {
   if(funcTable.BeginEvent)
-    funcTable.BeginEvent("RenderDoc", name.c_str(), PERFORMANCEAPI_DEFAULT_COLOR);
+    funcTable.BeginEvent("DComp", name.c_str(), PERFORMANCEAPI_DEFAULT_COLOR);
 }
 
 void EndProfileRange()

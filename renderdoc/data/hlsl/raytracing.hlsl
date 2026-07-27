@@ -48,7 +48,7 @@ GPUAddress RemapCaptureToReplayAddress(GPUAddress instanceBlasAddress)
 }
 
 // Each SV_GroupId corresponds to each of the BLAS (instance) in TLAS
-[numthreads(1, 1, 1)] void RENDERDOC_PatchAccStructAddressCS(uint3 dispatchGroup
+[numthreads(1, 1, 1)] void DCOMP_PatchAccStructAddressCS(uint3 dispatchGroup
                                                              : SV_GroupId) {
   instanceDescs[dispatchGroup.x].blasAddress =
       RemapCaptureToReplayAddress(instanceDescs[dispatchGroup.x].blasAddress);
@@ -265,14 +265,14 @@ void PatchTable(uint byteOffset)
 }
 
 // Each SV_GroupId corresponds to one shader record to patch
-[numthreads(RECORD_PATCH_THREADS, 1, 1)] void RENDERDOC_PatchShaderTableCS(uint3 dispatchThread
+[numthreads(RECORD_PATCH_THREADS, 1, 1)] void DCOMP_PatchShaderTableCS(uint3 dispatchThread
                                                                            : SV_DispatchThreadID) {
   if(dispatchThread.x < shaderrecord_count)
     PatchTable(shaderrecord_stride * dispatchThread.x);
 };
 
 // Each SV_GroupId corresponds to one shader record to patch
-[numthreads(RECORD_PATCH_THREADS, 1, 1)] void RENDERDOC_CopyShaderTableCS(uint3 dispatchThread
+[numthreads(RECORD_PATCH_THREADS, 1, 1)] void DCOMP_CopyShaderTableCS(uint3 dispatchThread
                                                                           : SV_DispatchThreadID) {
   if(dispatchThread.x < shaderrecord_count)
   {
@@ -329,7 +329,7 @@ GPUAddress AlignRecordAddress(GPUAddress x)
   return ret;
 }
 
-[numthreads(1, 1, 1)] void RENDERDOC_PrepareRayIndirectExecuteCS() {
+[numthreads(1, 1, 1)] void DCOMP_PrepareRayIndirectExecuteCS() {
   uint numCommands = maxCommandCount;
   if(numCommands & 0x80000000U)
   {
@@ -470,7 +470,7 @@ GPUAddress AlignRecordAddress(GPUAddress x)
 StructuredBuffer<uint2> applicationBLASPointers : register(t1);
 RWStructuredBuffer<TLASCopyExecute> internalTLASCopyArguments : register(u0);
 
-[numthreads(1, 1, 1)] void RENDERDOC_PrepareTLASCopyIndirectExecuteCS(uint3 dispatchThread
+[numthreads(1, 1, 1)] void DCOMP_PrepareTLASCopyIndirectExecuteCS(uint3 dispatchThread
                                                                       : SV_DispatchThreadID) {
   TLASCopyExecute execute = (TLASCopyExecute)0;
   if(addressCount > 0)
@@ -496,7 +496,7 @@ cbuffer TLASCopyExecuteCB : register(b0)
 RWStructuredBuffer<InstanceDesc> copyDest : register(u0);
 
 // Each SV_GroupId corresponds to one shader record to patch
-[numthreads(1, 1, 1)] void RENDERDOC_CopyBLASInstanceCS(uint3 dispatchThread
+[numthreads(1, 1, 1)] void DCOMP_CopyBLASInstanceCS(uint3 dispatchThread
                                                         : SV_DispatchThreadID) {
   copyDest[blas_index] = copySource[0];
 }

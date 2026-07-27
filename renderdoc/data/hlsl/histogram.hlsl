@@ -34,7 +34,7 @@ RWBuffer<float4> MinMaxDestFloat : register(u0);
 RWBuffer<uint4> MinMaxDestUInt : register(u1);
 RWBuffer<int4> MinMaxDestInt : register(u2);
 
-[numthreads(HGRAM_TILES_PER_BLOCK, HGRAM_TILES_PER_BLOCK, 1)] void RENDERDOC_TileMinMaxCS(
+[numthreads(HGRAM_TILES_PER_BLOCK, HGRAM_TILES_PER_BLOCK, 1)] void DCOMP_TileMinMaxCS(
     uint3 tid
     : SV_GroupThreadID, uint3 gid
     : SV_GroupID) {
@@ -154,7 +154,7 @@ RWBuffer<float4> MinMaxResultDestFloat : register(u0);
 RWBuffer<uint4> MinMaxResultDestUInt : register(u1);
 RWBuffer<int4> MinMaxResultDestInt : register(u2);
 
-[numthreads(1, 1, 1)] void RENDERDOC_ResultMinMaxCS() {
+[numthreads(1, 1, 1)] void DCOMP_ResultMinMaxCS() {
   uint3 texDim = uint3(HistogramTextureResolution);
 
   uint blocksX = (int)ceil(float(texDim.x) / float(HGRAM_PIXELS_PER_TILE * HGRAM_TILES_PER_BLOCK));
@@ -214,7 +214,7 @@ RWBuffer<int4> MinMaxResultDestInt : register(u2);
 
 RWBuffer<uint> HistogramDest : register(u0);
 
-[numthreads(HGRAM_TILES_PER_BLOCK, HGRAM_TILES_PER_BLOCK, 1)] void RENDERDOC_HistogramCS(
+[numthreads(HGRAM_TILES_PER_BLOCK, HGRAM_TILES_PER_BLOCK, 1)] void DCOMP_HistogramCS(
     uint3 tid
     : SV_GroupThreadID, uint3 gid
     : SV_GroupID) {

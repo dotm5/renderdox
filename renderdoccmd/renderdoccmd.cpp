@@ -150,7 +150,7 @@ struct VersionCommand : public Command
   {
     std::cout << command_executable_name() << " "
               << (sizeof(uintptr_t) == sizeof(uint64_t) ? "x64" : "x86") << " v"
-              << MAJOR_MINOR_VERSION_STRING << " built from " << RENDERDOC_GetCommitHash()
+              << MAJOR_MINOR_VERSION_STRING << " built from " << DCOMP_GetCommitHash()
               << std::endl;
 
 #if defined(DISTRIBUTION_VERSION)
@@ -248,7 +248,7 @@ public:
 
     rdcarray<EnvironmentModification> env;
 
-    ExecuteResult res = RENDERDOC_ExecuteAndInject(
+    ExecuteResult res = DCOMP_ExecuteAndInject(
         conv(executable), conv(workingDir), conv(cmdLine), env, conv(logFile), opts, wait_for_exit);
 
     if(res.result.code != ResultCode::Succeeded)
@@ -320,7 +320,7 @@ public:
 
     rdcarray<EnvironmentModification> env;
 
-    ExecuteResult res = RENDERDOC_InjectIntoProcess(PID, env, conv(captureFile), opts, wait_for_exit);
+    ExecuteResult res = DCOMP_InjectIntoProcess(PID, env, conv(captureFile), opts, wait_for_exit);
 
     if(res.result.code != ResultCode::Succeeded)
     {
@@ -428,7 +428,7 @@ public:
 
     bytebuf buf;
 
-    ICaptureFile *file = RENDERDOC_OpenCaptureFile();
+    ICaptureFile *file = DCOMP_OpenCaptureFile();
     ResultDetails st = file->OpenFile(conv(infile), "rdc", NULL);
     if(st.OK())
     {
@@ -526,7 +526,7 @@ public:
     if(DisplayRemoteServerPreview(false, {}).system != WindowingSystem::Unknown)
       previewWindow = &DisplayRemoteServerPreview;
 
-    RENDERDOC_BecomeRemoteServer(
+    DCOMP_BecomeRemoteServer(
         conv(host), port, []() { return killSignal; }, previewWindow);
 
     std::cerr << std::endl << "Cleaning up from replay hosting." << std::endl;
@@ -596,7 +596,7 @@ public:
       std::cout << "Replaying '" << filename << "' on " << remote_host << "." << std::endl;
 
       IRemoteServer *remote = NULL;
-      ResultDetails result = RENDERDOC_CreateRemoteServerConnection(conv(remote_host), &remote);
+      ResultDetails result = DCOMP_CreateRemoteServerConnection(conv(remote_host), &remote);
 
       if(remote == NULL || result.code != ResultCode::Succeeded)
       {
@@ -632,7 +632,7 @@ public:
     {
       std::cout << "Replaying '" << filename << "' locally.." << std::endl;
 
-      ICaptureFile *file = RENDERDOC_OpenCaptureFile();
+      ICaptureFile *file = DCOMP_OpenCaptureFile();
 
       ResultDetails res = file->OpenFile(conv(filename), "rdc", NULL);
 
@@ -669,7 +669,7 @@ struct formats_reader
 {
   formats_reader(bool input)
   {
-    ICaptureFile *tmp = RENDERDOC_OpenCaptureFile();
+    ICaptureFile *tmp = DCOMP_OpenCaptureFile();
 
     for(const CaptureFileFormat &f : tmp->GetCaptureFileFormats())
     {
@@ -759,7 +759,7 @@ public:
 
   virtual int Execute(const CaptureOptions &)
   {
-    ICaptureFile *tmp = RENDERDOC_OpenCaptureFile();
+    ICaptureFile *tmp = DCOMP_OpenCaptureFile();
 
     m_Formats = tmp->GetCaptureFileFormats();
 
@@ -822,7 +822,7 @@ public:
       return 1;
     }
 
-    ICaptureFile *file = RENDERDOC_OpenCaptureFile();
+    ICaptureFile *file = DCOMP_OpenCaptureFile();
 
     ResultDetails st = file->OpenFile(conv(infile), conv(infmt), NULL);
 
@@ -910,13 +910,13 @@ public:
   virtual int Execute(const CaptureOptions &)
   {
     if(mode == "unit")
-      return RENDERDOC_RunUnitTests(rdcstr(command_executable_name()) + " test unit", args);
+      return DCOMP_RunUnitTests(rdcstr(command_executable_name()) + " test unit", args);
 #if PYTHON_AVAILABLE == 1
     else if(mode == "functional")
     {
       rdcarray<rdcstr> functionalArgs = args;
       functionalArgs.insert(0, "--internal_command_runner");
-      return RENDERDOC_RunFunctionalTests(functionalArgs);
+      return DCOMP_RunFunctionalTests(functionalArgs);
     }
 #endif
 
@@ -1034,9 +1034,9 @@ public:
   }
   virtual int Execute(const CaptureOptions &)
   {
-    RENDERDOC_SetDebugLogFile(conv(debuglog));
+    DCOMP_SetDebugLogFile(conv(debuglog));
 
-    ExecuteResult result = RENDERDOC_InjectIntoProcess(pid, env, conv(capfile), cmdopts, false);
+    ExecuteResult result = DCOMP_InjectIntoProcess(pid, env, conv(capfile), cmdopts, false);
 
     if(result.result.OK())
       return result.ident;
@@ -1133,7 +1133,7 @@ public:
       lz4 = false;
     }
 
-    ICaptureFile *capfile = RENDERDOC_OpenCaptureFile();
+    ICaptureFile *capfile = DCOMP_OpenCaptureFile();
 
     ResultDetails result = capfile->OpenFile(conv(rdc), "", NULL);
 
@@ -1295,7 +1295,7 @@ private:
 public:
   VulkanRegisterCommand() : Command()
   {
-    m_LayerNeedUpdate = RENDERDOC_NeedVulkanLayerRegistration(&m_Info);
+    m_LayerNeedUpdate = DCOMP_NeedVulkanLayerRegistration(&m_Info);
   }
   virtual void AddOptions(cmdline::parser &parser)
   {
@@ -1454,9 +1454,9 @@ public:
     }
     else if(user || system)
     {
-      RENDERDOC_UpdateVulkanLayerRegistration(system);
+      DCOMP_UpdateVulkanLayerRegistration(system);
 
-      if(RENDERDOC_NeedVulkanLayerRegistration(NULL))
+      if(DCOMP_NeedVulkanLayerRegistration(NULL))
       {
         std::cerr << "Vulkan layer registration not successful. ";
         if(system)
@@ -1675,7 +1675,7 @@ int renderdoccmd(GlobalEnvironment &env, std::vector<std::string> &argv)
     cmd.parse_check(argv, true);
 
     CaptureOptions opts;
-    RENDERDOC_GetDefaultCaptureOptions(&opts);
+    DCOMP_GetDefaultCaptureOptions(&opts);
 
     if(it->second->IsCaptureCommand())
     {
@@ -1721,11 +1721,11 @@ int renderdoccmd(GlobalEnvironment &env, std::vector<std::string> &argv)
 
     args.append(it->second->ReplayArgs());
 
-    RENDERDOC_InitialiseReplay(env, args);
+    DCOMP_InitialiseReplay(env, args);
 
     int ret = it->second->Execute(opts);
 
-    RENDERDOC_ShutdownReplay();
+    DCOMP_ShutdownReplay();
 
     clean_up();
     return ret;

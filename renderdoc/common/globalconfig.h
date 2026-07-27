@@ -60,7 +60,7 @@
 
 // translate from build system defines, so they don't have to be defined to anything in
 // particular
-#if defined(RENDERDOC_PLATFORM_WIN32)
+#if defined(DCOMP_PLATFORM_WIN32)
 
 #define RDOC_WIN32 OPTION_ON
 #define RDOC_ANDROID OPTION_OFF
@@ -150,13 +150,13 @@ enum
   RenderDoc_ForwardPortStride = 10,
 };
 
-#define RENDERDOC_VULKAN_LAYER_NAME "VK_LAYER_RENDERDOC_Capture"
-#define RENDERDOC_VULKAN_LAYER_VAR "ENABLE_VULKAN_RENDERDOC_CAPTURE"
+#define RENDERDOC_VULKAN_LAYER_NAME "VK_LAYER_DCOMP_Capture"
+#define RENDERDOC_VULKAN_LAYER_VAR "ENABLE_VULKAN_DCOMP_CAPTURE"
 
-#define RENDERDOC_ANDROID_LIBRARY "libVkLayer_GLES_RenderDoc.so"
+#define RENDERDOC_ANDROID_LIBRARY "libVkLayer_GLES_DComp.so"
 
 // This MUST match the package name in the build process that generates per-architecture packages
-#define RENDERDOC_ANDROID_PACKAGE_BASE "org.renderdoc.renderdoccmd"
+#define RENDERDOC_ANDROID_PACKAGE_BASE "org.dgcore.dgcorecmd"
 
 /////////////////////////////////////////////////
 // Debugging features configuration

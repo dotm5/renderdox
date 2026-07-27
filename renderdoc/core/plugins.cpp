@@ -48,7 +48,7 @@ rdcstr LocatePluginFile(const rdcstr &path, const rdcstr &fileName)
   // windows installation
   paths.push_back(libpath + "/plugins");
   // linux installation
-  paths.push_back(libpath + "/../share/renderdoc/plugins");
+  paths.push_back(libpath + "/../share/dgcore/plugins");
 // also search the appropriate OS-specific location in the root
 #if ENABLED(RDOC_WIN32) && ENABLED(RDOC_X64)
   paths.push_back(libpath + "/../../plugins-win64");

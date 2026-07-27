@@ -171,7 +171,7 @@ const D3D11Pipe::Shader &PipeState::GetD3D11Stage(ShaderStage stage) const
   if(stage == ShaderStage::Compute)
     return m_D3D11->computeShader;
 
-  RENDERDOC_LogMessage(LogType::Error, "PIPE", __FILE__, __LINE__, "Error - invalid stage");
+  DCOMP_LogMessage(LogType::Error, "PIPE", __FILE__, __LINE__, "Error - invalid stage");
   return m_D3D11->computeShader;
 }
 
@@ -194,7 +194,7 @@ const D3D12Pipe::Shader &PipeState::GetD3D12Stage(ShaderStage stage) const
   if(stage == ShaderStage::Mesh)
     return m_D3D12->meshShader;
 
-  RENDERDOC_LogMessage(LogType::Error, "PIPE", __FILE__, __LINE__, "Error - invalid stage");
+  DCOMP_LogMessage(LogType::Error, "PIPE", __FILE__, __LINE__, "Error - invalid stage");
   return m_D3D12->computeShader;
 }
 
@@ -213,7 +213,7 @@ const GLPipe::Shader &PipeState::GetGLStage(ShaderStage stage) const
   if(stage == ShaderStage::Compute)
     return m_GL->computeShader;
 
-  RENDERDOC_LogMessage(LogType::Error, "PIPE", __FILE__, __LINE__, "Error - invalid stage");
+  DCOMP_LogMessage(LogType::Error, "PIPE", __FILE__, __LINE__, "Error - invalid stage");
   return m_GL->computeShader;
 }
 
@@ -236,7 +236,7 @@ const VKPipe::Shader &PipeState::GetVulkanStage(ShaderStage stage) const
   if(stage == ShaderStage::Mesh)
     return m_Vulkan->meshShader;
 
-  RENDERDOC_LogMessage(LogType::Error, "PIPE", __FILE__, __LINE__, "Error - invalid stage");
+  DCOMP_LogMessage(LogType::Error, "PIPE", __FILE__, __LINE__, "Error - invalid stage");
   return m_Vulkan->computeShader;
 }
 

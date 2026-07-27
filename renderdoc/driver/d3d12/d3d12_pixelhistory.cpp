@@ -2595,9 +2595,9 @@ struct D3D12PixelHistoryDiscardedFragmentsCallback : D3D12PixelHistoryCallback
 
       uint32_t primId = primIds[i];
       ActionDescription action = *m_pDevice->GetAction(eid);
-      action.numIndices = RENDERDOC_NumVerticesPerPrimitive(topo);
-      action.indexOffset += RENDERDOC_VertexOffset(topo, primId);
-      action.vertexOffset += RENDERDOC_VertexOffset(topo, primId);
+      action.numIndices = DCOMP_NumVerticesPerPrimitive(topo);
+      action.indexOffset += DCOMP_VertexOffset(topo, primId);
+      action.vertexOffset += DCOMP_VertexOffset(topo, primId);
 
       // TODO once pixel history distinguishes between instances, draw only the instance
       // for this fragment.

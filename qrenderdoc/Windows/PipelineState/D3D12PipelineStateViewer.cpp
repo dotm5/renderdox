@@ -1427,7 +1427,7 @@ void D3D12PipelineStateViewer::setState()
           iformat = lit("uint");
 
         iformat +=
-            lit(" indices[%1]").arg(RENDERDOC_NumVerticesPerPrimitive(state.inputAssembly.topology));
+            lit(" indices[%1]").arg(DCOMP_NumVerticesPerPrimitive(state.inputAssembly.topology));
 
         uint32_t drawOffset =
             (action ? action->indexOffset * state.inputAssembly.indexBuffer.byteStride : 0);
@@ -1478,7 +1478,7 @@ void D3D12PipelineStateViewer::setState()
           iformat = lit("uint");
 
         iformat +=
-            lit(" indices[%1]").arg(RENDERDOC_NumVerticesPerPrimitive(state.inputAssembly.topology));
+            lit(" indices[%1]").arg(DCOMP_NumVerticesPerPrimitive(state.inputAssembly.topology));
 
         uint32_t drawOffset =
             (action ? action->indexOffset * state.inputAssembly.indexBuffer.byteStride : 0);

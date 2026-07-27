@@ -6055,8 +6055,8 @@ bool EventBrowser::WriteVisibilityPreset(const QString &filename, const QString 
   root[lit("captureSHA256")] = sha256;
   root[lit("captureFileName")] = QFileInfo(QString(m_Ctx.GetCaptureFilename())).fileName();
   root[lit("api")] = ToQStr(m_Ctx.APIProps().pipelineType);
-  root[lit("renderDocVersion")] = QString::fromLatin1(RENDERDOC_GetVersionString());
-  root[lit("portCommit")] = QString::fromLatin1(RENDERDOC_GetCommitHash());
+  root[lit("renderDocVersion")] = QString::fromLatin1(DCOMP_GetVersionString());
+  root[lit("portCommit")] = QString::fromLatin1(DCOMP_GetCommitHash());
   root[lit("generatedAt")] = QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs);
 
   QList<uint32_t> sorted = m_DisabledActions.values();

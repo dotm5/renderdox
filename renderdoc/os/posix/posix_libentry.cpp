@@ -49,8 +49,8 @@ void library_loaded()
 
     ResetHookingEnvVars();
 
-    rdcstr capturefile = Process::GetEnvVariable("RENDERDOC_CAPFILE");
-    rdcstr opts = Process::GetEnvVariable("RENDERDOC_CAPOPTS");
+    rdcstr capturefile = Process::GetEnvVariable("DCOMP_CAPFILE");
+    rdcstr opts = Process::GetEnvVariable("DCOMP_CAPOPTS");
 
     if(!opts.empty())
     {

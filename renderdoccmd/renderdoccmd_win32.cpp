@@ -699,7 +699,7 @@ public:
 
       std::string reportPath = conv(dumpFolder) + "\\" + dumpId + ".zip";
 
-      RENDERDOC_CreateBugReport(rdcstr(conv(wlogpath).c_str()), rdcstr(conv(wdump).c_str()),
+      DCOMP_CreateBugReport(rdcstr(conv(wlogpath).c_str()), rdcstr(conv(wdump).c_str()),
                                 rdcstr(reportPath.c_str()));
 
       for(size_t i = 0; i < reportPath.size(); i++)

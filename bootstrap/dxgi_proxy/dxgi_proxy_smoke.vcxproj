@@ -21,8 +21,8 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{2F433773-A24D-480A-B1B1-6A1C267A5754}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>rendertest_dxgi_proxy_smoke</RootNamespace>
-    <ProjectName>rendertest_dxgi_proxy_smoke</ProjectName>
+    <RootNamespace>dcomp_dxgi_proxy_smoke</RootNamespace>
+    <ProjectName>dcomp_dxgi_proxy_smoke</ProjectName>
     <RepoRoot>$(MSBuildThisFileDirectory)..\..\</RepoRoot>
     <SolutionDir Condition="'$(SolutionDir)'=='' or '$(SolutionDir)'=='*Undefined*'">$(RepoRoot)</SolutionDir>
   </PropertyGroup>
@@ -51,7 +51,7 @@
   <Import Project="$(RepoRoot)util\WindowsSDKFix.props" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IntDir>$(RepoRoot)$(Platform)\$(Configuration)\obj\rendertest_dxgi_proxy_smoke\</IntDir>
+    <IntDir>$(RepoRoot)$(Platform)\$(Configuration)\obj\dcomp_dxgi_proxy_smoke\</IntDir>
     <OutDir>$(RepoRoot)$(Platform)\$(Configuration)\bootstrap\dxgi_proxy\</OutDir>
     <TargetName>dxgi_proxy_smoke</TargetName>
   </PropertyGroup>

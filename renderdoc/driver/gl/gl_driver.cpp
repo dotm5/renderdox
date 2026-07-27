@@ -269,7 +269,7 @@ void WrappedOpenGL::BuildGLExtensions()
 
   // this WGL extension is advertised in the gl ext string instead of via the wgl ext string,
   // return it just in case anyone is checking for it via this place. On non-windows platforms
-  // it won't be reported as we do the intersection of renderdoc supported extensions and
+  // it won't be reported as we do the intersection of dgcore supported extensions and
   // implementation supported extensions.
   m_GLExtensions.push_back("WGL_EXT_swap_control");
 
@@ -1533,8 +1533,8 @@ void WrappedOpenGL::ActivateContext(GLWindowingData winData)
       }
     }
 
-    // this extension is something RenderDoc will support even if the impl
-    // doesn't. https://renderdoc.org/debug_tool.txt
+    // this extension is something DComp will support even if the impl
+    // doesn't. https://dgcore.org/debug_tool.txt
     ctxdata.glExts.push_back("GL_EXT_debug_tool");
 
     // similarly we report all the debug extensions so that applications can use them freely - we
@@ -2065,7 +2065,7 @@ void WrappedOpenGL::SwapBuffers(WindowingSystem winSystem, void *windowHandle)
     if(m_NoCtxFrames == 100)
     {
       RDCERR(
-          "Seen 100 frames with no context current. RenderDoc requires a context to be current "
+          "Seen 100 frames with no context current. DComp requires a context to be current "
           "during the call to SwapBuffers to display its overlay and start/stop captures on "
           "default keys.\nIf your GL use is elsewhere, consider using the in-application API to "
           "trigger captures manually");
@@ -5914,7 +5914,7 @@ void WrappedOpenGL::ReplayLog(uint32_t startEventID, uint32_t endEventID, Replay
   if(!partial)
   {
     RENDERDOC_PROFILEREGION("ApplyInitialContents");
-    GLMarkerRegion apply("!!!!RenderDoc Internal: ApplyInitialContents");
+    GLMarkerRegion apply("!!!!DComp Internal: ApplyInitialContents");
     GetResourceManager()->ApplyInitialContents();
 
     m_WasActiveFeedback = false;
@@ -5922,7 +5922,7 @@ void WrappedOpenGL::ReplayLog(uint32_t startEventID, uint32_t endEventID, Replay
 
   m_State = CaptureState::ActiveReplaying;
 
-  GLMarkerRegion::Set(StringFormat::Fmt("!!!!RenderDoc Internal:  Replay %d (%d): %u->%u",
+  GLMarkerRegion::Set(StringFormat::Fmt("!!!!DComp Internal:  Replay %d (%d): %u->%u",
                                         (int)replayType, (int)partial, startEventID, endEventID));
 
   m_ReplayEventCount = 0;
@@ -5944,5 +5944,5 @@ void WrappedOpenGL::ReplayLog(uint32_t startEventID, uint32_t endEventID, Replay
   for(int i = 0; m_ReplayMarkers && i < m_ReplayEventCount; i++)
     GLMarkerRegion::End();
 
-  GLMarkerRegion::Set("!!!!RenderDoc Internal: Done replay");
+  GLMarkerRegion::Set("!!!!DComp Internal: Done replay");
 }

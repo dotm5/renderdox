@@ -692,7 +692,7 @@ ConfigEditor::ConfigEditor(QWidget *parent) : QDialog(parent), ui(new Ui::Config
   ui->setupUi(this);
   setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
-  m_Config = RENDERDOC_SetConfigSetting("");
+  m_Config = DCOMP_SetConfigSetting("");
 
   m_SettingModel = new SettingModel(this);
   m_FilterModel = new SettingFilterModel(this);

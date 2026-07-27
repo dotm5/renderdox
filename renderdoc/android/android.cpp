@@ -47,7 +47,7 @@ namespace Android
 void adbForwardPorts(uint16_t portbase, const rdcstr &deviceID, uint16_t jdwpPort, int pid,
                      bool silent)
 {
-  const char *forwardCommand = "forward tcp:%i localabstract:renderdoc_%i";
+  const char *forwardCommand = "forward tcp:%i localabstract:dgcore_%i";
 
   adbExecCommand(deviceID,
                  StringFormat::Fmt(forwardCommand, portbase + RenderDoc_ForwardRemoteServerOffset,
@@ -337,7 +337,7 @@ AndroidVersionCheckResult CheckAndroidServerVersion(const rdcstr &deviceID, ABI 
     return AndroidVersionCheckResult::Correct;
   }
 
-  RDCWARN("RenderDoc server versionCode:versionName (%s:%s) is incompatible with host (%s:%s)",
+  RDCWARN("DComp server versionCode:versionName (%s:%s) is incompatible with host (%s:%s)",
           versionCode.c_str(), versionName.c_str(), hostVersionCode.c_str(), hostVersionName.c_str());
 
   return AndroidVersionCheckResult::WrongVersion;
@@ -414,7 +414,7 @@ RDResult InstallRenderDocServer(const rdcstr &deviceID)
                         "Couldn't determine supported ABIs for device %s", deviceID.c_str());
   }
 
-  // Check known paths for RenderDoc server
+  // Check known paths for DComp server
   rdcstr libPath;
   FileIO::GetLibraryFilename(libPath);
   rdcstr libDir = get_dirname(FileIO::GetFullPathname(libPath));
@@ -443,7 +443,7 @@ RDResult InstallRenderDocServer(const rdcstr &deviceID)
   rdcstr suff = GetPlainABIName(abis[0]);
 
   paths.push_back(libDir + "/plugins/android/");                                  // Windows install
-  paths.push_back(libDir + "/../share/renderdoc/plugins/android/");               // Linux install
+  paths.push_back(libDir + "/../share/dgcore/plugins/android/");               // Linux install
   paths.push_back(libDir + "/../plugins/android/");                               // macOS install
   paths.push_back(libDir + "/../../build-android/bin/");                          // Local build
   paths.push_back(libDir + "/../../build-android-" + suff + "/bin/");             // Local ABI build
@@ -472,11 +472,11 @@ RDResult InstallRenderDocServer(const rdcstr &deviceID)
   {
 #if RENDERDOC_OFFICIAL_BUILD
     RETURN_ERROR_RESULT(ResultCode::AndroidAPKFolderNotFound,
-                        "RenderDoc APK not found. Your build of RenderDoc may be incomplete.\n"
+                        "DComp APK not found. Your build of DComp may be incomplete.\n"
                         "Check that your device is ARM based, other ABIs are not supported.");
 #else
     RETURN_ERROR_RESULT(ResultCode::AndroidAPKFolderNotFound,
-                        "RenderDoc APK not found. Your build of RenderDoc is incomplete.\n"
+                        "DComp APK not found. Your build of DComp is incomplete.\n"
                         "If this is a development build, consult the documentation for building "
                         "the Android package.\n"
                         "If this is a release build check that your device is ARM based, other "
@@ -736,7 +736,7 @@ struct AndroidRemoteServer : public RemoteServer
       for(const rdcstr &line : lines)
       {
         // hide our own internal packages
-        if(strstr(line.c_str(), "package:org.renderdoc."))
+        if(strstr(line.c_str(), "package:org.dgcore."))
           continue;
 
         if(!strncmp(line.c_str(), "package:", 8))
@@ -1154,7 +1154,7 @@ struct AndroidController : public IDeviceProtocolHandler
 
       rdcarray<Android::ABI> abis = Android::GetSupportedABIs(deviceID);
 
-      RDCLOG("Starting RenderDoc server, supported ABIs:");
+      RDCLOG("Starting DComp server, supported ABIs:");
       for(Android::ABI abi : abis)
         RDCLOG("  - %s", ToStr(abi).c_str());
 
@@ -1211,7 +1211,7 @@ struct AndroidController : public IDeviceProtocolHandler
         if(result != ResultCode::Succeeded && result != ResultCode::AndroidGrantPermissionsFailed &&
            result != ResultCode::AndroidAPKVerifyFailed)
         {
-          RDCERR("Failed to install RenderDoc server app");
+          RDCERR("Failed to install DComp server app");
           return;
         }
       }
@@ -1222,7 +1222,7 @@ struct AndroidController : public IDeviceProtocolHandler
 
       // Attempt to prevent the user needing to click through on permissions
       rdcstr auto_grant_permissions =
-          Android::adbExecCommand(deviceID, "shell getprop debug.renderdoc.autograntpermissions")
+          Android::adbExecCommand(deviceID, "shell getprop debug.dgcore.autograntpermissions")
               .strStdout.trimmed();
       if(apiVersion >= 30 && atoi(auto_grant_permissions.c_str()) == 1)
       {
@@ -1247,15 +1247,15 @@ struct AndroidController : public IDeviceProtocolHandler
       rdcstr folderName = Android::GetFolderName(deviceID);
 
       // push settings file into our folder
-      Android::adbExecCommand(deviceID, "push \"" + FileIO::GetAppFolderFilename("renderdoc.conf") +
+      Android::adbExecCommand(deviceID, "push \"" + FileIO::GetAppFolderFilename("dgcore.conf") +
                                             "\" /sdcard/Android/" + folderName + package +
-                                            "/files/renderdoc.conf");
+                                            "/files/dgcore.conf");
 
       // launch the last ABI, as the 64-bit version where possible, or 32-bit version where not.
       // Captures are portable across bitness and in some cases a 64-bit capture can't replay on a
       // 32-bit remote server.
       Android::adbExecCommand(
-          deviceID, "shell am start -n " + package + "/.Loader -e renderdoccmd remoteserver");
+          deviceID, "shell am start -n " + package + "/.Loader -e dgcorecmd remoteserver");
     });
 
     // allow the package to start and begin listening before we return
@@ -1506,9 +1506,9 @@ ExecuteResult AndroidRemoteServer::ExecuteAndInject(const rdcstr &packageAndActi
                                               opts.EncodeAsString().c_str()));
 
     // try to push our settings file into the appdata folder
-    Android::adbExecCommand(m_deviceID, "push \"" + FileIO::GetAppFolderFilename("renderdoc.conf") +
+    Android::adbExecCommand(m_deviceID, "push \"" + FileIO::GetAppFolderFilename("dgcore.conf") +
                                             "\" /sdcard/Android/" + folderName + processName +
-                                            "/files/renderdoc.conf");
+                                            "/files/dgcore.conf");
 
     rdcstr installedPath = Android::GetPathForPackage(m_deviceID, packageName);
 
@@ -1625,7 +1625,7 @@ ExecuteResult AndroidRemoteServer::ExecuteAndInject(const rdcstr &packageAndActi
     while(elapsed < timeout)
     {
       // Check if the target app has started yet and we can connect to it.
-      ITargetControl *control = RENDERDOC_CreateTargetControl(
+      ITargetControl *control = DCOMP_CreateTargetControl(
           AndroidController::m_Inst.GetProtocolName() + "://" + m_deviceID, ident, "testConnection",
           false);
       if(control)
@@ -1676,7 +1676,7 @@ AndroidController AndroidController::m_Inst;
 
 DeviceProtocolRegistration androidProtocol("adb", &AndroidController::Get);
 
-extern "C" RENDERDOC_API void RENDERDOC_CC RENDERDOC_CheckAndroidPackage(
+extern "C" RENDERDOC_API void RENDERDOC_CC DCOMP_CheckAndroidPackage(
     const rdcstr &URL, const rdcstr &packageAndActivity, AndroidFlags *flags)
 {
   IDeviceProtocolHandler *adb = RenderDoc::Inst().GetDeviceProtocol("adb");

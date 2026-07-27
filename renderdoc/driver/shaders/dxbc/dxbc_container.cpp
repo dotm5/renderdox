@@ -1449,7 +1449,7 @@ rdcstr DXBCContainer::GetDebugBinaryPath(const void *ByteCode, size_t ByteCodeLe
 
   uint32_t *chunkOffsets = (uint32_t *)(header + 1);    // right after the header
 
-  // prefer RenderDoc's magic value which pre-dated D3D's support
+  // prefer DComp's magic value which pre-dated D3D's support
   for(uint32_t chunkIdx = 0; chunkIdx < header->numChunks; chunkIdx++)
   {
     uint32_t *fourcc = (uint32_t *)(data + chunkOffsets[chunkIdx]);
@@ -1515,7 +1515,7 @@ void DXBCContainer::TryFetchSeparateDebugInfo(bytebuf &byteCode, const rdcstr &d
     {
       bool lz4 = false;
 
-      // RenderDoc extension to allow lz4 compression
+      // DComp extension to allow lz4 compression
       if(!strncmp(originalPath.c_str(), "lz4#", 4))
       {
         originalPath = originalPath.substr(4);

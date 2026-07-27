@@ -75,11 +75,13 @@
 #define DOCUMENT4(text1, text2, text3, text4)
 #endif
 
-#if defined(RENDERDOC_PLATFORM_WIN32)
+#if defined(DCOMP_PLATFORM_WIN32)
 
 #define RENDERDOC_EXPORT_API __declspec(dllexport)
 #define RENDERDOC_IMPORT_API __declspec(dllimport)
+#ifndef RENDERDOC_CC
 #define RENDERDOC_CC __cdecl
+#endif
 
 #elif defined(RENDERDOC_PLATFORM_LINUX) || defined(RENDERDOC_PLATFORM_APPLE) || \
     defined(RENDERDOC_PLATFORM_ANDROID) || defined(RENDERDOC_PLATFORM_SWITCH)
@@ -87,7 +89,9 @@
 #define RENDERDOC_EXPORT_API __attribute__((visibility("default"), used))
 #define RENDERDOC_IMPORT_API
 
+#ifndef RENDERDOC_CC
 #define RENDERDOC_CC
+#endif
 
 #else
 
@@ -96,7 +100,7 @@
 #endif
 
 // define the API visibility depending on whether we're exporting
-#ifdef RENDERDOC_EXPORTS
+#ifdef DCOMP_EXPORTS
 #define RENDERDOC_API RENDERDOC_EXPORT_API
 #else
 #define RENDERDOC_API RENDERDOC_IMPORT_API

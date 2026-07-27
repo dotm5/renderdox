@@ -413,7 +413,7 @@ typedef const char *(RENDERDOC_CC *pRENDERDOC_GetCaptureFilePathTemplate)(void);
 
 // DEPRECATED: compatibility for code compiled against pre-1.1.2 headers.
 typedef pRENDERDOC_SetCaptureFilePathTemplate pRENDERDOC_SetLogFilePathTemplate;
-typedef pRENDERDOC_GetCaptureFilePathTemplate pRENDERDOC_GetLogFilePathTemplate;
+typedef pRENDERDOC_GetCaptureFilePathTemplate pDCOMP_GetLogFilePathTemplate;
 
 // returns the number of captures that have been made
 typedef uint32_t(RENDERDOC_CC *pRENDERDOC_GetNumCaptures)(void);
@@ -470,7 +470,7 @@ typedef uint32_t(RENDERDOC_CC *pRENDERDOC_LaunchReplayUI)(uint32_t connectTarget
 // RenderDoc can return a higher version than requested if it's backwards compatible,
 // this function returns the actual version returned. If a parameter is NULL, it will be
 // ignored and the others will be filled out.
-typedef void(RENDERDOC_CC *pRENDERDOC_GetAPIVersion)(int *major, int *minor, int *patch);
+typedef void(RENDERDOC_CC *pDCOMP_GetAPIVersion)(int *major, int *minor, int *patch);
 
 // Requests that the replay UI show itself (if hidden or not the current top window). This can be
 // used in conjunction with IsTargetControlConnected and LaunchReplayUI to intelligently handle
@@ -750,7 +750,7 @@ typedef enum RENDERDOC_Version
 
 typedef struct RENDERDOC_API_1_7_0
 {
-  pRENDERDOC_GetAPIVersion GetAPIVersion;
+  pDCOMP_GetAPIVersion GetAPIVersion;
 
   pRENDERDOC_SetCaptureOptionU32 SetCaptureOptionU32;
   pRENDERDOC_SetCaptureOptionF32 SetCaptureOptionF32;
@@ -785,7 +785,7 @@ typedef struct RENDERDOC_API_1_7_0
   union
   {
     // deprecated name
-    pRENDERDOC_GetLogFilePathTemplate GetLogFilePathTemplate;
+    pDCOMP_GetLogFilePathTemplate GetLogFilePathTemplate;
     // current name
     pRENDERDOC_GetCaptureFilePathTemplate GetCaptureFilePathTemplate;
   };
@@ -851,7 +851,7 @@ typedef RENDERDOC_API_1_7_0 RENDERDOC_API_1_6_0;
 //
 // This entry point can be obtained via GetProcAddress/dlsym if RenderDoc is available.
 //
-// The name is the same as the typedef - "RENDERDOC_GetAPI"
+// The name is the same as the typedef - "DCOMP_GetAPI"
 //
 // This function is not thread safe, and should not be called on multiple threads at once.
 // Ideally, call this once as early as possible in your application's startup, before doing
@@ -868,7 +868,7 @@ typedef RENDERDOC_API_1_7_0 RENDERDOC_API_1_6_0;
 //   1 - if the outAPIPointers has been filled with a pointer to the API struct requested
 //   0 - if the requested version is not supported or the arguments are invalid.
 //
-typedef int(RENDERDOC_CC *pRENDERDOC_GetAPI)(RENDERDOC_Version version, void **outAPIPointers);
+typedef int(RENDERDOC_CC *pDCOMP_GetAPI)(RENDERDOC_Version version, void **outAPIPointers);
 
 #ifdef __cplusplus
 }    // extern "C"

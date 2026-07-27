@@ -41,7 +41,7 @@ Texture2DMSArray<uint4, 8> sourceMS8 : register(t3);
 Texture2DMSArray<uint4, 16> sourceMS16 : register(t4);
 Texture2DMSArray<uint4, 32> sourceMS32 : register(t5);
 
-uint4 RENDERDOC_CopyMSToArray(float4 pos : SV_Position) : SV_Target0
+uint4 DCOMP_CopyMSToArray(float4 pos : SV_Position) : SV_Target0
 {
   uint3 srcCoord = uint3(pos.x, pos.y, currentSlice);
 
@@ -75,7 +75,7 @@ Texture2DMSArray<float4, 8> sourceFloatMS8 : register(t3);
 Texture2DMSArray<float4, 16> sourceFloatMS16 : register(t4);
 Texture2DMSArray<float4, 32> sourceFloatMS32 : register(t5);
 
-float4 RENDERDOC_FloatCopyMSToArray(float4 pos : SV_Position) : SV_Target0
+float4 DCOMP_FloatCopyMSToArray(float4 pos : SV_Position) : SV_Target0
 {
   uint3 srcCoord = uint3(pos.x, pos.y, currentSlice);
 
@@ -115,7 +115,7 @@ Texture2DMSArray<uint2, 8> sourceStencilMS8 : register(t13);
 Texture2DMSArray<uint2, 16> sourceStencilMS16 : register(t14);
 Texture2DMSArray<uint2, 32> sourceStencilMS32 : register(t15);
 
-float RENDERDOC_DepthCopyMSToArray(float4 pos : SV_Position) : SV_Depth
+float DCOMP_DepthCopyMSToArray(float4 pos : SV_Position) : SV_Depth
 {
   uint3 srcCoord = uint3(pos.x, pos.y, currentSlice);
 
@@ -174,7 +174,7 @@ float RENDERDOC_DepthCopyMSToArray(float4 pos : SV_Position) : SV_Depth
 
 Texture2DArray<uint4> sourceArray : register(t1);
 
-uint4 RENDERDOC_CopyArrayToMS(float4 pos
+uint4 DCOMP_CopyArrayToMS(float4 pos
                               : SV_Position, uint curSample
                               : SV_SampleIndex)
     : SV_Target0
@@ -186,7 +186,7 @@ uint4 RENDERDOC_CopyArrayToMS(float4 pos
 
 Texture2DArray<float4> sourceFloatArray : register(t1);
 
-float4 RENDERDOC_FloatCopyArrayToMS(float4 pos
+float4 DCOMP_FloatCopyArrayToMS(float4 pos
                                     : SV_Position, uint curSample
                                     : SV_SampleIndex)
     : SV_Target0
@@ -199,7 +199,7 @@ float4 RENDERDOC_FloatCopyArrayToMS(float4 pos
 Texture2DArray<float2> sourceDepthArray : register(t1);
 Texture2DArray<uint2> sourceStencilArray : register(t11);
 
-float RENDERDOC_DepthCopyArrayToMS(float4 pos
+float DCOMP_DepthCopyArrayToMS(float4 pos
                                    : SV_Position, uint curSample
                                    : SV_SampleIndex)
     : SV_Depth

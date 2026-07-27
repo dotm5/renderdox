@@ -435,7 +435,7 @@ ShaderMessageViewer::ShaderMessageViewer(ICaptureContext &ctx, ShaderStageMask s
         m_Ctx.GetMeshPreview()->ShowMeshData(MeshDataStage::GSOut);
         // TODO, instances not supported
         m_Ctx.GetMeshPreview()->ScrollToRow(
-            RENDERDOC_VertexOffset(m_Ctx.CurPipelineState().GetPrimitiveTopology(),
+            DCOMP_VertexOffset(m_Ctx.CurPipelineState().GetPrimitiveTopology(),
                                    msg.location.geometry.primitive),
             MeshDataStage::GSOut);
       }

@@ -40,7 +40,7 @@ struct CaptureOptions
 {
 // for convenience, don't export the constructor but allow it within the module
 // for constructing defaults
-#ifdef RENDERDOC_EXPORTS
+#ifdef DCOMP_EXPORTS
   CaptureOptions();
 #endif
 

@@ -3970,9 +3970,9 @@ struct VulkanPixelHistoryDiscardedFragmentsCallback : VulkanPixelHistoryCallback
       ObjDisp(cmd)->CmdBeginQuery(Unwrap(cmd), m_OcclusionPool, queryId, m_QueryFlags);
       uint32_t primId = primIds[i];
       ActionDescription action = *m_pDriver->GetAction(eid);
-      action.numIndices = RENDERDOC_NumVerticesPerPrimitive(topo);
-      action.indexOffset += RENDERDOC_VertexOffset(topo, primId);
-      action.vertexOffset += RENDERDOC_VertexOffset(topo, primId);
+      action.numIndices = DCOMP_NumVerticesPerPrimitive(topo);
+      action.indexOffset += DCOMP_VertexOffset(topo, primId);
+      action.vertexOffset += DCOMP_VertexOffset(topo, primId);
       // TODO once pixel history distinguishes between instances, draw only the instance for
       // this fragment.
       // TODO replay with a dummy index buffer so that all primitives other than the target one are

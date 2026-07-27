@@ -595,7 +595,7 @@ void Analytics::Prompt(ICaptureContext &ctx, PersistantConfig &config)
 
       postData.addQueryItem(lit("report"), jsonReport);
 
-      QNetworkRequest request(QUrl(lit("https://renderdoc.org/analytics")));
+      QNetworkRequest request(QUrl(lit("")));
 
       request.setHeader(QNetworkRequest::ContentTypeHeader,
                         lit("application/x-www-form-urlencoded"));

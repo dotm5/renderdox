@@ -37,7 +37,7 @@ struct MultipleOutput
   float4 col7 : SV_Target7;
 };
 
-float4 RENDERDOC_FullscreenVS(uint id : SV_VertexID) : SV_Position
+float4 DCOMP_FullscreenVS(uint id : SV_VertexID) : SV_Position
 {
   float4 pos[] = {float4(-1.0f, 1.0f, 0.0f, 1.0f), float4(3.0f, 1.0f, 0.0f, 1.0f),
                   float4(-1.0f, -3.0f, 0.0f, 1.0f)};
@@ -50,7 +50,7 @@ cbuffer overlayconsts : register(b0)
   float4 overlaycol;
 };
 
-MultipleOutput RENDERDOC_FixedColPS()
+MultipleOutput DCOMP_FixedColPS()
 {
   MultipleOutput OUT = (MultipleOutput)0;
 
@@ -59,7 +59,7 @@ MultipleOutput RENDERDOC_FixedColPS()
   return OUT;
 }
 
-float4 RENDERDOC_CheckerboardPS(float4 pos : SV_Position) : SV_Target0
+float4 DCOMP_CheckerboardPS(float4 pos : SV_Position) : SV_Target0
 {
   float2 RectRelativePos = pos.xy - RectPosition;
 
@@ -96,7 +96,7 @@ cbuffer discardopts : register(b1)
   uint discardPass;
 };
 
-float4 RENDERDOC_DiscardFloatPS(float4 pos : SV_Position, out float depth : SV_Depth) : SV_Target0
+float4 DCOMP_DiscardFloatPS(float4 pos : SV_Position, out float depth : SV_Depth) : SV_Target0
 {
   uint x = uint(pos.x) % PATTERN_WIDTH;
   uint y = uint(pos.y) % PATTERN_HEIGHT;
@@ -115,7 +115,7 @@ float4 RENDERDOC_DiscardFloatPS(float4 pos : SV_Position, out float depth : SV_D
   return val.xxxx;
 }
 
-uint4 RENDERDOC_DiscardIntPS(float4 pos : SV_Position, out float depth : SV_Depth) : SV_Target0
+uint4 DCOMP_DiscardIntPS(float4 pos : SV_Position, out float depth : SV_Depth) : SV_Target0
 {
   uint x = uint(pos.x) % PATTERN_WIDTH;
   uint y = uint(pos.y) % PATTERN_HEIGHT;
@@ -176,7 +176,7 @@ GPUAddress PatchAddress(GPUAddress addr)
   return addr;
 }
 
-[numthreads(128, 1, 1)] void RENDERDOC_ExecuteIndirectPatchCS(uint idx
+[numthreads(128, 1, 1)] void DCOMP_ExecuteIndirectPatchCS(uint idx
                                                               : SV_GroupIndex) {
   if(idx < argCount)
   {

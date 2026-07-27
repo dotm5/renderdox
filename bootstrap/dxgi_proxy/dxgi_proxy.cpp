@@ -1,7 +1,7 @@
 /******************************************************************************
  * The MIT License (MIT)
  *
- * Copyright (c) 2026 RenderTest contributors
+ * Copyright (c) 2026 DComp contributors
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -89,6 +89,7 @@ HMODULE RealDXGI = NULL;
 HMODULE CoreModule = NULL;
 INIT_ONCE Initialisation = INIT_ONCE_STATIC_INIT;
 FARPROC ExportTargets[DXGIExportCount] = {};
+FARPROC RealExportTargets[DXGIExportCount] = {};
 GetProcAddressProc RealGetProcAddress = NULL;
 wchar_t LogPath[32768] = {};
 bool CoreHandshakeSucceeded = false;
@@ -104,8 +105,7 @@ void Log(const wchar_t *format, ...)
   va_end(args);
 
   if(FAILED(result))
-    StringCchCopyW(message, ARRAYSIZE(message),
-                   L"RenderTest DXGI bootstrap: log formatting failed\n");
+    StringCchCopyW(message, ARRAYSIZE(message), L"DComp DXGI bootstrap: log formatting failed\n");
 
   OutputDebugStringW(message);
 
@@ -162,14 +162,14 @@ bool EnvironmentEnabled()
 {
   wchar_t value[16] = {};
   DWORD length =
-      GetEnvironmentVariableW(L"RENDERTEST_BOOTSTRAP_ENABLE", value, (DWORD)ARRAYSIZE(value));
+      GetEnvironmentVariableW(L"UE_GRAPHICS_DEBUG", value, (DWORD)ARRAYSIZE(value));
   return length == 1 && value[0] == L'1';
 }
 
 void InitialiseLogging()
 {
   DWORD length =
-      GetEnvironmentVariableW(L"RENDERTEST_BOOTSTRAP_LOG", LogPath, (DWORD)ARRAYSIZE(LogPath));
+      GetEnvironmentVariableW(L"UE_GRAPHICS_LOG", LogPath, (DWORD)ARRAYSIZE(LogPath));
   const bool driveAbsolute =
       length >= 3 &&
       ((LogPath[0] >= L'A' && LogPath[0] <= L'Z') || (LogPath[0] >= L'a' && LogPath[0] <= L'z')) &&
@@ -202,17 +202,17 @@ bool PerformCoreHandshake()
   if(CoreModule == NULL || RealGetProcAddress == NULL)
     return false;
 
-  pRENDERDOC_GetAPI getAPI = (pRENDERDOC_GetAPI)RealGetProcAddress(CoreModule, "RENDERDOC_GetAPI");
+  pDCOMP_GetAPI getAPI = (pDCOMP_GetAPI)RealGetProcAddress(CoreModule, "DCOMP_GetAPI");
   if(getAPI == NULL)
   {
-    Log(L"RenderTest DXGI bootstrap: %s does not export RENDERDOC_GetAPI\n", RDOC_CORE_FILENAME_W);
+    Log(L"DComp DXGI bootstrap: %s does not export DCOMP_GetAPI\n", RDOC_CORE_FILENAME_W);
     return false;
   }
 
   RENDERDOC_API_1_6_0 *api = NULL;
-  if(getAPI(eRENDERDOC_API_Version_1_6_0, (void **)&api) != 1 || api == NULL)
+  if(getAPI(eDCOMP_API_Version_1_6_0, (void **)&api) != 1 || api == NULL)
   {
-    Log(L"RenderTest DXGI bootstrap: Core API 1.6.0 handshake failed\n");
+    Log(L"DComp DXGI bootstrap: Core API 1.6.0 handshake failed\n");
     return false;
   }
 
@@ -220,7 +220,7 @@ bool PerformCoreHandshake()
   int minor = 0;
   int patch = 0;
   api->GetAPIVersion(&major, &minor, &patch);
-  Log(L"RenderTest DXGI bootstrap: Core API handshake %d.%d.%d\n", major, minor, patch);
+  Log(L"DComp DXGI bootstrap: Core API handshake %d.%d.%d\n", major, minor, patch);
   return true;
 }
 
@@ -230,15 +230,23 @@ void ResolveExports(bool useHookAwareLookup)
   {
     ExportTargets[i] = useHookAwareLookup ? HookAwareGetProcAddress(RealDXGI, ExportNames[i])
                                           : RealGetProcAddress(RealDXGI, ExportNames[i]);
+    if(!useHookAwareLookup)
+      RealExportTargets[i] = ExportTargets[i];
 
     HMODULE targetModule = ModuleFromAddress(ExportTargets[i]);
     wchar_t targetPath[32768] = {};
     if(targetModule != NULL)
       GetModulePath(targetModule, targetPath);
 
-    Log(L"RenderTest DXGI bootstrap: export %-38hs target=%p module=%s\n", ExportNames[i],
+    Log(L"DComp DXGI bootstrap: export %-38hs target=%p module=%s\n", ExportNames[i],
         ExportTargets[i], targetPath[0] ? targetPath : L"<unresolved>");
   }
+}
+
+void RestoreRealExports()
+{
+  for(uint32_t i = 0; i < DXGIExportCount; ++i)
+    ExportTargets[i] = RealExportTargets[i];
 }
 
 bool VerifyHookTargets()
@@ -257,23 +265,28 @@ bool VerifyHookTargets()
 BOOL CALLBACK InitialiseBootstrap(PINIT_ONCE, PVOID, PVOID *)
 {
   InitialiseLogging();
-  RealGetProcAddress = GetProcAddress;
+  if(RealGetProcAddress == NULL)
+    RealGetProcAddress = GetProcAddress;
 
   wchar_t realDXGIPath[32768] = {};
   if(!GetSystemDXGIPath(realDXGIPath))
   {
-    Log(L"RenderTest DXGI bootstrap: failed to construct the System32 DXGI path\n");
+    Log(L"DComp DXGI bootstrap: failed to construct the System32 DXGI path\n");
     return TRUE;
   }
 
   RealDXGI = LoadLibraryW(realDXGIPath);
   if(RealDXGI == NULL)
   {
-    Log(L"RenderTest DXGI bootstrap: failed to load %s (error %lu)\n", realDXGIPath, GetLastError());
+    Log(L"DComp DXGI bootstrap: failed to load %s (error %lu)\n", realDXGIPath, GetLastError());
     return TRUE;
   }
 
-  Log(L"RenderTest DXGI bootstrap: loaded real DXGI %s at %p\n", realDXGIPath, RealDXGI);
+  Log(L"DComp DXGI bootstrap: loaded real DXGI %s at %p\n", realDXGIPath, RealDXGI);
+
+  // Capture an immutable forwarding baseline before loading the Core. DllMain records
+  // GetProcAddress before a previously loaded Core can patch this proxy's import table.
+  ResolveExports(false);
 
   bool bootstrapEnabled = EnvironmentEnabled();
   if(bootstrapEnabled)
@@ -283,34 +296,37 @@ BOOL CALLBACK InitialiseBootstrap(PINIT_ONCE, PVOID, PVOID *)
     {
       CoreModule = LoadLibraryW(corePath);
       if(CoreModule == NULL)
-        Log(L"RenderTest DXGI bootstrap: failed to load Core %s (error %lu); forwarding only\n",
+        Log(L"DComp DXGI bootstrap: failed to load Core %s (error %lu); forwarding only\n",
             corePath, GetLastError());
       else
-        Log(L"RenderTest DXGI bootstrap: loaded Core %s at %p\n", corePath, CoreModule);
+        Log(L"DComp DXGI bootstrap: loaded Core %s at %p\n", corePath, CoreModule);
     }
     else
     {
-      Log(L"RenderTest DXGI bootstrap: failed to construct the adjacent Core path\n");
+      Log(L"DComp DXGI bootstrap: failed to construct the adjacent Core path\n");
     }
 
     CoreHandshakeSucceeded = PerformCoreHandshake();
   }
   else
   {
-    Log(L"RenderTest DXGI bootstrap: Core loading disabled; forwarding only\n");
+    Log(L"DComp DXGI bootstrap: Core loading disabled; forwarding only\n");
   }
 
-  ResolveExports(CoreHandshakeSucceeded);
-  HookTargetsActive = CoreHandshakeSucceeded && VerifyHookTargets();
-
-  if(CoreHandshakeSucceeded && !HookTargetsActive)
+  if(CoreHandshakeSucceeded)
   {
-    Log(L"RenderTest DXGI bootstrap: Core loaded but DXGI hook targets were not active; "
-        L"falling back to real exports\n");
-    ResolveExports(false);
+    ResolveExports(true);
+    HookTargetsActive = VerifyHookTargets();
+
+    if(!HookTargetsActive)
+    {
+      Log(L"DComp DXGI bootstrap: Core loaded but DXGI hook targets were not active; "
+          L"restoring cached real exports\n");
+      RestoreRealExports();
+    }
   }
 
-  Log(L"RenderTest DXGI bootstrap: initialisation complete, core=%s hooks=%s\n",
+  Log(L"DComp DXGI bootstrap: initialisation complete, core=%s hooks=%s\n",
       CoreHandshakeSucceeded ? L"ready" : L"not-ready", HookTargetsActive ? L"active" : L"inactive");
   return TRUE;
 }
@@ -331,6 +347,7 @@ BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID)
   if(reason == DLL_PROCESS_ATTACH)
   {
     ProxyModule = instance;
+    RealGetProcAddress = GetProcAddress;
     DisableThreadLibraryCalls(instance);
   }
 

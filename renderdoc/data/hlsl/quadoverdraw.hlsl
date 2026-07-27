@@ -42,7 +42,7 @@ RWTexture2DArray<uint> overdrawUAV : register(u0);
 
 Texture2DArray<uint> overdrawSRV : register(t0);
 
-[earlydepthstencil] void RENDERDOC_QuadOverdrawPS(float4 vpos
+[earlydepthstencil] void DCOMP_QuadOverdrawPS(float4 vpos
                                                   : SV_Position, uint c0
                                                   : SV_Coverage) {
   // Obtain coverage for all pixels in the quad, via 'message passing'*.
@@ -64,7 +64,7 @@ Texture2DArray<uint> overdrawSRV : register(t0);
   InterlockedAdd(overdrawUAV[quad], 1);
 }
 
-float4 RENDERDOC_QOResolvePS(float4 vpos
+float4 DCOMP_QOResolvePS(float4 vpos
                              : SV_POSITION)
     : SV_Target0
 {

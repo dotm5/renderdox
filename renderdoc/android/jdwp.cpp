@@ -157,7 +157,7 @@ bool InjectLibraries(const rdcstr &deviceID, Network::Socket *sock)
     case Android::ABI::x86: libPath += "lib/x86"; break;
   }
 
-  RDCLOG("Injecting RenderDoc from library in %s", libPath.c_str());
+  RDCLOG("Injecting DComp from library in %s", libPath.c_str());
 
   if(conn.IsErrored())
     return false;

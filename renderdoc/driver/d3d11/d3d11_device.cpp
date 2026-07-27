@@ -577,7 +577,7 @@ HRESULT WrappedID3D11Device::QueryInterface(REFIID riid, void **ppvObject)
   static const GUID ID3D11On12Device_uuid = {
       0x85611e73, 0x70a9, 0x490e, {0x96, 0x14, 0xa9, 0xe3, 0x02, 0x77, 0x79, 0x04}};
 
-  // RenderDoc UUID {A7AA6116-9C8D-4BBA-9083-B4D816B71B78}
+  // DComp UUID {A7AA6116-9C8D-4BBA-9083-B4D816B71B78}
   static const GUID IRenderDoc_uuid = {
       0xa7aa6116, 0x9c8d, 0x4bba, {0x90, 0x83, 0xb4, 0xd8, 0x16, 0xb7, 0x1b, 0x78}};
 
@@ -801,7 +801,7 @@ HRESULT WrappedID3D11Device::QueryInterface(REFIID riid, void **ppvObject)
   else if(riid == __uuidof(ID3D11InfoQueue))
   {
     RDCWARN(
-        "Returning a dummy ID3D11InfoQueue that does nothing. RenderDoc takes control of the debug "
+        "Returning a dummy ID3D11InfoQueue that does nothing. DComp takes control of the debug "
         "layer.");
     RDCWARN(
         "If you want direct access, enable API validation and query for %s. This will return the "
@@ -836,9 +836,9 @@ HRESULT WrappedID3D11Device::QueryInterface(REFIID riid, void **ppvObject)
     {
       if(!RenderDoc::Inst().GetCaptureOptions().apiValidation)
       {
-        RDCWARN("API Validation is not enabled, RenderDoc disabled the debug layer.");
+        RDCWARN("API Validation is not enabled, DComp disabled the debug layer.");
         RDCWARN(
-            "Enable this either in the capture options, or using the RenderDoc API before device "
+            "Enable this either in the capture options, or using the DComp API before device "
             "creation.");
       }
       return E_NOINTERFACE;
@@ -1586,13 +1586,13 @@ void WrappedID3D11Device::ReplayLog(uint32_t startEventID, uint32_t endEventID,
   if(!partial)
   {
     RENDERDOC_PROFILEREGION("ApplyInitialContents");
-    D3D11MarkerRegion apply("!!!!RenderDoc Internal: ApplyInitialContents");
+    D3D11MarkerRegion apply("!!!!DComp Internal: ApplyInitialContents");
     GetResourceManager()->ApplyInitialContents();
   }
 
   m_State = CaptureState::ActiveReplaying;
 
-  D3D11MarkerRegion::Set(StringFormat::Fmt("!!!!RenderDoc Internal: Replay %d (%d): %u->%u",
+  D3D11MarkerRegion::Set(StringFormat::Fmt("!!!!DComp Internal: Replay %d (%d): %u->%u",
                                            (int)replayType, (int)partial, startEventID, endEventID));
 
   m_ReplayEventCount = 0;
@@ -1615,7 +1615,7 @@ void WrappedID3D11Device::ReplayLog(uint32_t startEventID, uint32_t endEventID,
   for(int i = 0; i < m_ReplayEventCount; i++)
     D3D11MarkerRegion::End();
 
-  D3D11MarkerRegion::Set("!!!!RenderDoc Internal: Done replay");
+  D3D11MarkerRegion::Set("!!!!DComp Internal: Done replay");
 
   if(m_pDevice->GetDeviceRemovedReason() != S_OK)
     SET_ERROR_RESULT(m_FatalError, ResultCode::DeviceLost, "Device lost during replay: %s",

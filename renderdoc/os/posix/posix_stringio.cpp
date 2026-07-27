@@ -151,7 +151,7 @@ rdcstr GetReplayAppFilename()
   dladdr((void *)&soLocator, &info);
   rdcstr path = info.dli_fname ? info.dli_fname : "";
   path = get_dirname(path);
-  rdcstr replay = path + "/qrenderdoc";
+  rdcstr replay = path + "/dgcoreui";
 
   FILE *f = FileIO::fopen(replay, FileIO::ReadText);
   if(f)
@@ -171,7 +171,7 @@ rdcstr GetReplayAppFilename()
 #endif
 
   // leave the lib/ folder, and go into bin/
-  replay += "../bin/qrenderdoc";
+  replay += "../bin/dgcoreui";
 
   f = FileIO::fopen(replay, FileIO::ReadText);
   if(f)
@@ -181,8 +181,8 @@ rdcstr GetReplayAppFilename()
   }
 
   // random guesses!
-  const char *guess[] = {"/opt/renderdoc/qrenderdoc", "/opt/renderdoc/bin/qrenderdoc",
-                         "/usr/local/bin/qrenderdoc", "/usr/bin/qrenderdoc"};
+  const char *guess[] = {"/opt/dgcore/dgcoreui", "/opt/dgcore/bin/dgcoreui",
+                         "/usr/local/bin/dgcoreui", "/usr/bin/dgcoreui"};
 
   for(size_t i = 0; i < ARRAY_COUNT(guess); i++)
   {
@@ -195,7 +195,7 @@ rdcstr GetReplayAppFilename()
   }
 
   // out of ideas, just return the filename and hope it's in PATH
-  return "qrenderdoc";
+  return "dgcoreui";
 }
 
 void GetDefaultFiles(const rdcstr &logBaseName, rdcstr &capture_filename, rdcstr &logging_filename,
@@ -221,7 +221,7 @@ void GetDefaultFiles(const rdcstr &logBaseName, rdcstr &capture_filename, rdcstr
 
   strcpy(temp_folder, GetTempRootPath().c_str());
 
-  rdcstr temp_override = Process::GetEnvVariable("RENDERDOC_TEMP");
+  rdcstr temp_override = Process::GetEnvVariable("DCOMP_TEMP");
   if(!temp_override.empty() && temp_override[0] == '/')
   {
     strncpy(temp_folder, temp_override.c_str(), sizeof(temp_folder) - 1);
@@ -231,16 +231,16 @@ void GetDefaultFiles(const rdcstr &logBaseName, rdcstr &capture_filename, rdcstr
   }
 
   capture_filename =
-      StringFormat::Fmt("%s/RenderDoc/%s_%04d.%02d.%02d_%02d.%02d.rdc", temp_folder, mod,
+      StringFormat::Fmt("%s/DComp/%s_%04d.%02d.%02d_%02d.%02d.rdc", temp_folder, mod,
                         1900 + now.tm_year, now.tm_mon + 1, now.tm_mday, now.tm_hour, now.tm_min);
 
   // set by UI when launching programs so all logging goes to the same file
-  rdcstr logfile_override = Process::GetEnvVariable("RENDERDOC_DEBUG_LOG_FILE");
+  rdcstr logfile_override = Process::GetEnvVariable("DCOMP_DEBUG_LOG_FILE");
   if(!logfile_override.empty())
     logging_filename = logfile_override;
   else
     logging_filename = StringFormat::Fmt(
-        "%s/RenderDoc/%s_%04d.%02d.%02d_%02d.%02d.%02d.log", temp_folder, logBaseName.c_str(),
+        "%s/DComp/%s_%04d.%02d.%02d_%02d.%02d.%02d.log", temp_folder, logBaseName.c_str(),
         1900 + now.tm_year, now.tm_mon + 1, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec);
 }
 

@@ -24,7 +24,7 @@
 
 #include <string.h>
 #include "api/app/renderdoc_app.h"
-#include "api/replay/apidefs.h"    // for RENDERDOC_API to export the RENDERDOC_GetAPI function
+#include "api/replay/apidefs.h"    // for RENDERDOC_API to export the application API entry point
 #include "common/common.h"
 #include "common/formatting.h"
 #include "core/core.h"
@@ -401,12 +401,12 @@ void Init_1_7_0()
   api.SetCommandAnnotation = &SetCommandAnnotation;
 }
 
-extern "C" RENDERDOC_API int RENDERDOC_CC RENDERDOC_GetAPI(RENDERDOC_Version version,
+extern "C" RENDERDOC_API int RENDERDOC_CC DCOMP_GetAPI(RENDERDOC_Version version,
                                                            void **outAPIPointers)
 {
   if(outAPIPointers == NULL)
   {
-    RDCERR("Invalid call to RENDERDOC_GetAPI with NULL outAPIPointers");
+    RDCERR("Invalid call to DCOMP_GetAPI with NULL outAPIPointers");
     return 0;
   }
 
@@ -417,7 +417,7 @@ extern "C" RENDERDOC_API int RENDERDOC_CC RENDERDOC_GetAPI(RENDERDOC_Version ver
 
 #define API_VERSION_HANDLE(enumver, actualver)                     \
   supportedVersions += " " STRINGIZE(CONCAT(API_, enumver));       \
-  if(version == CONCAT(eRENDERDOC_API_Version_, enumver))          \
+  if(version == CONCAT(eDCOMP_API_Version_, enumver))          \
   {                                                                \
     CONCAT(Init_, actualver)();                                    \
     *outAPIPointers = &CONCAT(api_, actualver);                    \
@@ -444,7 +444,7 @@ extern "C" RENDERDOC_API int RENDERDOC_CC RENDERDOC_GetAPI(RENDERDOC_Version ver
 
   if(ret)
   {
-    RDCLOG("Initialising RenderDoc API version %d.%d.%d for requested version %d", major, minor,
+    RDCLOG("Initialising DComp API version %d.%d.%d for requested version %d", major, minor,
            patch, version);
     return 1;
   }

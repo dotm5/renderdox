@@ -607,7 +607,7 @@ rdcstr GetAppFolderFilename(const rdcstr &filename)
     homedir = "";
   }
 
-  rdcstr ret = homedir + "/.renderdoc/";
+  rdcstr ret = homedir + "/.dgcore/";
 
   mkdir(ret.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 

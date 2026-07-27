@@ -39,7 +39,7 @@ struct v2f
   float4 tex : TEXCOORD0;
 };
 
-v2f RENDERDOC_TexDisplayVS(uint vertID : SV_VertexID)
+v2f DCOMP_TexDisplayVS(uint vertID : SV_VertexID)
 {
   v2f OUT = (v2f)0;
 
@@ -64,7 +64,7 @@ bool fxc_workaround_isnan(float f)
 // for the type and applies things like the range check and channel masking.
 // It also does a couple of overlays that we can get 'free' like NaN/inf checks
 // or range clipping
-float4 RENDERDOC_TexDisplayPS(v2f IN) : SV_Target0
+float4 DCOMP_TexDisplayPS(v2f IN) : SV_Target0
 {
   bool uintTex = OutputDisplayFormat & TEXDISPLAY_UINT_TEX;
   bool sintTex = OutputDisplayFormat & TEXDISPLAY_SINT_TEX;

@@ -33,7 +33,7 @@ struct OutStruct
 
 RWStructuredBuffer<OutStruct> outBuf : register(u1);
 
-[numthreads(1, 1, 1)] void RENDERDOC_DebugMathOp() {
+[numthreads(1, 1, 1)] void DCOMP_DebugMathOp() {
   switch(mathOp)
   {
     case DEBUG_SAMPLE_MATH_DXBC_RCP: outBuf[0].outf[0] = rcp(mathInVal); break;
@@ -66,7 +66,7 @@ RWStructuredBuffer<OutStruct> outBuf : register(u1);
   }
 }
 
-void RENDERDOC_DebugSampleVS(uint id
+void DCOMP_DebugSampleVS(uint id
                              : SV_VertexID, out float4 pos
                              : SV_Position, out float4 uv
                              : UVS)
@@ -838,7 +838,7 @@ uint4 DoUIntOpcode(float4 uv)
   }
 }
 
-void RENDERDOC_DebugSamplePS(in float4 pos : SV_Position, in float4 uv : UVS)
+void DCOMP_DebugSamplePS(in float4 pos : SV_Position, in float4 uv : UVS)
 {
   int opcode = debugSampleOperation;
 

@@ -31,7 +31,7 @@
 #include <initializer_list>
 #include <type_traits>
 
-#ifdef RENDERDOC_EXPORTS
+#ifdef DCOMP_EXPORTS
 #include <stdlib.h>    // for malloc/free
 void RENDERDOC_OutOfMemory(uint64_t sz);
 #endif
@@ -126,21 +126,21 @@ protected:
   static T *allocate(size_t count)
   {
     T *ret = NULL;
-#ifdef RENDERDOC_EXPORTS
+#ifdef DCOMP_EXPORTS
     ret = (T *)malloc(count * sizeof(T));
     if(ret == NULL)
       RENDERDOC_OutOfMemory(count * sizeof(T));
 #else
-    ret = (T *)RENDERDOC_AllocArrayMem(count * sizeof(T));
+    ret = (T *)DCOMP_AllocArrayMem(count * sizeof(T));
 #endif
     return ret;
   }
   static void deallocate(T *p)
   {
-#ifdef RENDERDOC_EXPORTS
+#ifdef DCOMP_EXPORTS
     free((void *)p);
 #else
-    RENDERDOC_FreeArrayMem((void *)p);
+    DCOMP_FreeArrayMem((void *)p);
 #endif
   }
 

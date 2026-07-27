@@ -49,9 +49,9 @@ RDOC_CONFIG(bool, Vulkan_Debug_EnableGPUVA, false,
 static VkApplicationInfo renderdocAppInfo = {
     VK_STRUCTURE_TYPE_APPLICATION_INFO,
     NULL,
-    "RenderDoc Capturing App",
+    "DComp Capturing App",
     VK_MAKE_VERSION(RENDERDOC_VERSION_MAJOR, RENDERDOC_VERSION_MINOR, 0),
-    "RenderDoc",
+    "DComp",
     VK_MAKE_VERSION(RENDERDOC_VERSION_MAJOR, RENDERDOC_VERSION_MINOR, 0),
     VK_API_VERSION_1_0,
 };
@@ -582,7 +582,7 @@ VkResult WrappedVulkan::vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo
 
   const bool internalInstance =
       (pCreateInfo->pApplicationInfo && pCreateInfo->pApplicationInfo->pApplicationName &&
-       rdcstr(pCreateInfo->pApplicationInfo->pApplicationName) == "RenderDoc forced instance");
+       rdcstr(pCreateInfo->pApplicationInfo->pApplicationName) == "DComp forced instance");
 
   VkLayerInstanceCreateInfo *layerCreateInfo = (VkLayerInstanceCreateInfo *)pCreateInfo->pNext;
 
@@ -622,7 +622,7 @@ VkResult WrappedVulkan::vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo
           (VkDebugReportCallbackCreateInfoEXT *)pCreateInfo->pNext;
 
       rdcstr msg =
-          "RenderDoc's layer should NEVER be activated manually. Do not include it in "
+          "DComp's layer should NEVER be activated manually. Do not include it in "
           "vkCreateInstance's instance layers.";
 
       RDCERR("%s", msg.c_str());
@@ -666,17 +666,17 @@ VkResult WrappedVulkan::vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo
   {
     if(!IsSupportedExtension(modifiedCreateInfo.ppEnabledExtensionNames[i]))
     {
-      RDCERR("RenderDoc does not support instance extension '%s'.",
+      RDCERR("DComp does not support instance extension '%s'.",
              modifiedCreateInfo.ppEnabledExtensionNames[i]);
       RDCERR(
           "For KHR/EXT extensions file an issue on github to request support: "
-          "https://github.com/baldurk/renderdoc");
+          "https://github.com/baldurk/dgcore");
 
       // see if any debug report callbacks were passed in the pNext chain
       VkDebugReportCallbackCreateInfoEXT *report =
           (VkDebugReportCallbackCreateInfoEXT *)pCreateInfo->pNext;
 
-      rdcstr msg = StringFormat::Fmt("RenderDoc does not support requested instance extension: %s.",
+      rdcstr msg = StringFormat::Fmt("DComp does not support requested instance extension: %s.",
                                      modifiedCreateInfo.ppEnabledExtensionNames[i]);
 
       while(report)
@@ -799,7 +799,7 @@ VkResult WrappedVulkan::vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo
 
   bool brokenGetDeviceProcAddr = false;
 
-  // override applicationInfo with RenderDoc's, but preserve apiVersion
+  // override applicationInfo with DComp's, but preserve apiVersion
   if(modifiedCreateInfo.pApplicationInfo)
   {
     if(modifiedCreateInfo.pApplicationInfo->pEngineName &&
@@ -1636,7 +1636,7 @@ bool WrappedVulkan::SelectGraphicsComputeQueue(const rdcarray<VkQueueFamilyPrope
     {
       SET_ERROR_RESULT(
           m_FailedReplayResult, ResultCode::APIHardwareUnsupported,
-          "Can't add a queue with required properties for RenderDoc! Unsupported configuration");
+          "Can't add a queue with required properties for DComp! Unsupported configuration");
       return false;
     }
 
@@ -2233,7 +2233,7 @@ bool WrappedVulkan::Serialise_vkCreateDevice(SerialiserType &ser, VkPhysicalDevi
     {
       SET_ERROR_RESULT(
           m_FailedReplayResult, ResultCode::APIHardwareUnsupported,
-          "Can't add a queue with required properties for RenderDoc! Unsupported configuration");
+          "Can't add a queue with required properties for DComp! Unsupported configuration");
       return false;
     }
 
@@ -3745,7 +3745,7 @@ bool WrappedVulkan::Serialise_vkCreateDevice(SerialiserType &ser, VkPhysicalDevi
           "robustBufferAccess is available, but cannot be enabled due to "
           "robustBufferAccessUpdateAfterBind not being avilable and some UpdateAfterBind features "
           "being enabled. "
-          "out of bounds access due to bugs in application or RenderDoc may cause crashes");
+          "out of bounds access due to bugs in application or DComp may cause crashes");
     }
     else
     {
@@ -3755,7 +3755,7 @@ bool WrappedVulkan::Serialise_vkCreateDevice(SerialiserType &ser, VkPhysicalDevi
       else
         RDCWARN(
             "robustBufferAccess = false, out of bounds access due to bugs in application or "
-            "RenderDoc may cause crashes");
+            "DComp may cause crashes");
     }
 
     if(availFeatures.shaderInt64)
@@ -4604,14 +4604,14 @@ VkResult WrappedVulkan::vkCreateDevice(VkPhysicalDevice physicalDevice,
   {
     if(!IsSupportedExtension(createInfo.ppEnabledExtensionNames[i]))
     {
-      RDCERR("RenderDoc does not support device extension '%s'.",
+      RDCERR("DComp does not support device extension '%s'.",
              createInfo.ppEnabledExtensionNames[i]);
       RDCERR(
           "For KHR/EXT extensions file an issue on github to request support: "
-          "https://github.com/baldurk/renderdoc");
+          "https://github.com/baldurk/dgcore");
 
       SendUserDebugMessage(
-          StringFormat::Fmt("RenderDoc does not support requested device extension: %s.",
+          StringFormat::Fmt("DComp does not support requested device extension: %s.",
                             createInfo.ppEnabledExtensionNames[i]));
 
       return VK_ERROR_EXTENSION_NOT_PRESENT;
@@ -4620,7 +4620,7 @@ VkResult WrappedVulkan::vkCreateDevice(VkPhysicalDevice physicalDevice,
 
   if(m_Device != VK_NULL_HANDLE)
   {
-    SendUserDebugMessage("RenderDoc does not support multiple simultaneous logical devices.");
+    SendUserDebugMessage("DComp does not support multiple simultaneous logical devices.");
     return VK_ERROR_INITIALIZATION_FAILED;
   }
 
@@ -4816,7 +4816,7 @@ VkResult WrappedVulkan::vkCreateDevice(VkPhysicalDevice physicalDevice,
         "robustBufferAccess is available, but cannot be enabled due to "
         "robustBufferAccessUpdateAfterBind not being avilable and some UpdateAfterBind features "
         "being enabled. "
-        "out of bounds access due to bugs in application or RenderDoc may cause crashes");
+        "out of bounds access due to bugs in application or DComp may cause crashes");
 
     for(const char *e : Extensions)
     {
@@ -4834,7 +4834,7 @@ VkResult WrappedVulkan::vkCreateDevice(VkPhysicalDevice physicalDevice,
     else
       RDCWARN(
           "robustBufferAccess = false, out of bounds access due to bugs in application or "
-          "RenderDoc may cause crashes");
+          "DComp may cause crashes");
   }
 
   // enable this feature as it's needed at capture time to save MSAA initial states

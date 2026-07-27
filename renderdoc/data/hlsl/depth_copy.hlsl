@@ -28,7 +28,7 @@ cbuffer ViewInput : register(b0)
   uint4 viewData;    // viewIndex, ???, ???, ???
 };
 
-void RENDERDOC_DepthCopyPS(float4 pos : SV_Position, out float depth : SV_Depth)
+void DCOMP_DepthCopyPS(float4 pos : SV_Position, out float depth : SV_Depth)
 {
   int2 srcCoord = int2(pos.xy);
   depth = srcDepth.Load(int3(srcCoord, 0)).r;
@@ -36,7 +36,7 @@ void RENDERDOC_DepthCopyPS(float4 pos : SV_Position, out float depth : SV_Depth)
 
 Texture2DArray<float2> srcDepthArray : register(t0);
 
-void RENDERDOC_DepthCopyArrayPS(float4 pos : SV_Position, out float depth : SV_Depth)
+void DCOMP_DepthCopyArrayPS(float4 pos : SV_Position, out float depth : SV_Depth)
 {
   int2 srcCoord = int2(pos.xy);
   depth = srcDepthArray.Load(int4(srcCoord, viewData.x, 0)).r;
@@ -44,7 +44,7 @@ void RENDERDOC_DepthCopyArrayPS(float4 pos : SV_Position, out float depth : SV_D
 
 Texture2DMS<float2> srcDepthMS : register(t0);
 
-void RENDERDOC_DepthCopyMSPS(float4 pos
+void DCOMP_DepthCopyMSPS(float4 pos
                              : SV_Position, uint sample
                              : SV_SampleIndex, out float depth
                              : SV_Depth)
@@ -55,7 +55,7 @@ void RENDERDOC_DepthCopyMSPS(float4 pos
 
 Texture2DMSArray<float2> srcDepthMSArray : register(t0);
 
-void RENDERDOC_DepthCopyMSArrayPS(float4 pos
+void DCOMP_DepthCopyMSArrayPS(float4 pos
                                   : SV_Position, uint sample
                                   : SV_SampleIndex, out float depth
                                   : SV_Depth)

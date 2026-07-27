@@ -949,7 +949,7 @@ If ``False`` then a zero in the buffer would lead to them being performed as nor
 DOCUMENT("The full current D3D12 pipeline state.");
 struct State
 {
-#if !defined(RENDERDOC_EXPORTS)
+#if !defined(DCOMP_EXPORTS)
   // disallow creation/copy of this object externally
   State() = delete;
   State(const State &) = delete;

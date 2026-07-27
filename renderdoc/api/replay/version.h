@@ -45,8 +45,8 @@
 // It's 41 characters to allow 40 characters of commit hash plus trailing NULL.
 // Then version.cpp is the only thing that needs to be rebuilt when the git commit changes
 //
-// Only available internally, external users should use RENDERDOC_GetCommitHash()
-#if defined(RENDERDOC_EXPORTS)
+// Only available internally, external users should use DCOMP_GetCommitHash()
+#if defined(DCOMP_EXPORTS)
 extern "C" const char GitVersionHash[41];
 #endif
 

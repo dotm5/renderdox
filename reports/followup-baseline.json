@@ -5,10 +5,10 @@
   "stableWindowsPort": "25df92efcf0f5e138f3bc663fe54dcf4c8f72149",
   "renderDocVersion": "1.45",
   "productIdentity": {
-    "core": "rendertest.dll",
-    "ui": "qrendertest.exe",
-    "command": "rendertestcmd.exe",
-    "shim64": "rendertestshim64.dll"
+    "core": "dcomp.dll",
+    "ui": "dcompui.exe",
+    "command": "dcompcmd.exe",
+    "shim64": "dcompshim64.dll"
   },
   "toolchain": {
     "msbuild": "Visual Studio 18 Enterprise",

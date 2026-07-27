@@ -371,13 +371,13 @@ struct LogLine
     //
     // 0        1         2         3         4         5         6         7         8         9         10
     // 1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456
-    // I/renderdoc( 1234): @1234567812345678@ RDOC 001234: [01:02:03]         filename.cpp( 123) - Log     - Hello
+    // I/dgcore( 1234): @1234567812345678@ RDOC 001234: [01:02:03]         filename.cpp( 123) - Log     - Hello
     //
     // F/libc    (11519): Fatal signal 11 (SIGSEGV), code 1, fault addr 0x4 in tid 11618 (FooBar), pid 11519 (blah)
     // F/DEBUG   (12061): backtrace:
     // F/DEBUG   (12061):     #00 pc 000485ec  /system/lib/libc.so (pthread_mutex_lock+1)
-    // F/DEBUG   (12061):     #01 pc 00137449  /data/app/org.renderdoc.renderdoccmd.arm32==/lib/arm/libVkLayer_GLES_RenderDoc.so
-    // F/DEBUG   (12061):     #02 pc 0013bbf1  /data/app/org.renderdoc.renderdoccmd.arm32==/lib/arm/libVkLayer_GLES_RenderDoc.so
+    // F/DEBUG   (12061):     #01 pc 00137449  /data/app/org.dgcore.dgcorecmd.arm32==/lib/arm/libVkLayer_GLES_DComp.so
+    // F/DEBUG   (12061):     #02 pc 0013bbf1  /data/app/org.dgcore.dgcorecmd.arm32==/lib/arm/libVkLayer_GLES_DComp.so
     //
     // clang-format on
     //
@@ -396,7 +396,7 @@ struct LogLine
 
     // we assume that the logcat filters have worked, so ignore the logcat tag here. Just check if
     // it's ours or not
-    bool ownLog = !strncmp(&line[idx], "renderdoc", 9);
+    bool ownLog = !strncmp(&line[idx], "dgcore", 6);
     while(idx < line.length() && line[idx] != '(')
       idx++;
 
@@ -713,13 +713,13 @@ void LogcatThread::Tick()
   //    -t N         // always the last N messages, and (implied -d) stop after doing so
   //    -v brief     // print the 'brief' format
   //    -s           // silence everything as a default
-  //    renderdoc:*  // print logcats from our tag.
+  //    dgcore:*  // print logcats from our tag.
   //    libc:*       // or from libc (prints crash messages)
   //    DEBUG:*      // or from DEBUG (prints crash messages)
   //
-  // This gives us all messages from renderdoc since the last timestamp.
+  // This gives us all messages from dgcore since the last timestamp.
   rdcstr command =
-      StringFormat::Fmt("logcat -t %u -v brief -s renderdoc:* libc:* DEBUG:*", lineBacklog);
+      StringFormat::Fmt("logcat -t %u -v brief -s dgcore:* libc:* DEBUG:*", lineBacklog);
 
   rdcstr logcat = Android::adbExecCommand(deviceID, command, ".", true).strStdout.trimmed();
 
@@ -814,7 +814,7 @@ TEST_CASE("Test that log line parsing is robust", "[android]")
     LogLine line;
 
     const char *valid_text =
-        R"(I/renderdoc( 1234): @1234567812345678@ RDOC 001234: [01:02:03]         filename.cpp( 123) - Warning - Hello)";
+        R"(I/dgcore( 1234): @1234567812345678@ RDOC 001234: [01:02:03]         filename.cpp( 123) - Warning - Hello)";
 
     CHECK(line.parse(valid_text) == true);
 
@@ -828,7 +828,7 @@ TEST_CASE("Test that log line parsing is robust", "[android]")
     LogLine highpid;
 
     const char *highpid_text =
-        R"(I/renderdoc(12345678): @1234567812345678@ RDOC 12345678: [01:02:03]         filename.cpp( 123) - Warning - Hello)";
+        R"(I/dgcore(12345678): @1234567812345678@ RDOC 12345678: [01:02:03]         filename.cpp( 123) - Warning - Hello)";
 
     CHECK(highpid.parse(highpid_text) == true);
 
@@ -842,7 +842,7 @@ TEST_CASE("Test that log line parsing is robust", "[android]")
     LogLine longname;
 
     const char *longname_text =
-        R"(I/renderdoc( 1234): @1234567812345678@ RDOC 001234: [01:02:03] a_very_long_source_filename.cpp( 123) - Warning - Hello)";
+        R"(I/dgcore( 1234): @1234567812345678@ RDOC 001234: [01:02:03] a_very_long_source_filename.cpp( 123) - Warning - Hello)";
 
     CHECK(longname.parse(longname_text) == true);
 
@@ -856,7 +856,7 @@ TEST_CASE("Test that log line parsing is robust", "[android]")
     LogLine longlinenum;
 
     const char *longlinenum_text =
-        R"(I/renderdoc( 1234): @1234567812345678@ RDOC 001234: [01:02:03]         filename.cpp(12345678) - Warning - Hello)";
+        R"(I/dgcore( 1234): @1234567812345678@ RDOC 001234: [01:02:03]         filename.cpp(12345678) - Warning - Hello)";
 
     CHECK(longlinenum.parse(longlinenum_text) == true);
 
@@ -871,7 +871,7 @@ TEST_CASE("Test that log line parsing is robust", "[android]")
   SECTION("Invalid strings - truncated")
   {
     rdcstr truncated =
-        R"(I/renderdoc( 1234): @1234567812345678@ RDOC 001234: [01:02:03]         filename.cpp( 123) - Warning - H)";
+        R"(I/dgcore( 1234): @1234567812345678@ RDOC 001234: [01:02:03]         filename.cpp( 123) - Warning - H)";
 
     LogLine working;
     CHECK(working.parse(truncated) == true);

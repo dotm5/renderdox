@@ -221,7 +221,7 @@ DECLARE_REFLECTION_STRUCT(SectionProperties);
 struct ResourceFormat;
 
 #if !defined(SWIG)
-extern "C" RENDERDOC_API void RENDERDOC_CC RENDERDOC_ResourceFormatName(const ResourceFormat &fmt,
+extern "C" RENDERDOC_API void RENDERDOC_CC DCOMP_ResourceFormatName(const ResourceFormat &fmt,
                                                                         rdcstr &name);
 #endif
 
@@ -269,7 +269,7 @@ struct ResourceFormat
   rdcstr Name() const
   {
     rdcstr ret;
-    RENDERDOC_ResourceFormatName(*this, ret);
+    DCOMP_ResourceFormatName(*this, ret);
     return ret;
   }
 

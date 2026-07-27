@@ -941,8 +941,7 @@ void WrappedID3D11Device::WriteToSubresource(ID3D11Resource *pDstResource, UINT 
     return;
 
   RDCUNIMPLEMENTED(
-      "WriteToSubresource is not supported. Please contact me if you have a working example! "
-      "https://github.com/baldurk/renderdoc/issues");
+      "WriteToSubresource is not supported. Please contact the developers!");
 
   m_pDevice3->WriteToSubresource(pDstResource, DstSubresource, pDstBox, pSrcData, SrcRowPitch,
                                  SrcDepthPitch);
@@ -959,7 +958,7 @@ void WrappedID3D11Device::ReadFromSubresource(void *pDstData, UINT DstRowPitch, 
 
   RDCUNIMPLEMENTED(
       "ReadFromSubresource is not supported. Please contact me if you have a working example! "
-      "https://github.com/baldurk/renderdoc/issues");
+      "https://example.com/dgcore-issues");
 
   m_pDevice3->ReadFromSubresource(pDstData, DstRowPitch, DstDepthPitch, pSrcResource,
                                   SrcSubresource, pSrcBox);

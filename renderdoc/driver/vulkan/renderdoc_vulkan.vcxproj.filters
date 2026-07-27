@@ -277,7 +277,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="renderdoc.json">
+    <None Include="dgcore.json">
       <Filter>Layer</Filter>
     </None>
     <None Include="vk_apple_helpers.mm">

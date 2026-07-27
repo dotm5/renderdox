@@ -25,6 +25,7 @@
 
 // must be separate so that it's included first and not sorted by clang-format
 #include <windows.h>
+#include <winternl.h>
 
 #include <delayimp.h>
 #include <tlhelp32.h>
@@ -43,9 +44,13 @@
 
 static bool GetCanonicalSystemModulePath(const rdcstr &libraryName, rdcwstr &modulePath)
 {
-  // DXGI is always an operating-system component. Do not extend this list to D3D12: applications
-  // can legitimately use a private Agility SDK D3D12Core deployment.
-  if(_stricmp(libraryName.c_str(), "dxgi.dll") != 0)
+  // These public graphics entry modules are operating-system components. A same-name bootstrap
+  // proxy may already be loaded when hooks are registered, so onward calls must use the canonical
+  // System32 module. Agility SDK applications still select their private implementation through
+  // D3D12Core.dll; the public d3d12.dll loader remains the System32 component.
+  if(_stricmp(libraryName.c_str(), "dxgi.dll") != 0 &&
+     _stricmp(libraryName.c_str(), "d3d11.dll") != 0 &&
+     _stricmp(libraryName.c_str(), "d3d12.dll") != 0)
     return false;
 
   rdcarray<wchar_t> systemDirectory;
@@ -207,12 +212,55 @@ static const char *GetImageString(const byte *baseAddress, size_t imageSize, siz
   return memchr(str, 0, readable) ? str : NULL;
 }
 
+// ---- Hook mode control ----
+// IATAndInline: normal operation, patch IAT entries (default)
+// ProxyOnly: skip all IAT patches and page protection changes.
+//   Used when proxy DLLs (dxgi/d3d12/d3d11) intercept CreateDevice
+//   entry points via DLL sideloading, making IAT modification unnecessary.
+enum class HookMode { IATAndInline, ProxyOnly };
+static HookMode g_HookMode = HookMode::IATAndInline;
+
+extern "C" __declspec(dllexport) void DCOMP_SetHookMode(int mode)
+{
+  g_HookMode = (mode == 0) ? HookMode::ProxyOnly : HookMode::IATAndInline;
+}
+
+static bool IsProxyOnly()
+{
+  return g_HookMode == HookMode::ProxyOnly;
+}
+
+// Use ntdll!NtProtectVirtualMemory instead of kernel32!VirtualProtect
+// to avoid "VirtualProtect" appearing in the static import table.
+static BOOL ProtectPage(void *addr, SIZE_T size, DWORD newProtect, DWORD &oldProtect)
+{
+  HMODULE ntdll = GetModuleHandleA("ntdll.dll");
+  if(!ntdll) return FALSE;
+
+  typedef NTSTATUS(NTAPI * NtProtectVirtualMemory_t)(
+      HANDLE, PVOID *, PSIZE_T, ULONG, PULONG);
+  static NtProtectVirtualMemory_t pNtProtect = NULL;
+  if(!pNtProtect)
+    pNtProtect = (NtProtectVirtualMemory_t)GetProcAddress(ntdll, "NtProtectVirtualMemory");
+  if(!pNtProtect) return FALSE;
+
+  PVOID base = addr;
+  SIZE_T sz = size;
+  ULONG old = 0;
+  NTSTATUS st = pNtProtect(GetCurrentProcess(), &base, &sz, newProtect, &old);
+  oldProtect = (DWORD)old;
+  return NT_SUCCESS(st);
+}
+
 // map from address of IAT entry, to original contents
 std::map<void **, void *> s_InstalledHooks;
 Threading::CriticalSection installedLock;
 
 bool ApplyHook(FunctionHook &hook, void **IATentry, bool &already)
 {
+  if(IsProxyOnly())
+    return true;  // skip all IAT patches in ProxyOnly mode
+
   DWORD oldProtection = PAGE_EXECUTE;
 
   if(*IATentry == hook.hook)
@@ -231,8 +279,7 @@ bool ApplyHook(FunctionHook &hook, void **IATentry, bool &already)
       s_InstalledHooks[IATentry] = *IATentry;
   }
 
-  BOOL success = VirtualProtect(IATentry, sizeof(void *), PAGE_READWRITE, &oldProtection);
-  if(!success)
+  if(!ProtectPage(IATentry, sizeof(void *), PAGE_READWRITE, oldProtection))
   {
     RDCERR("Failed to make IAT entry writeable 0x%p", IATentry);
     return false;
@@ -240,8 +287,7 @@ bool ApplyHook(FunctionHook &hook, void **IATentry, bool &already)
 
   *IATentry = hook.hook;
 
-  success = VirtualProtect(IATentry, sizeof(void *), oldProtection, &oldProtection);
-  if(!success)
+  if(!ProtectPage(IATentry, sizeof(void *), oldProtection, oldProtection))
   {
     RDCERR("Failed to restore IAT entry protection 0x%p", IATentry);
     return false;
@@ -1400,6 +1446,7 @@ void LibraryHooks::EndHookRegistration()
 
     s_HookData->missedOrdinals = false;
   }
+
 }
 
 void LibraryHooks::Refresh()
@@ -1413,6 +1460,9 @@ void LibraryHooks::ReplayInitialise()
 
 void LibraryHooks::RemoveHooks()
 {
+  if(IsProxyOnly())
+    return;  // nothing installed in ProxyOnly mode
+
   LibraryHooks::RemoveHookCallbacks();
 
   for(auto it = s_InstalledHooks.begin(); it != s_InstalledHooks.end(); ++it)
@@ -1421,8 +1471,7 @@ void LibraryHooks::RemoveHooks()
 
     void **IATentry = it->first;
 
-    BOOL success = VirtualProtect(IATentry, sizeof(void *), PAGE_READWRITE, &oldProtection);
-    if(!success)
+    if(!ProtectPage(IATentry, sizeof(void *), PAGE_READWRITE, oldProtection))
     {
       RDCERR("Failed to make IAT entry writeable 0x%p", IATentry);
       continue;
@@ -1430,8 +1479,7 @@ void LibraryHooks::RemoveHooks()
 
     *IATentry = it->second;
 
-    success = VirtualProtect(IATentry, sizeof(void *), oldProtection, &oldProtection);
-    if(!success)
+    if(!ProtectPage(IATentry, sizeof(void *), oldProtection, oldProtection))
     {
       RDCERR("Failed to restore IAT entry protection 0x%p", IATentry);
       continue;
@@ -1489,50 +1537,98 @@ void Win32_ManualHookModule(rdcstr modName, HMODULE module)
 
 #include "catch/catch.hpp"
 
-TEST_CASE("Win32 hook originals select an already-loaded canonical DXGI",
-          "[win32][hook-resolution]")
+TEST_CASE("Win32 hook originals select already-loaded canonical graphics runtimes",
+           "[win32][hook-resolution]")
 {
   rdcwstr systemDXGIPath;
   REQUIRE(GetCanonicalSystemModulePath("dxgi.dll", systemDXGIPath));
 
+  rdcwstr systemD3D11Path;
+  REQUIRE(GetCanonicalSystemModulePath("d3d11.dll", systemD3D11Path));
+
+  rdcwstr systemD3D12Path;
+  REQUIRE(GetCanonicalSystemModulePath("d3d12.dll", systemD3D12Path));
+
   rdcwstr rejectedPath;
-  CHECK_FALSE(GetCanonicalSystemModulePath("d3d12.dll", rejectedPath));
   CHECK_FALSE(GetCanonicalSystemModulePath("../dxgi.dll", rejectedPath));
   CHECK(GetCanonicalSystemModulePath("DXGI.DLL", rejectedPath));
   CHECK(_wcsicmp(rejectedPath.c_str(), systemDXGIPath.c_str()) == 0);
+  CHECK(GetCanonicalSystemModulePath("D3D11.DLL", rejectedPath));
+  CHECK(_wcsicmp(rejectedPath.c_str(), systemD3D11Path.c_str()) == 0);
+  CHECK(GetCanonicalSystemModulePath("D3D12.DLL", rejectedPath));
+  CHECK(_wcsicmp(rejectedPath.c_str(), systemD3D12Path.c_str()) == 0);
 
   HMODULE coreModule = GetModuleHandleA(RDOC_CORE_FILENAME);
   REQUIRE(coreModule != NULL);
   CHECK(ModuleHandleIsLoaded(coreModule));
   CHECK_FALSE(ModuleHandleIsLoaded(NULL));
   CHECK_FALSE(ModulePathMatches(coreModule, systemDXGIPath));
+  CHECK_FALSE(ModulePathMatches(coreModule, systemD3D11Path));
+  CHECK_FALSE(ModulePathMatches(coreModule, systemD3D12Path));
 
   HMODULE systemDXGI = LoadLibraryW(systemDXGIPath.c_str());
   REQUIRE(systemDXGI != NULL);
   REQUIRE(ModulePathMatches(systemDXGI, systemDXGIPath));
   CHECK(GetLoadedCanonicalSystemModule("dxgi.dll") == systemDXGI);
   CHECK(GetPreferredOriginalModule("dxgi.dll", coreModule) == systemDXGI);
-  CHECK(GetPreferredOriginalModule("d3d12.dll", coreModule) == coreModule);
+
+  HMODULE systemD3D11 = LoadLibraryW(systemD3D11Path.c_str());
+  REQUIRE(systemD3D11 != NULL);
+  REQUIRE(ModulePathMatches(systemD3D11, systemD3D11Path));
+  CHECK(GetLoadedCanonicalSystemModule("d3d11.dll") == systemD3D11);
+  CHECK(GetPreferredOriginalModule("d3d11.dll", coreModule) == systemD3D11);
+
+  HMODULE systemD3D12 = LoadLibraryW(systemD3D12Path.c_str());
+  REQUIRE(systemD3D12 != NULL);
+  REQUIRE(ModulePathMatches(systemD3D12, systemD3D12Path));
+  CHECK(GetLoadedCanonicalSystemModule("d3d12.dll") == systemD3D12);
+  CHECK(GetPreferredOriginalModule("d3d12.dll", coreModule) == systemD3D12);
 
   FARPROC createFactory = GetProcAddress(systemDXGI, "CreateDXGIFactory1");
   REQUIRE(createFactory != NULL);
+  FARPROC createD3D11Device = GetProcAddress(systemD3D11, "D3D11CreateDevice");
+  REQUIRE(createD3D11Device != NULL);
+  FARPROC createD3D12Device = GetProcAddress(systemD3D12, "D3D12CreateDevice");
+  REQUIRE(createD3D12Device != NULL);
 
   void *originalFactory = NULL;
+  void *originalD3D11CreateDevice = NULL;
+  void *originalD3D12CreateDevice = NULL;
   CachedHookData hookData;
   DllHookset &dxgiHookset = hookData.DllHooks["dxgi.dll"];
   dxgiHookset.originalModule = coreModule;
   dxgiHookset.FunctionHooks.push_back(FunctionHook("CreateDXGIFactory1", &originalFactory, NULL));
+  DllHookset &d3d11Hookset = hookData.DllHooks["d3d11.dll"];
+  d3d11Hookset.originalModule = coreModule;
+  d3d11Hookset.FunctionHooks.push_back(
+      FunctionHook("D3D11CreateDevice", &originalD3D11CreateDevice, NULL));
+  DllHookset &d3d12Hookset = hookData.DllHooks["d3d12.dll"];
+  d3d12Hookset.originalModule = coreModule;
+  d3d12Hookset.FunctionHooks.push_back(
+      FunctionHook("D3D12CreateDevice", &originalD3D12CreateDevice, NULL));
   {
     SCOPED_LOCK(hookData.lock);
     RefreshOriginalModule("dxgi.dll", dxgiHookset, coreModule);
+    RefreshOriginalModule("d3d11.dll", d3d11Hookset, coreModule);
+    RefreshOriginalModule("d3d12.dll", d3d12Hookset, coreModule);
   }
   CHECK(dxgiHookset.originalModule == systemDXGI);
   CHECK(originalFactory == (void *)createFactory);
+  CHECK(d3d11Hookset.originalModule == systemD3D11);
+  CHECK(originalD3D11CreateDevice == (void *)createD3D11Device);
+  CHECK(d3d12Hookset.originalModule == systemD3D12);
+  CHECK(originalD3D12CreateDevice == (void *)createD3D12Device);
 
   MEMORY_BASIC_INFORMATION memory = {};
   REQUIRE(VirtualQuery(createFactory, &memory, sizeof(memory)) == sizeof(memory));
   CHECK(memory.AllocationBase == systemDXGI);
+  REQUIRE(VirtualQuery(createD3D11Device, &memory, sizeof(memory)) == sizeof(memory));
+  CHECK(memory.AllocationBase == systemD3D11);
+  REQUIRE(VirtualQuery(createD3D12Device, &memory, sizeof(memory)) == sizeof(memory));
+  CHECK(memory.AllocationBase == systemD3D12);
 
+  FreeLibrary(systemD3D12);
+  FreeLibrary(systemD3D11);
   FreeLibrary(systemDXGI);
 }
 

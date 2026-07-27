@@ -19,10 +19,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{8B2122E6-B4D1-40C8-9DCA-C9D8CA1B9272}</ProjectGuid>
+    <ProjectGuid>{81D4DAE5-BDF0-4AE3-9FD9-378CFADFB82A}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>rendertest_dxgi_proxy</RootNamespace>
-    <ProjectName>rendertest_dxgi_proxy</ProjectName>
+    <RootNamespace>dcomp_dxgi_proxy</RootNamespace>
+    <ProjectName>dcomp_dxgi_proxy</ProjectName>
     <RepoRoot>$(MSBuildThisFileDirectory)..\..\</RepoRoot>
     <SolutionDir Condition="'$(SolutionDir)'=='' or '$(SolutionDir)'=='*Undefined*'">$(RepoRoot)</SolutionDir>
   </PropertyGroup>
@@ -54,7 +54,7 @@
   <Import Project="$(RepoRoot)util\WindowsSDKFix.props" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IntDir>$(RepoRoot)$(Platform)\$(Configuration)\obj\rendertest_dxgi_proxy\</IntDir>
+    <IntDir>$(RepoRoot)$(Platform)\$(Configuration)\obj\dgcore_proxy_dxgi\</IntDir>
     <OutDir>$(RepoRoot)$(Platform)\$(Configuration)\bootstrap\dxgi_proxy\</OutDir>
     <TargetName>dxgi</TargetName>
     <ProxyDefinitionFile Condition="'$(Platform)'=='x64'">dxgi_proxy_x64.def</ProxyDefinitionFile>

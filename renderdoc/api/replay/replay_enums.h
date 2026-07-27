@@ -44,20 +44,20 @@ version of RenderDoc that addes a new section type. They should be considered eq
   This section contains the actual captured frame, in RenderDoc's internal chunked representation.
   The contents can be fetched as structured data with or without replaying the frame.
 
-  The name for this section will be "renderdoc/internal/framecapture".
+  The name for this section will be "dcomp/internal/framecapture".
 
 .. data:: ResolveDatabase
 
   This section contains platform-specific data used to resolve callstacks.
 
-  The name for this section will be "renderdoc/internal/resolvedb".
+  The name for this section will be "dcomp/internal/resolvedb".
 
 .. data:: Bookmarks
 
   This section contains a JSON document with bookmarks added to the capture to highlight important
   events.
 
-  The name for this section will be "renderdoc/ui/bookmarks".
+  The name for this section will be "dcomp/ui/bookmarks".
 
 .. data:: Notes
 
@@ -65,14 +65,14 @@ version of RenderDoc that addes a new section type. They should be considered eq
   details about how the capture was obtained with repro steps in the original program, or with
   driver and machine info.
 
-  The name for this section will be "renderdoc/ui/notes".
+  The name for this section will be "dcomp/ui/notes".
 
 .. data:: ResourceRenames
 
   This section contains a JSON document with custom names applied to resources in the UI, over and
   above any friendly names specified in the capture itself.
 
-  The name for this section will be "renderdoc/ui/resrenames".
+  The name for this section will be "dcomp/ui/resrenames".
 
 .. data:: AMDRGPProfile
 
@@ -85,37 +85,37 @@ version of RenderDoc that addes a new section type. They should be considered eq
   This section contains a thumbnail in format other than JPEG. For example, when it needs to be
   lossless.
 
-  The name for this section will be "renderdoc/internal/exthumb".
+  The name for this section will be "dcomp/internal/exthumb".
 
 .. data:: EmbeddedLogfile
 
   This section contains the log file at the time of capture, for debugging.
 
-  The name for this section will be "renderdoc/internal/logfile".
+  The name for this section will be "dcomp/internal/logfile".
 
 .. data:: EditedShaders
 
   This section contains any edited shaders.
 
-  The name for this section will be "renderdoc/ui/edits".
+  The name for this section will be "dcomp/ui/edits".
 
 .. data:: D3D12Core
 
   This section contains an internal copy of D3D12Core for replaying.
 
-  The name for this section will be "renderdoc/internal/d3d12core".
+  The name for this section will be "dcomp/internal/d3d12core".
 
 .. data:: D3D12SDKLayers
 
   This section contains an internal copy of D3D12SDKLayers for replaying.
 
-  The name for this section will be "renderdoc/internal/d3d12sdklayers".
+  The name for this section will be "dcomp/internal/d3d12sdklayers".
 
 .. data:: EmbeddedExternalFiles
 
   This section contains externally referenced files that have been embedded into the capture.
 
-  The name for this section will be "renderdoc/internal/embeddedexternalfiles".
+  The name for this section will be "dcomp/internal/embeddedexternalfiles".
 )");
 enum class SectionType : uint32_t
 {

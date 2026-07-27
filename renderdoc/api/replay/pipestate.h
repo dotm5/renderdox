@@ -43,7 +43,7 @@ public:
   // disallow copy of this object
   PipeState(const PipeState &) = delete;
 
-#if defined(RENDERDOC_EXPORTS)
+#if defined(DCOMP_EXPORTS)
   // we initialise this internally only
   void SetState(const D3D11Pipe::State *d3d11)
   {

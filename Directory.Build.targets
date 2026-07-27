@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <!--
+    Fast Release is the default for local builds. Set RDocEnableLTCG=true for
+    the original whole-program-optimised release profile.
+
+    This file is imported after project-local settings, so it also covers the
+    static driver libraries that feed the Core DLL. Disabling WPO only in
+    renderdoc.vcxproj is insufficient because /GL objects from those libraries
+    still force link-time code generation.
+  -->
+  <PropertyGroup>
+    <RDocEnableLTCG Condition="'$(RDocEnableLTCG)'==''">false</RDocEnableLTCG>
+    <RDocClangMsvcFallback Condition="'$(RDocClangMsvcFallback)'==''">true</RDocClangMsvcFallback>
+  </PropertyGroup>
+
+  <!--
+    The projects intentionally use /WX for MSVC. ClangCL diagnoses additional
+    Microsoft extensions that are accepted by the supported MSVC build, so keep
+    those diagnostics visible without making them build-stopping errors.
+
+    This must live in Directory.Build.targets rather than Directory.Build.props:
+    project-local ItemDefinitionGroups are evaluated after .props and otherwise
+    restore /WX. The explicit narrowing override is needed because Clang treats
+    that diagnostic as an error by default, independently of /WX.
+  -->
+  <PropertyGroup
+      Condition="'$(PlatformToolset)'=='ClangCL' And
+                 '$(RDocClangMsvcFallback)'=='true' And
+                 ('$(MSBuildProjectName)'=='renderdoc_d3d11' Or
+                  '$(MSBuildProjectName)'=='renderdoc_d3d12' Or
+                  '$(MSBuildProjectName)'=='renderdoc_vulkan' Or
+                  '$(MSBuildProjectName)'=='renderdoccmd' Or
+                  '$(MSBuildProjectName)'=='NV')">
+    <!--
+      D3D12 and NV include three empty-argument variadic macro calls that depend
+      on the legacy MSVC preprocessor's comma elision. D3D11 relies on MSVC's
+      template-instantiation timing. Vulkan contains a template parameter whose
+      top-level const qualification produces a different specialisation symbol
+      under Clang. renderdoccmd includes a UTF-16 resource header that Clang's
+      source reader does not support. Clang has no compatibility switch that
+      accepts these constructs as written. Keep the source untouched and compile
+      only these ABI-compatible objects with the installed MSVC frontend;
+      llvm-lib/lld-link and every other project remain on ClangCL.
+    -->
+    <RDocUseMsvcFrontend>true</RDocUseMsvcFrontend>
+    <RDocMsvcTargetArchitecture Condition="'$(Platform)'=='Win32'">x86</RDocMsvcTargetArchitecture>
+    <RDocMsvcTargetArchitecture Condition="'$(Platform)'=='x64'">x64</RDocMsvcTargetArchitecture>
+    <CLToolExe>cl.exe</CLToolExe>
+    <CLToolPath>$(VCToolsInstallDir)bin\Host$(PreferredToolArchitecture)\$(RDocMsvcTargetArchitecture)</CLToolPath>
+    <IncludePath>$(SolutionDir)util\sdkfix;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <LlvmArchitectureSwitch></LlvmArchitectureSwitch>
+  </PropertyGroup>
+
+  <ItemGroup
+      Condition="'$(PlatformToolset)'=='ClangCL' And '$(RDocUseMsvcFrontend)'!='true'">
+    <ClCompile Update="@(ClCompile)">
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <AdditionalOptions>%(AdditionalOptions) -Wno-error=c++11-narrowing</AdditionalOptions>
+    </ClCompile>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(RDocUseMsvcFrontend)'=='true'">
+    <ClCompile Update="@(ClCompile)">
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <AdditionalOptions>%(AdditionalOptions) /wd4100</AdditionalOptions>
+    </ClCompile>
+  </ItemGroup>
+
+  <ItemGroup
+      Condition="'$(PlatformToolset)'=='ClangCL' And '$(MSBuildProjectName)'=='renderdoc'">
+    <!--
+      MSVC finds the PCH header relative to core\precompiled.cpp. Clang requires
+      the same header to be reachable by the spelling used in /Yc and /Yu.
+    -->
+    <ClCompile Update="@(ClCompile)">
+      <AdditionalIncludeDirectories>$(MSBuildProjectDirectory)\core;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemGroup>
+
+  <ItemGroup
+      Condition="'$(PlatformToolset)'=='ClangCL' And '$(MSBuildProjectName)'=='qrenderdoc_local'">
+    <!--
+      Make the PCH header reachable by the exact spelling used by /Yc and /Yu.
+      Scintilla also treats clang-cl as old MSVC and includes stddef.h instead
+      of stdint.h, so force that header only into its non-PCH source.
+    -->
+    <ClCompile Update="@(ClCompile)">
+      <AdditionalIncludeDirectories>$(MSBuildProjectDirectory)\Code;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Update="3rdparty\scintilla\qt\ScintillaEditBase\ScintillaEditBase.cpp">
+      <ForcedIncludeFiles>stdint.h</ForcedIncludeFiles>
+    </ClCompile>
+  </ItemGroup>
+
+  <ItemGroup
+      Condition="'$(PlatformToolset)'=='ClangCL' And '$(MSBuildProjectName)'=='renderdocshim'">
+    <!--
+      The shim intentionally has no CRT. Prevent Release loop recognition from
+      replacing its explicit byte clear with an unresolved memset library call.
+    -->
+    <ClCompile Update="@(ClCompile)">
+      <AdditionalOptions>%(AdditionalOptions) -fno-builtin-memset</AdditionalOptions>
+    </ClCompile>
+  </ItemGroup>
+
+  <PropertyGroup Condition="'$(Configuration)'=='Release' And '$(RDocEnableLTCG)'!='true'">
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+    <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
+  </PropertyGroup>
+
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release' And '$(RDocEnableLTCG)'!='true'">
+    <ClCompile>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
+    </ClCompile>
+    <Link>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
+    </Link>
+    <Lib>
+      <LinkTimeCodeGeneration>false</LinkTimeCodeGeneration>
+    </Lib>
+  </ItemDefinitionGroup>
+</Project>

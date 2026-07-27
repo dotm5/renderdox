@@ -2103,7 +2103,7 @@ void VulkanPipelineStateViewer::setState()
           iformat = lit("uint");
 
         iformat +=
-            lit(" indices[%1]").arg(RENDERDOC_NumVerticesPerPrimitive(state.inputAssembly.topology));
+            lit(" indices[%1]").arg(DCOMP_NumVerticesPerPrimitive(state.inputAssembly.topology));
 
         node->setTag(QVariant::fromValue(VulkanVBIBTag(
             state.inputAssembly.indexBuffer.resourceId,
@@ -2141,7 +2141,7 @@ void VulkanPipelineStateViewer::setState()
           iformat = lit("uint");
 
         iformat +=
-            lit(" indices[%1]").arg(RENDERDOC_NumVerticesPerPrimitive(state.inputAssembly.topology));
+            lit(" indices[%1]").arg(DCOMP_NumVerticesPerPrimitive(state.inputAssembly.topology));
 
         node->setTag(QVariant::fromValue(VulkanVBIBTag(
             state.inputAssembly.indexBuffer.resourceId,

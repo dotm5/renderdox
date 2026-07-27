@@ -199,7 +199,7 @@ import gdb.printing
 def register(objfile):
     """Register the pretty printers within the given objfile."""
 
-    printer = gdb.printing.RegexpCollectionPrettyPrinter('renderdoc')
+    printer = gdb.printing.RegexpCollectionPrettyPrinter('dgcore')
 
     printer.add_printer('rdcstr', r'^rdcstr$', rdcstrPrinter)
     printer.add_printer('rdcinflexiblestr', r'^rdcinflexiblestr$', rdcinflexiblestrPrinter)

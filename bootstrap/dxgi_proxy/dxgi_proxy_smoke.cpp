@@ -1,7 +1,7 @@
 /******************************************************************************
  * The MIT License (MIT)
  *
- * Copyright (c) 2026 RenderTest contributors
+ * Copyright (c) 2026 DComp contributors
  ******************************************************************************/
 
 #define WIN32_LEAN_AND_MEAN
@@ -164,9 +164,9 @@ int wmain(int argc, wchar_t **argv)
 
   if(core != NULL)
   {
-    pRENDERDOC_GetAPI getAPI = (pRENDERDOC_GetAPI)GetProcAddress(core, "RENDERDOC_GetAPI");
+    pDCOMP_GetAPI getAPI = (pDCOMP_GetAPI)GetProcAddress(core, "DCOMP_GetAPI");
     RENDERDOC_API_1_6_0 *api = NULL;
-    if(getAPI == NULL || getAPI(eRENDERDOC_API_Version_1_6_0, (void **)&api) != 1 || api == NULL)
+    if(getAPI == NULL || getAPI(eDCOMP_API_Version_1_6_0, (void **)&api) != 1 || api == NULL)
     {
       fwprintf(stderr, L"Core API handshake failed\n");
       return 1;

@@ -242,12 +242,12 @@ D3D11TextRenderer::D3D11TextRenderer(WrappedID3D11Device *wrapper)
 
   if(m_pDevice->GetFeatureLevel() >= D3D_FEATURE_LEVEL_10_0)
   {
-    VS = shaderCache->MakeVShader(hlsl.c_str(), "RENDERDOC_TextVS", "vs_4_0");
+    VS = shaderCache->MakeVShader(hlsl.c_str(), "DCOMP_TextVS", "vs_4_0");
 
     InternalRef(VS);
     rm->SetInternalResource(VS);
 
-    PS = shaderCache->MakePShader(hlsl.c_str(), "RENDERDOC_TextPS", "ps_4_0");
+    PS = shaderCache->MakePShader(hlsl.c_str(), "DCOMP_TextPS", "ps_4_0");
 
     InternalRef(PS);
     rm->SetInternalResource(PS);
@@ -261,7 +261,7 @@ D3D11TextRenderer::D3D11TextRenderer(WrappedID3D11Device *wrapper)
 
     // if we're on 9_x feature levels, compile the shaders in 9_0 mode and switch to the downlevel
     // vertex shader that expects vertex inputs directly rather than using SV_VertexID/SV_InstanceID
-    VS = shaderCache->MakeVShader(hlsl.c_str(), "RENDERDOC_Text9VS", "vs_4_0_level_9_0", 1, inputs,
+    VS = shaderCache->MakeVShader(hlsl.c_str(), "DCOMP_Text9VS", "vs_4_0_level_9_0", 1, inputs,
                                   &Layout);
 
     InternalRef(VS);
@@ -270,7 +270,7 @@ D3D11TextRenderer::D3D11TextRenderer(WrappedID3D11Device *wrapper)
     InternalRef(Layout);
     rm->SetInternalResource(Layout);
 
-    PS = shaderCache->MakePShader(hlsl.c_str(), "RENDERDOC_TextPS", "ps_4_0_level_9_0");
+    PS = shaderCache->MakePShader(hlsl.c_str(), "DCOMP_TextPS", "ps_4_0_level_9_0");
 
     InternalRef(PS);
     rm->SetInternalResource(PS);
