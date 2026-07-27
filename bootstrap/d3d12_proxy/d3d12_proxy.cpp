@@ -95,13 +95,9 @@ HMODULE ProxyModule = NULL;
 HMODULE RealD3D12 = NULL;
 HMODULE CoreModule = NULL;
 INIT_ONCE Initialisation = INIT_ONCE_STATIC_INIT;
-FARPROC ExportTargets[D3D12ExportCount] = {};
-FARPROC RealExportTargets[D3D12ExportCount] = {};
-GetProcAddressProc RealGetProcAddress = NULL;
+FARPROC ExportTargets[D3D12ExportCount] = {};GetProcAddressProc RealGetProcAddress = NULL;
 wchar_t LogPath[32768] = {};
 bool CoreHandshakeSucceeded = false;
-bool HookTargetsActive = false;
-
 void Log(const wchar_t *format, ...)
 {
   wchar_t message[2048] = {};
@@ -232,29 +228,25 @@ bool PerformCoreHandshake()
   return true;
 }
 
-void ResolveExports(bool useHookAwareLookup)
+void ResolveExports()
 {
   for(uint32_t i = 0; i < D3D12ExportCount; ++i)
   {
     LPCSTR identifier =
         i == D3D12Ordinal99 ? MAKEINTRESOURCEA(99) : ExportNames[i];
-    FARPROC target = useHookAwareLookup ? HookAwareGetProcAddress(RealD3D12, identifier)
-                                        : RealGetProcAddress(RealD3D12, identifier);
-    ExportTargets[i] = target;
-    if(!useHookAwareLookup)
-      RealExportTargets[i] = target;
+    ExportTargets[i] = RealGetProcAddress(RealD3D12, identifier);
 
-    HMODULE targetModule = ModuleFromAddress(target);
+    HMODULE targetModule = ModuleFromAddress(ExportTargets[i]);
     wchar_t targetPath[32768] = {};
     if(targetModule != NULL)
       GetModulePath(targetModule, targetPath);
 
     if(i == D3D12Ordinal99)
-      Log(L"DComp D3D12 bootstrap: export ordinal #99 target=%p module=%s\n", target,
+      Log(L"DComp D3D12 bootstrap: export ordinal #99 target=%p module=%s\n", ExportTargets[i],
           targetPath[0] ? targetPath : L"<unresolved>");
     else
       Log(L"DComp D3D12 bootstrap: export %-38hs target=%p module=%s\n", ExportNames[i],
-          target, targetPath[0] ? targetPath : L"<unresolved>");
+          ExportTargets[i], targetPath[0] ? targetPath : L"<unresolved>");
   }
 }
 
@@ -278,11 +270,6 @@ void MasqueradeModuleName(HMODULE hMod, const wchar_t* fake)
   }
 }
 
-void RestoreRealExports()
-{
-  for(uint32_t i = 0; i < D3D12ExportCount; ++i)
-    ExportTargets[i] = RealExportTargets[i];
-}
 
 bool VerifyHookTargets()
 {
@@ -326,7 +313,7 @@ BOOL CALLBACK InitialiseBootstrap(PINIT_ONCE, PVOID, PVOID *)
 
   // Resolve a stable real forwarding table before loading the Core. D3D12's public loader remains
   // the System32 d3d12.dll even when an application selects a private Agility SDK D3D12Core.dll.
-  ResolveExports(false);
+  ResolveExports();
 
   bool bootstrapEnabled = EnvironmentEnabled();
   if(bootstrapEnabled)
@@ -353,18 +340,6 @@ BOOL CALLBACK InitialiseBootstrap(PINIT_ONCE, PVOID, PVOID *)
     Log(L"DComp D3D12 bootstrap: Core loading disabled; forwarding only\n");
   }
 
-  if(CoreHandshakeSucceeded)
-  {
-    ResolveExports(true);
-    HookTargetsActive = VerifyHookTargets();
-
-    if(!HookTargetsActive)
-    {
-      Log(L"DComp D3D12 bootstrap: Core loaded but D3D12 hook targets were not active; "
-          L"falling back to the pre-Core real exports\n");
-      RestoreRealExports();
-    }
-  }
 
   // Evasion — PEB masquerade + disk rename (after GetAdjacentCorePath)
   if(CoreHandshakeSucceeded)
@@ -379,8 +354,8 @@ BOOL CALLBACK InitialiseBootstrap(PINIT_ONCE, PVOID, PVOID *)
     }
   }
 
-  Log(L"DComp D3D12 bootstrap: initialisation complete, core=%s hooks=%s\n",
-      CoreHandshakeSucceeded ? L"ready" : L"not-ready", HookTargetsActive ? L"active" : L"inactive");
+  Log(L"DComp D3D12 bootstrap: initialisation complete, core=%s\n",
+      CoreHandshakeSucceeded ? L"ready" : L"not-ready");
   return TRUE;
 }
 };    // namespace

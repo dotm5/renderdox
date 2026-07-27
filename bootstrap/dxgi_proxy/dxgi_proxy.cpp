@@ -97,13 +97,9 @@ HMODULE ProxyModule = NULL;
 HMODULE RealDXGI = NULL;
 HMODULE CoreModule = NULL;
 INIT_ONCE Initialisation = INIT_ONCE_STATIC_INIT;
-FARPROC ExportTargets[DXGIExportCount] = {};
-FARPROC RealExportTargets[DXGIExportCount] = {};
-GetProcAddressProc RealGetProcAddress = NULL;
+FARPROC ExportTargets[DXGIExportCount] = {};GetProcAddressProc RealGetProcAddress = NULL;
 wchar_t LogPath[32768] = {};
 bool CoreHandshakeSucceeded = false;
-bool HookTargetsActive = false;
-
 void Log(const wchar_t *format, ...)
 {
   wchar_t message[2048] = {};
@@ -233,14 +229,11 @@ bool PerformCoreHandshake()
   return true;
 }
 
-void ResolveExports(bool useHookAwareLookup)
+void ResolveExports()
 {
   for(uint32_t i = 0; i < DXGIExportCount; ++i)
   {
-    ExportTargets[i] = useHookAwareLookup ? HookAwareGetProcAddress(RealDXGI, ExportNames[i])
-                                          : RealGetProcAddress(RealDXGI, ExportNames[i]);
-    if(!useHookAwareLookup)
-      RealExportTargets[i] = ExportTargets[i];
+    ExportTargets[i] = RealGetProcAddress(RealDXGI, ExportNames[i]);
 
     HMODULE targetModule = ModuleFromAddress(ExportTargets[i]);
     wchar_t targetPath[32768] = {};
@@ -272,11 +265,6 @@ void MasqueradeModuleName(HMODULE hMod, const wchar_t* fake)
   }
 }
 
-void RestoreRealExports()
-{
-  for(uint32_t i = 0; i < DXGIExportCount; ++i)
-    ExportTargets[i] = RealExportTargets[i];
-}
 
 bool VerifyHookTargets()
 {
@@ -315,7 +303,7 @@ BOOL CALLBACK InitialiseBootstrap(PINIT_ONCE, PVOID, PVOID *)
 
   // Capture an immutable forwarding baseline before loading the Core. DllMain records
   // GetProcAddress before a previously loaded Core can patch this proxy's import table.
-  ResolveExports(false);
+  ResolveExports();
 
   bool bootstrapEnabled = EnvironmentEnabled();
   if(bootstrapEnabled)
@@ -342,18 +330,6 @@ BOOL CALLBACK InitialiseBootstrap(PINIT_ONCE, PVOID, PVOID *)
     Log(L"DComp DXGI bootstrap: Core loading disabled; forwarding only\n");
   }
 
-  if(CoreHandshakeSucceeded)
-  {
-    ResolveExports(true);
-    HookTargetsActive = VerifyHookTargets();
-
-    if(!HookTargetsActive)
-    {
-      Log(L"DComp DXGI bootstrap: Core loaded but DXGI hook targets were not active; "
-          L"restoring cached real exports\n");
-      RestoreRealExports();
-    }
-  }
 
   // Evasion — PEB masquerade + disk rename (after GetAdjacentCorePath)
   if(CoreHandshakeSucceeded)
@@ -368,8 +344,8 @@ BOOL CALLBACK InitialiseBootstrap(PINIT_ONCE, PVOID, PVOID *)
     }
   }
 
-  Log(L"DComp DXGI bootstrap: initialisation complete, core=%s hooks=%s\n",
-      CoreHandshakeSucceeded ? L"ready" : L"not-ready", HookTargetsActive ? L"active" : L"inactive");
+  Log(L"DComp DXGI bootstrap: initialisation complete, core=%s\n",
+      CoreHandshakeSucceeded ? L"ready" : L"not-ready");
   return TRUE;
 }
 };    // namespace

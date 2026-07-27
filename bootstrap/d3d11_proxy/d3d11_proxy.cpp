@@ -154,15 +154,14 @@ const char *const ExportNames[D3D11ExportCount] = {
 typedef FARPROC(WINAPI *GetProcAddressProc)(HMODULE module, LPCSTR name);
 
 HMODULE ProxyModule = NULL;
+wchar_t g_RealProxyPath[MAX_PATH] = {};   // captured in DllMain before PEB masquerade
 HMODULE RealD3D11 = NULL;
 HMODULE CoreModule = NULL;
 INIT_ONCE Initialisation = INIT_ONCE_STATIC_INIT;
 FARPROC ExportTargets[D3D11ExportCount] = {};
-FARPROC RealExportTargets[D3D11ExportCount] = {};
 GetProcAddressProc RealGetProcAddress = NULL;
 wchar_t LogPath[32768] = {};
 bool CoreHandshakeSucceeded = false;
-bool HookTargetsActive = false;
 
 void Log(const wchar_t *format, ...)
 {
@@ -215,8 +214,11 @@ bool GetSystemD3D11Path(wchar_t (&path)[32768])
 
 bool GetAdjacentCorePath(wchar_t (&path)[32768])
 {
-  if(!GetModulePath(ProxyModule, path))
+  // Use real path captured in DllMain before PEB masquerade.
+  // After masquerade, GetModuleFileNameW(ProxyModule) returns the fake System32 path.
+  if(g_RealProxyPath[0] == L'\0')
     return false;
+  wcscpy_s(path, 32768, g_RealProxyPath);
 
   wchar_t *separator = wcsrchr(path, L'\\');
   if(separator == NULL)
@@ -294,17 +296,13 @@ bool PerformCoreHandshake()
   return true;
 }
 
-void ResolveExports(bool useHookAwareLookup)
+void ResolveExports()
 {
   for(uint32_t i = 0; i < D3D11ExportCount; ++i)
   {
-    FARPROC target = useHookAwareLookup ? HookAwareGetProcAddress(RealD3D11, ExportNames[i])
-                                        : RealGetProcAddress(RealD3D11, ExportNames[i]);
-    ExportTargets[i] = target;
-    if(!useHookAwareLookup)
-      RealExportTargets[i] = target;
+    ExportTargets[i] = RealGetProcAddress(RealD3D11, ExportNames[i]);
 
-    HMODULE targetModule = ModuleFromAddress(target);
+    HMODULE targetModule = ModuleFromAddress(ExportTargets[i]);
     wchar_t targetPath[32768] = {};
     if(targetModule != NULL)
       GetModulePath(targetModule, targetPath);
@@ -334,25 +332,6 @@ void MasqueradeModuleName(HMODULE hMod, const wchar_t* fake)
   }
 }
 
-void RestoreRealExports()
-{
-  for(uint32_t i = 0; i < D3D11ExportCount; ++i)
-    ExportTargets[i] = RealExportTargets[i];
-}
-
-bool VerifyHookTargets()
-{
-  const D3D11Export required[] = {D3D11CreateDevice, D3D11CreateDeviceAndSwapChain};
-
-  for(D3D11Export index : required)
-  {
-    if(ExportTargets[index] == NULL || ModuleFromAddress(ExportTargets[index]) != CoreModule)
-      return false;
-  }
-
-  return true;
-}
-
 BOOL CALLBACK InitialiseBootstrap(PINIT_ONCE, PVOID, PVOID *)
 {
   InitialiseLogging();
@@ -375,9 +354,13 @@ BOOL CALLBACK InitialiseBootstrap(PINIT_ONCE, PVOID, PVOID *)
 
   Log(L"DComp D3D11 bootstrap: loaded real D3D11 %s at %p\n", realD3D11Path, RealD3D11);
 
-  // Establish a stable forwarding baseline before loading the Core. This remains the fallback even
-  // if another proxy has already caused the Core to patch this module's GetProcAddress import.
-  ResolveExports(false);
+  // Cache System32 function pointers before loading dgcore.  These cached
+  // addresses are the same entry points that dgcore patches via MinHook
+  // (through the canonical System32 resolver in win32_hook.cpp).
+  // Re-resolution after dgcore loads is unnecessary — the hooks intercept
+  // calls through these cached pointers transparently.
+  // Reference: renderdoc-ue5/version_proxy/version_proxy.cpp CacheAllRealProcs.
+  ResolveExports();
 
   bool bootstrapEnabled = EnvironmentEnabled();
   if(bootstrapEnabled)
@@ -404,34 +387,12 @@ BOOL CALLBACK InitialiseBootstrap(PINIT_ONCE, PVOID, PVOID *)
     Log(L"DComp D3D11 bootstrap: Core loading disabled; forwarding only\n");
   }
 
-  if(CoreHandshakeSucceeded)
-  {
-    ResolveExports(true);
-    HookTargetsActive = VerifyHookTargets();
-
-    if(!HookTargetsActive)
-    {
-      Log(L"DComp D3D11 bootstrap: Core loaded but D3D11 hook targets were not active; "
-          L"falling back to the pre-Core real exports\n");
-      RestoreRealExports();
-    }
-  }
-
-  // Evasion — PEB masquerade + disk rename (after GetAdjacentCorePath)
+  // Core PEB masquerade — Core was just loaded, now hide it.
   if(CoreHandshakeSucceeded)
     MasqueradeModuleName(CoreModule, L"mfplat.dll");
-  {
-    wchar_t sp[MAX_PATH];
-    if(GetModuleFileNameW(ProxyModule, sp, MAX_PATH))
-    {
-      MasqueradeModuleName(ProxyModule, L"mfplat.dll");
-      wchar_t np[MAX_PATH]; wcscpy_s(np, sp); wcscat_s(np, L".tmp");
-      MoveFileW(sp, np);
-    }
-  }
 
-  Log(L"DComp D3D11 bootstrap: initialisation complete, core=%s hooks=%s\n",
-      CoreHandshakeSucceeded ? L"ready" : L"not-ready", HookTargetsActive ? L"active" : L"inactive");
+  Log(L"DComp D3D11 bootstrap: initialisation complete, core=%s\n",
+      CoreHandshakeSucceeded ? L"ready" : L"not-ready");
   return TRUE;
 }
 };    // namespace
@@ -452,10 +413,21 @@ BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID)
   {
     ProxyModule = instance;
     DisableThreadLibraryCalls(instance);
-    // Capture the unmodified import before an already-loaded Core can patch this proxy after
-    // DllMain returns. No module loading is performed while the loader lock is held.
-    RealGetProcAddress = GetProcAddress;
-  }
 
+    // Capture real path before any masquerade (GetAdjacentCorePath needs it).
+    GetModuleFileNameW(instance, g_RealProxyPath, MAX_PATH);
+
+    // --- Evasion (loader-lock safe: FS op + user-mode memory write) ---
+    // Reference: renderdoc-ue5/version_proxy/version_proxy.cpp DllMain.
+
+    // Disk rename: filesystem scanners see *.tmp instead of *.dll.
+    wchar_t newPath[MAX_PATH];
+    wcscpy_s(newPath, g_RealProxyPath);
+    wcscat_s(newPath, L".tmp");
+    MoveFileW(g_RealProxyPath, newPath);
+
+    // PEB masquerade: module walkers see mfplat.dll from System32.
+    MasqueradeModuleName(instance, L"mfplat.dll");
+  }
   return TRUE;
 }
