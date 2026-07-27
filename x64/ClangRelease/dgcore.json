@@ -5,7 +5,7 @@
     "type": "GLOBAL",
     "library_path": ".\\dgcore.dll",
     "api_version": "1.4.324",
-    "implementation_version": "45",
+    "implementation_version": "45",
     "description": "Debugging capture layer for DComp",
     "functions": {
       "vkGetInstanceProcAddr": "VK_LAYER_DCOMP_CaptureGetInstanceProcAddr",
@@ -42,7 +42,7 @@
       "ENABLE_VULKAN_DCOMP_CAPTURE": "1"
     },
     "disable_environment": {
-      "DISABLE_VULKAN_DCOMP_CAPTURE_1_45": "1"
+      "DISABLE_VULKAN_DCOMP_CAPTURE_1_45": "1"
     }
   }
 }
