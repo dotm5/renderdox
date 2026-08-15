@@ -33,6 +33,9 @@
 #include <functional>
 #include <map>
 #include <set>
+#if defined(DCOMP_INLINE_GRAPHICS_HOOKS) && DCOMP_INLINE_GRAPHICS_HOOKS
+#include <MinHook.h>
+#endif
 #include "common/common.h"
 #include "common/threading.h"
 #include "generated/product_identity.h"
@@ -44,13 +47,12 @@
 
 static bool GetCanonicalSystemModulePath(const rdcstr &libraryName, rdcwstr &modulePath)
 {
-  // These public graphics entry modules are operating-system components. A same-name bootstrap
-  // proxy may already be loaded when hooks are registered, so onward calls must use the canonical
-  // System32 module. Agility SDK applications still select their private implementation through
-  // D3D12Core.dll; the public d3d12.dll loader remains the System32 component.
+  // DXGI and D3D11 are operating-system components. A same-name bootstrap proxy may already be
+  // loaded when hooks are registered, so onward calls must use the canonical System32 module.
+  // Do not extend this list to D3D12: applications can legitimately use a private Agility SDK
+  // D3D12Core deployment.
   if(_stricmp(libraryName.c_str(), "dxgi.dll") != 0 &&
-     _stricmp(libraryName.c_str(), "d3d11.dll") != 0 &&
-     _stricmp(libraryName.c_str(), "d3d12.dll") != 0)
+     _stricmp(libraryName.c_str(), "d3d11.dll") != 0)
     return false;
 
   rdcarray<wchar_t> systemDirectory;
@@ -986,6 +988,163 @@ struct CachedHookData
 
 static CachedHookData *s_HookData = NULL;
 
+#if defined(DCOMP_INLINE_GRAPHICS_HOOKS) && DCOMP_INLINE_GRAPHICS_HOOKS
+struct InlineGraphicsHook
+{
+  void *target = NULL;
+  void *detour = NULL;
+  void *trampoline = NULL;
+  rdcarray<void **> originalSlots;
+};
+
+static std::map<void *, InlineGraphicsHook> s_InlineGraphicsHooks;
+static Threading::CriticalSection s_InlineGraphicsHookLock;
+static bool s_InlineGraphicsMinHookInitialised = false;
+static bool s_InlineGraphicsOwnsMinHook = false;
+
+static bool IsInlineGraphicsLibrary(const rdcstr &libraryName)
+{
+  return libraryName == "dxgi.dll" || libraryName == "d3d11.dll" ||
+         libraryName == "d3d12.dll" || libraryName == "d3d11on12.dll";
+}
+
+static void RememberOriginalSlot(InlineGraphicsHook &installed, void **slot)
+{
+  if(slot == NULL)
+    return;
+
+  for(void **known : installed.originalSlots)
+    if(known == slot)
+      return;
+
+  installed.originalSlots.push_back(slot);
+}
+
+static bool InitialiseInlineGraphicsHooks()
+{
+  if(s_InlineGraphicsMinHookInitialised)
+    return true;
+
+  MH_STATUS status = MH_Initialize();
+  if(status != MH_OK && status != MH_ERROR_ALREADY_INITIALIZED)
+  {
+    RDCERR("Could not initialise graphics entry hooks: MinHook status %d", (int)status);
+    return false;
+  }
+
+  s_InlineGraphicsMinHookInitialised = true;
+  s_InlineGraphicsOwnsMinHook = status == MH_OK;
+  return true;
+}
+
+static void InstallInlineGraphicsHooks()
+{
+  if(IsProxyOnly())
+    return;
+
+  SCOPED_LOCK(s_InlineGraphicsHookLock);
+
+  if(!InitialiseInlineGraphicsHooks())
+    return;
+
+  for(auto libraryIt = s_HookData->DllHooks.begin(); libraryIt != s_HookData->DllHooks.end();
+      ++libraryIt)
+  {
+    if(!IsInlineGraphicsLibrary(libraryIt->first))
+      continue;
+
+    DllHookset &hookset = libraryIt->second;
+    HMODULE module = hookset.originalModule ? hookset.originalModule : hookset.module;
+    if(module == NULL)
+      continue;
+
+    for(FunctionHook &hook : hookset.FunctionHooks)
+    {
+      if(hook.hook == NULL || hook.orig == NULL)
+        continue;
+
+      void *target = (void *)GetProcAddress(module, hook.function.c_str());
+      if(target == NULL || target == hook.hook)
+        continue;
+
+      auto installedIt = s_InlineGraphicsHooks.find(target);
+      if(installedIt != s_InlineGraphicsHooks.end())
+      {
+        InlineGraphicsHook &installed = installedIt->second;
+        if(installed.detour != hook.hook)
+        {
+          RDCERR("Graphics entry %s!%s shares target %p with a different hook", libraryIt->first.c_str(),
+                 hook.function.c_str(), target);
+          continue;
+        }
+
+        *hook.orig = installed.trampoline;
+        RememberOriginalSlot(installed, hook.orig);
+        continue;
+      }
+
+      InlineGraphicsHook installed;
+      installed.target = target;
+      installed.detour = hook.hook;
+
+      MH_STATUS status = MH_CreateHook(target, hook.hook, &installed.trampoline);
+      if(status != MH_OK)
+      {
+        RDCERR("Could not create graphics entry hook for %s!%s at %p: MinHook status %d",
+               libraryIt->first.c_str(), hook.function.c_str(), target, (int)status);
+        continue;
+      }
+
+      // Publish the trampoline before enabling the detour so the first intercepted call can
+      // always continue into the real implementation.
+      *hook.orig = installed.trampoline;
+      RememberOriginalSlot(installed, hook.orig);
+
+      status = MH_EnableHook(target);
+      if(status != MH_OK && status != MH_ERROR_ENABLED)
+      {
+        *hook.orig = target;
+        MH_RemoveHook(target);
+        RDCERR("Could not enable graphics entry hook for %s!%s at %p: MinHook status %d",
+               libraryIt->first.c_str(), hook.function.c_str(), target, (int)status);
+        continue;
+      }
+
+      s_InlineGraphicsHooks[target] = installed;
+      RDCLOG("Installed graphics entry hook for %s!%s at %p", libraryIt->first.c_str(),
+             hook.function.c_str(), target);
+    }
+  }
+}
+
+static void RemoveInlineGraphicsHooks()
+{
+  SCOPED_LOCK(s_InlineGraphicsHookLock);
+
+  if(!s_InlineGraphicsMinHookInitialised)
+    return;
+
+  for(auto &hookIt : s_InlineGraphicsHooks)
+  {
+    InlineGraphicsHook &installed = hookIt.second;
+    MH_DisableHook(installed.target);
+    MH_RemoveHook(installed.target);
+
+    for(void **slot : installed.originalSlots)
+      if(slot && *slot == installed.trampoline)
+        *slot = installed.target;
+  }
+
+  s_InlineGraphicsHooks.clear();
+
+  if(s_InlineGraphicsOwnsMinHook)
+    MH_Uninitialize();
+
+  s_InlineGraphicsMinHookInitialised = false;
+  s_InlineGraphicsOwnsMinHook = false;
+}
+#endif
+
 #ifdef UNICODE
 #undef MODULEENTRY32
 #undef Module32First
@@ -1091,6 +1250,10 @@ static void HookAllModules()
       if(cb)
         cb(it->second.module, it->first.c_str());
   }
+
+#if defined(DCOMP_INLINE_GRAPHICS_HOOKS) && DCOMP_INLINE_GRAPHICS_HOOKS
+  InstallInlineGraphicsHooks();
+#endif
 
   Atomic::CmpExch32(&s_HookData->posthooking, 1, 0);
 }
@@ -1460,6 +1623,10 @@ void LibraryHooks::ReplayInitialise()
 
 void LibraryHooks::RemoveHooks()
 {
+#if defined(DCOMP_INLINE_GRAPHICS_HOOKS) && DCOMP_INLINE_GRAPHICS_HOOKS
+  RemoveInlineGraphicsHooks();
+#endif
+
   if(IsProxyOnly())
     return;  // nothing installed in ProxyOnly mode
 
@@ -1546,17 +1713,13 @@ TEST_CASE("Win32 hook originals select already-loaded canonical graphics runtime
   rdcwstr systemD3D11Path;
   REQUIRE(GetCanonicalSystemModulePath("d3d11.dll", systemD3D11Path));
 
-  rdcwstr systemD3D12Path;
-  REQUIRE(GetCanonicalSystemModulePath("d3d12.dll", systemD3D12Path));
-
   rdcwstr rejectedPath;
+  CHECK_FALSE(GetCanonicalSystemModulePath("d3d12.dll", rejectedPath));
   CHECK_FALSE(GetCanonicalSystemModulePath("../dxgi.dll", rejectedPath));
   CHECK(GetCanonicalSystemModulePath("DXGI.DLL", rejectedPath));
   CHECK(_wcsicmp(rejectedPath.c_str(), systemDXGIPath.c_str()) == 0);
   CHECK(GetCanonicalSystemModulePath("D3D11.DLL", rejectedPath));
   CHECK(_wcsicmp(rejectedPath.c_str(), systemD3D11Path.c_str()) == 0);
-  CHECK(GetCanonicalSystemModulePath("D3D12.DLL", rejectedPath));
-  CHECK(_wcsicmp(rejectedPath.c_str(), systemD3D12Path.c_str()) == 0);
 
   HMODULE coreModule = GetModuleHandleA(RDOC_CORE_FILENAME);
   REQUIRE(coreModule != NULL);
@@ -1564,7 +1727,6 @@ TEST_CASE("Win32 hook originals select already-loaded canonical graphics runtime
   CHECK_FALSE(ModuleHandleIsLoaded(NULL));
   CHECK_FALSE(ModulePathMatches(coreModule, systemDXGIPath));
   CHECK_FALSE(ModulePathMatches(coreModule, systemD3D11Path));
-  CHECK_FALSE(ModulePathMatches(coreModule, systemD3D12Path));
 
   HMODULE systemDXGI = LoadLibraryW(systemDXGIPath.c_str());
   REQUIRE(systemDXGI != NULL);
@@ -1577,23 +1739,15 @@ TEST_CASE("Win32 hook originals select already-loaded canonical graphics runtime
   REQUIRE(ModulePathMatches(systemD3D11, systemD3D11Path));
   CHECK(GetLoadedCanonicalSystemModule("d3d11.dll") == systemD3D11);
   CHECK(GetPreferredOriginalModule("d3d11.dll", coreModule) == systemD3D11);
-
-  HMODULE systemD3D12 = LoadLibraryW(systemD3D12Path.c_str());
-  REQUIRE(systemD3D12 != NULL);
-  REQUIRE(ModulePathMatches(systemD3D12, systemD3D12Path));
-  CHECK(GetLoadedCanonicalSystemModule("d3d12.dll") == systemD3D12);
-  CHECK(GetPreferredOriginalModule("d3d12.dll", coreModule) == systemD3D12);
+  CHECK(GetPreferredOriginalModule("d3d12.dll", coreModule) == coreModule);
 
   FARPROC createFactory = GetProcAddress(systemDXGI, "CreateDXGIFactory1");
   REQUIRE(createFactory != NULL);
   FARPROC createD3D11Device = GetProcAddress(systemD3D11, "D3D11CreateDevice");
   REQUIRE(createD3D11Device != NULL);
-  FARPROC createD3D12Device = GetProcAddress(systemD3D12, "D3D12CreateDevice");
-  REQUIRE(createD3D12Device != NULL);
 
   void *originalFactory = NULL;
   void *originalD3D11CreateDevice = NULL;
-  void *originalD3D12CreateDevice = NULL;
   CachedHookData hookData;
   DllHookset &dxgiHookset = hookData.DllHooks["dxgi.dll"];
   dxgiHookset.originalModule = coreModule;
@@ -1602,32 +1756,22 @@ TEST_CASE("Win32 hook originals select already-loaded canonical graphics runtime
   d3d11Hookset.originalModule = coreModule;
   d3d11Hookset.FunctionHooks.push_back(
       FunctionHook("D3D11CreateDevice", &originalD3D11CreateDevice, NULL));
-  DllHookset &d3d12Hookset = hookData.DllHooks["d3d12.dll"];
-  d3d12Hookset.originalModule = coreModule;
-  d3d12Hookset.FunctionHooks.push_back(
-      FunctionHook("D3D12CreateDevice", &originalD3D12CreateDevice, NULL));
   {
     SCOPED_LOCK(hookData.lock);
     RefreshOriginalModule("dxgi.dll", dxgiHookset, coreModule);
     RefreshOriginalModule("d3d11.dll", d3d11Hookset, coreModule);
-    RefreshOriginalModule("d3d12.dll", d3d12Hookset, coreModule);
   }
   CHECK(dxgiHookset.originalModule == systemDXGI);
   CHECK(originalFactory == (void *)createFactory);
   CHECK(d3d11Hookset.originalModule == systemD3D11);
   CHECK(originalD3D11CreateDevice == (void *)createD3D11Device);
-  CHECK(d3d12Hookset.originalModule == systemD3D12);
-  CHECK(originalD3D12CreateDevice == (void *)createD3D12Device);
 
   MEMORY_BASIC_INFORMATION memory = {};
   REQUIRE(VirtualQuery(createFactory, &memory, sizeof(memory)) == sizeof(memory));
   CHECK(memory.AllocationBase == systemDXGI);
   REQUIRE(VirtualQuery(createD3D11Device, &memory, sizeof(memory)) == sizeof(memory));
   CHECK(memory.AllocationBase == systemD3D11);
-  REQUIRE(VirtualQuery(createD3D12Device, &memory, sizeof(memory)) == sizeof(memory));
-  CHECK(memory.AllocationBase == systemD3D12);
 
-  FreeLibrary(systemD3D12);
   FreeLibrary(systemD3D11);
   FreeLibrary(systemDXGI);
 }

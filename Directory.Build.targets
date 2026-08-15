@@ -18,13 +18,64 @@
       processes by default, e.g. /p:DCompHookIntoChildrenDefault=1.
     -->
     <DCompHookIntoChildrenDefault Condition="'$(DCompHookIntoChildrenDefault)'==''">0</DCompHookIntoChildrenDefault>
+    <!--
+      Injected Core builds must not bind to an application-local MSVC runtime.
+      Set this property to 1 to compile the Core and every static library in its
+      link graph with /MT, e.g. /p:DCompStaticRuntime=1.
+    -->
+    <DCompStaticRuntime Condition="'$(DCompStaticRuntime)'==''">0</DCompStaticRuntime>
+    <!--
+      Some applications resolve graphics entry points from export tables and never
+      expose an import or GetProcAddress call that the normal hook path can patch.
+      Opt in to entry detours for the already-registered DXGI/D3D hooks with
+      /p:DCompInlineGraphicsHooks=1.
+    -->
+    <DCompInlineGraphicsHooks Condition="'$(DCompInlineGraphicsHooks)'==''">0</DCompInlineGraphicsHooks>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(MSBuildProjectName)'=='renderdoc'">
     <ClCompile Update="replay\capture_options.cpp">
       <PreprocessorDefinitions>DCOMP_DEFAULT_HOOK_INTO_CHILDREN=$(DCompHookIntoChildrenDefault);%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Update="os\win32\win32_hook.cpp">
+      <PreprocessorDefinitions>DCOMP_INLINE_GRAPHICS_HOOKS=$(DCompInlineGraphicsHooks);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
   </ItemGroup>
+
+  <!--
+    Keep the override scoped to the injected Core's complete link graph. This
+    avoids changing the CRT contract of qrenderdoc/Qt or unrelated utilities
+    when the full solution is built with DCompStaticRuntime enabled.
+  -->
+  <PropertyGroup>
+    <DCompCoreRuntimeProject
+        Condition="'$(MSBuildProjectName)'=='renderdoc' Or
+                   '$(MSBuildProjectName)'=='renderdoc_version' Or
+                   '$(MSBuildProjectName)'=='renderdoc_d3d11' Or
+                   '$(MSBuildProjectName)'=='renderdoc_d3d12' Or
+                   '$(MSBuildProjectName)'=='renderdoc_dxgi' Or
+                   '$(MSBuildProjectName)'=='renderdoc_gl' Or
+                   '$(MSBuildProjectName)'=='renderdoc_vulkan' Or
+                   '$(MSBuildProjectName)'=='renderdoc_dxbc' Or
+                   '$(MSBuildProjectName)'=='renderdoc_dxil' Or
+                   '$(MSBuildProjectName)'=='renderdoc_spirv' Or
+                   '$(MSBuildProjectName)'=='AMD' Or
+                   '$(MSBuildProjectName)'=='ARM' Or
+                   '$(MSBuildProjectName)'=='Intel' Or
+                   '$(MSBuildProjectName)'=='NV' Or
+                   '$(MSBuildProjectName)'=='breakpad_common' Or
+                   '$(MSBuildProjectName)'=='crash_generation_client' Or
+                   '$(MSBuildProjectName)'=='crash_generation_server' Or
+                   '$(MSBuildProjectName)'=='exception_handler'">true</DCompCoreRuntimeProject>
+  </PropertyGroup>
+
+  <ItemDefinitionGroup
+      Condition="('$(DCompStaticRuntime)'=='1' Or '$(DCompStaticRuntime)'=='true') And
+                 '$(DCompCoreRuntimeProject)'=='true'">
+    <ClCompile>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+    </ClCompile>
+  </ItemDefinitionGroup>
 
   <!--
     The projects intentionally use /WX for MSVC. ClangCL diagnoses additional
