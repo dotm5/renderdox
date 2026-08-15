@@ -31,6 +31,13 @@
       /p:DCompInlineGraphicsHooks=1.
     -->
     <DCompInlineGraphicsHooks Condition="'$(DCompInlineGraphicsHooks)'==''">0</DCompInlineGraphicsHooks>
+    <!--
+      A manually injected launcher still needs to inject the real game, but the
+      game should not necessarily propagate the Core into login/helper
+      descendants. Set this property to 1 to clear hookIntoChildren only in the
+      options forwarded to an injected child.
+    -->
+    <DCompSingleGenerationChildHook Condition="'$(DCompSingleGenerationChildHook)'==''">0</DCompSingleGenerationChildHook>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(MSBuildProjectName)'=='renderdoc'">
@@ -39,6 +46,9 @@
     </ClCompile>
     <ClCompile Update="os\win32\win32_hook.cpp">
       <PreprocessorDefinitions>DCOMP_INLINE_GRAPHICS_HOOKS=$(DCompInlineGraphicsHooks);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Update="os\win32\sys_win32_hooks.cpp">
+      <PreprocessorDefinitions>DCOMP_SINGLE_GENERATION_CHILD_HOOK=$(DCompSingleGenerationChildHook);%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemGroup>
 

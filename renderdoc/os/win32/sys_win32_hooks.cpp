@@ -375,9 +375,18 @@ private:
       RDCDEBUG("Intercepting %s", entryPoint);
 
       // inherit logfile and capture options
+      CaptureOptions childOptions = RenderDoc::Inst().GetCaptureOptions();
+
+#if defined(DCOMP_SINGLE_GENERATION_CHILD_HOOK) && DCOMP_SINGLE_GENERATION_CHILD_HOOK
+      // The current process was selected for capture, but its helper processes are not. This
+      // preserves launcher -> game injection without recursively altering login or utility children.
+      childOptions.hookIntoChildren = false;
+      RDCDEBUG("Injecting child with further child hooks disabled");
+#endif
+
       rdcpair<RDResult, uint32_t> res = Process::InjectIntoProcess(
           lpProcessInformation->dwProcessId, {}, RenderDoc::Inst().GetCaptureFileTemplate(),
-          RenderDoc::Inst().GetCaptureOptions(), false);
+          childOptions, false);
 
       if(res.first == ResultCode::Succeeded)
         RenderDoc::Inst().AddChildProcess((uint32_t)lpProcessInformation->dwProcessId, res.second);
