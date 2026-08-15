@@ -28,6 +28,14 @@
 #include "common/common.h"
 #include "core/core.h"
 
+#ifndef DCOMP_DEFAULT_HOOK_INTO_CHILDREN
+#define DCOMP_DEFAULT_HOOK_INTO_CHILDREN 0
+#endif
+
+static_assert(DCOMP_DEFAULT_HOOK_INTO_CHILDREN == 0 ||
+                  DCOMP_DEFAULT_HOOK_INTO_CHILDREN == 1,
+              "DCOMP_DEFAULT_HOOK_INTO_CHILDREN must be 0 or 1");
+
 int RENDERDOC_CC SetCaptureOptionU32(RENDERDOC_CaptureOption opt, uint32_t val)
 {
   CaptureOptions opts = RenderDoc::Inst().GetCaptureOptions();
@@ -186,7 +194,7 @@ CaptureOptions::CaptureOptions()
   captureCallstacksOnlyActions = false;
   delayForDebugger = 0;
   verifyBufferAccess = false;
-  hookIntoChildren = false;
+  hookIntoChildren = DCOMP_DEFAULT_HOOK_INTO_CHILDREN != 0;
   refAllResources = false;
   captureAllCmdLists = false;
   debugOutputMute = true;

@@ -12,7 +12,19 @@
   <PropertyGroup>
     <RDocEnableLTCG Condition="'$(RDocEnableLTCG)'==''">false</RDocEnableLTCG>
     <RDocClangMsvcFallback Condition="'$(RDocClangMsvcFallback)'==''">true</RDocClangMsvcFallback>
+    <!--
+      Raw DLL injection does not receive capture options from the GUI. Set this
+      property to 1 for a Core build that propagates capture into child
+      processes by default, e.g. /p:DCompHookIntoChildrenDefault=1.
+    -->
+    <DCompHookIntoChildrenDefault Condition="'$(DCompHookIntoChildrenDefault)'==''">0</DCompHookIntoChildrenDefault>
   </PropertyGroup>
+
+  <ItemGroup Condition="'$(MSBuildProjectName)'=='renderdoc'">
+    <ClCompile Update="replay\capture_options.cpp">
+      <PreprocessorDefinitions>DCOMP_DEFAULT_HOOK_INTO_CHILDREN=$(DCompHookIntoChildrenDefault);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemGroup>
 
   <!--
     The projects intentionally use /WX for MSVC. ClangCL diagnoses additional
