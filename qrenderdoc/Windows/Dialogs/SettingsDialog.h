@@ -33,6 +33,7 @@ class SettingsDialog;
 
 class QTableWidgetItem;
 class QListWidgetItem;
+class QComboBox;
 struct ShaderProcessingTool;
 class ReplayOptionsSelector;
 
@@ -60,6 +61,7 @@ private slots:
   void on_Font_MonoFamily_currentIndexChanged(int index);
   void on_Font_GlobalScale_currentIndexChanged(int index);
   void Font_GlobalScale_returnPressed();
+  void UILanguage_currentIndexChanged(int index);
   void on_UIStyle_currentIndexChanged(int index);
   void on_tempDirectory_textEdited(const QString &temp);
   void on_saveDirectory_textEdited(const QString &save);
@@ -126,8 +128,11 @@ private:
 
   void addProcessor(const ShaderProcessingTool &disasm);
   bool editTool(int existing, ShaderProcessingTool &disasm);
+  void setupModernGeneralPage();
+  void setupNavigationIcons();
 
   ReplayOptionsSelector *m_ReplayOptions;
+  QComboBox *m_UILanguage = NULL;
 
   ICaptureContext &m_Ctx;
   bool m_NeedRefresh = false;

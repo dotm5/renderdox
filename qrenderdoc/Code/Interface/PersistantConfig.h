@@ -227,13 +227,21 @@ DECLARE_REFLECTION_STRUCT(BugReport);
 #define CONFIG_SETTINGS()                                                                          \
                                                                                                    \
   DOCUMENT(                                                                                        \
-      "The style to load for the UI. Possible values include 'Native', 'RDLight', 'RDDark'. "      \
+      "The style to load for the UI. Possible values include 'Native', 'RDLight', "               \
+      "'RDLightClassic', 'RDDark'. The legacy value 'RDLightModern' maps to 'RDLight'. "           \
       "If empty, the closest of RDLight and RDDark will be chosen, based on the overall "          \
       "light-on-dark or dark-on-light theme of the application native style."                      \
       ""                                                                                           \
       ":type: str");                                                                               \
   CONFIG_SETTING_VAL(public, QString, rdcstr, UIStyle, "")                                         \
-                                                                                                   \
+                                                                                                    \
+  DOCUMENT(                                                                                        \
+      "The language used by the UI. Stable values are 'system', 'en', and 'zh_CN'. Changes take " \
+      "effect after restart and missing translations fall back to English."                       \
+      ""                                                                                           \
+      ":type: str");                                                                               \
+  CONFIG_SETTING_VAL(public, QString, rdcstr, UILanguage, "system")                                \
+                                                                                                    \
   DOCUMENT(                                                                                        \
       "The path to the last capture to be opened, which is useful as a default location for "      \
       "browsing."                                                                                  \

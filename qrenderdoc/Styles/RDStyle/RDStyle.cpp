@@ -28,12 +28,14 @@
 #include <QComboBox>
 #include <QCommonStyle>
 #include <QDebug>
+#include <QFrame>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPen>
 #include <QStyleOption>
 #include <QtMath>
 #include "Code/QRDUtils.h"
+#include "Code/Resources.h"
 
 namespace Constants
 {
@@ -43,6 +45,7 @@ static const qreal SliderHandleCornerRadius = 4.0f;
 
 static const int ButtonMargin = 6;
 static const int ButtonBorder = 1;
+static const qreal ModernControlCornerRadius = 3.0f;
 
 static const int HighlightBorder = 2;
 
@@ -82,6 +85,38 @@ static const int TabMaxWidth = 250;
 
 static const int ItemHeaderMargin = 4;
 static const int ItemHeaderIconSize = 16;
+};
+
+namespace ModernLight
+{
+// Keep the V3 token set compiled into the style. Loading JSON in a paint path would add failure
+// modes and allocations to every control, while these values are part of the built-in theme ABI.
+static const QColor Window(0xF7, 0xF9, 0xFB);
+static const QColor Frame(0xF3, 0xF6, 0xF8);
+static const QColor DockTitle(0xF5, 0xF7, 0xF9);
+static const QColor Base(0xFF, 0xFF, 0xFF);
+static const QColor AlternateBase(0xFA, 0xFB, 0xFC);
+static const QColor BorderStrong(0xC5, 0xCE, 0xD6);
+static const QColor Border(0xD6, 0xDD, 0xE3);
+static const QColor BorderWeak(0xE9, 0xED, 0xF0);
+static const QColor Text(0x27, 0x31, 0x3B);
+static const QColor TextSecondary(0x66, 0x71, 0x7D);
+static const QColor TextTertiary(0x87, 0x92, 0x9D);
+static const QColor InteractionBlue(0x47, 0x7E, 0xAA);
+static const QColor HoverSurface(0xEE, 0xF4, 0xF8);
+static const QColor SelectionSurface(0xE5, 0xEF, 0xF7);
+static const QColor RenderDocGreen(0x20, 0xA7, 0x6B);
+static const QColor GreenSurface(0xE5, 0xF5, 0xEE);
+static const QColor Error(0xB4, 0x47, 0x3D);
+static const QColor ScrollThumb(0x94, 0xA2, 0xAE);
+static const QColor ScrollHover(0x71, 0x84, 0x93);
+
+// Defensive bevel neutralisation for Qt controls that escape the explicit flat drawing paths.
+static const QColor BevelLight(0xE7, 0xEC, 0xEF);
+static const QColor BevelMidlight(0xE3, 0xE8, 0xEC);
+static const QColor BevelMid(0xDC, 0xE2, 0xE7);
+static const QColor BevelDark(0xD4, 0xDB, 0xE1);
+static const QColor BevelShadow(0xCF, 0xD7, 0xDE);
 };
 
 namespace Animation
@@ -168,110 +203,186 @@ void RDStyle::polishPalette(QPalette &pal) const
 {
   int h = 0, s = 0, v = 0;
 
-  QColor windowText;
-  QColor window;
-  QColor base;
-  QColor highlight;
-  QColor tooltip;
-
-  if(m_Scheme == Light)
+  // Preserve the long-standing themes exactly. The modernisation is intentionally opt-in so users
+  // and downstream builds can switch back without any visual or behavioural migration cost.
+  if(m_Scheme != LightModern)
   {
-    window = QColor(225, 225, 225);
-    windowText = QColor(Qt::black);
-    base = QColor(Qt::white);
-    highlight = QColor(80, 110, 160);
-    tooltip = QColor(250, 245, 200);
-  }
-  else
-  {
-    window = QColor(45, 55, 60);
-    windowText = QColor(225, 225, 225);
-    base = QColor(22, 27, 30);
-    highlight = QColor(100, 130, 200);
-    tooltip = QColor(70, 70, 65);
-  }
+    QColor windowText;
+    QColor window;
+    QColor base;
+    QColor highlight;
+    QColor tooltip;
 
-  QColor light = window.lighter(150);
-  QColor mid = window.darker(150);
-  QColor dark = mid.darker(150);
-
-  QColor text = windowText;
-
-  pal = QPalette(windowText, window, light, dark, mid, text, base);
-
-  pal.setColor(QPalette::Shadow, Qt::black);
-
-  if(m_Scheme == Light)
-    pal.setColor(QPalette::AlternateBase, base.darker(110));
-  else
-    pal.setColor(QPalette::AlternateBase, base.lighter(110));
-
-  if(m_Scheme == Dark)
-  {
-    pal.setColor(QPalette::BrightText, text);
-  }
-
-  pal.setColor(QPalette::ToolTipBase, tooltip);
-  pal.setColor(QPalette::ToolTipText, text);
-
-  pal.setColor(QPalette::Highlight, highlight);
-  // inactive highlight is desaturated
-  highlight.getHsv(&h, &s, &v);
-  highlight.setHsv(h, int(s * 0.5), v);
-  pal.setColor(QPalette::Inactive, QPalette::Highlight, highlight);
-
-  pal.setColor(QPalette::HighlightedText, Qt::white);
-
-  // links are based on the highlight colour
-  QColor link = m_Scheme == Light ? highlight.darker(125) : highlight.lighter(105);
-  pal.setColor(QPalette::Link, link);
-
-  // visited links are desaturated
-  QColor linkVisited = link;
-  linkVisited.getHsv(&h, &s, &v);
-  linkVisited.setHsv(h, 0, v);
-  pal.setColor(QPalette::LinkVisited, linkVisited);
-
-  // for the 'text' type roles, make the disabled colour half as bright
-  for(QPalette::ColorRole role :
-      {QPalette::WindowText, QPalette::Text, QPalette::ButtonText, QPalette::Highlight,
-       QPalette::HighlightedText, QPalette::Link, QPalette::LinkVisited})
-  {
-    QColor col = pal.color(QPalette::Inactive, role);
-
-    col.getHsv(&h, &s, &v);
-
-    // with the exception of link text, the disabled version is desaturated
-    if(role != QPalette::Link)
-      s = 0;
-
-    // black is the only colour that gets brighter, any other colour gets darker
-    if(s == 0 && v == 0)
+    if(m_Scheme == Light)
     {
-      pal.setColor(QPalette::Disabled, role, QColor(160, 160, 160));
+      window = QColor(225, 225, 225);
+      windowText = QColor(Qt::black);
+      base = QColor(Qt::white);
+      highlight = QColor(80, 110, 160);
+      tooltip = QColor(250, 245, 200);
     }
     else
     {
-      col.setHsv(h, s, v / 2);
+      window = QColor(45, 55, 60);
+      windowText = QColor(225, 225, 225);
+      base = QColor(22, 27, 30);
+      highlight = QColor(100, 130, 200);
+      tooltip = QColor(70, 70, 65);
+    }
+
+    QColor light = window.lighter(150);
+    QColor mid = window.darker(150);
+    QColor dark = mid.darker(150);
+    QColor text = windowText;
+
+    pal = QPalette(windowText, window, light, dark, mid, text, base);
+    pal.setColor(QPalette::Shadow, Qt::black);
+
+    if(m_Scheme == Light)
+      pal.setColor(QPalette::AlternateBase, base.darker(110));
+    else
+      pal.setColor(QPalette::AlternateBase, base.lighter(110));
+
+    if(m_Scheme == Dark)
+      pal.setColor(QPalette::BrightText, text);
+
+    pal.setColor(QPalette::ToolTipBase, tooltip);
+    pal.setColor(QPalette::ToolTipText, text);
+    pal.setColor(QPalette::Highlight, highlight);
+
+    // inactive highlight is desaturated
+    highlight.getHsv(&h, &s, &v);
+    highlight.setHsv(h, int(s * 0.5), v);
+    pal.setColor(QPalette::Inactive, QPalette::Highlight, highlight);
+    pal.setColor(QPalette::HighlightedText, Qt::white);
+
+    QColor link = m_Scheme == Light ? highlight.darker(125) : highlight.lighter(105);
+    pal.setColor(QPalette::Link, link);
+
+    QColor linkVisited = link;
+    linkVisited.getHsv(&h, &s, &v);
+    linkVisited.setHsv(h, 0, v);
+    pal.setColor(QPalette::LinkVisited, linkVisited);
+
+    for(QPalette::ColorRole role :
+        {QPalette::WindowText, QPalette::Text, QPalette::ButtonText, QPalette::Highlight,
+         QPalette::HighlightedText, QPalette::Link, QPalette::LinkVisited})
+    {
+      QColor col = pal.color(QPalette::Inactive, role);
+      col.getHsv(&h, &s, &v);
+
+      if(role != QPalette::Link)
+        s = 0;
+
+      if(s == 0 && v == 0)
+        pal.setColor(QPalette::Disabled, role, QColor(160, 160, 160));
+      else
+      {
+        col.setHsv(h, s, v / 2);
+        pal.setColor(QPalette::Disabled, role, col);
+      }
+    }
+
+    for(QPalette::ColorRole role : {QPalette::Base, QPalette::Window, QPalette::Button})
+    {
+      QColor col = pal.color(QPalette::Inactive, role);
+      col.getHsv(&h, &s, &v);
+      col.setHsv(h, s, v * 0.9);
       pal.setColor(QPalette::Disabled, role, col);
     }
+
+    return;
   }
 
-  // the 'base' roles get every so slightly darker, but not as much as text
-  for(QPalette::ColorRole role : {QPalette::Base, QPalette::Window, QPalette::Button})
-  {
-    QColor col = pal.color(QPalette::Inactive, role);
+  // Modern Light follows the supplied design tokens: green is reserved for product identity and
+  // current-state accents, while selection/focus/drag interactions remain blue.
+  pal = QPalette(ModernLight::Text, ModernLight::Frame, ModernLight::BevelLight,
+                 ModernLight::BevelDark, ModernLight::BevelMid, ModernLight::Text,
+                 ModernLight::Base);
+  pal.setColor(QPalette::Window, ModernLight::Window);
+  pal.setColor(QPalette::WindowText, ModernLight::Text);
+  pal.setColor(QPalette::Base, ModernLight::Base);
+  pal.setColor(QPalette::AlternateBase, ModernLight::AlternateBase);
+  pal.setColor(QPalette::Button, ModernLight::Frame);
+  pal.setColor(QPalette::ButtonText, ModernLight::Text);
+  pal.setColor(QPalette::Light, ModernLight::BevelLight);
+  pal.setColor(QPalette::Midlight, ModernLight::BevelMidlight);
+  pal.setColor(QPalette::Mid, ModernLight::BevelMid);
+  pal.setColor(QPalette::Dark, ModernLight::BevelDark);
+  pal.setColor(QPalette::Shadow, ModernLight::BevelShadow);
+  pal.setColor(QPalette::Text, ModernLight::Text);
+  pal.setColor(QPalette::BrightText, ModernLight::Error);
+  pal.setColor(QPalette::ToolTipBase, ModernLight::Text);
+  pal.setColor(QPalette::ToolTipText, ModernLight::Window);
+  pal.setColor(QPalette::Highlight, ModernLight::SelectionSurface);
+  pal.setColor(QPalette::HighlightedText, ModernLight::Text);
+  pal.setColor(QPalette::Link, ModernLight::InteractionBlue);
+  pal.setColor(QPalette::LinkVisited, ModernLight::TextSecondary);
 
-    col.getHsv(&h, &s, &v);
-    col.setHsv(h, s, v * 0.9);
-    pal.setColor(QPalette::Disabled, role, col);
-  }
+  pal.setColor(QPalette::Inactive, QPalette::Highlight, ModernLight::HoverSurface);
+  pal.setColor(QPalette::Inactive, QPalette::HighlightedText, ModernLight::Text);
+
+  for(QPalette::ColorRole role :
+      {QPalette::WindowText, QPalette::Text, QPalette::ButtonText, QPalette::HighlightedText,
+       QPalette::Link, QPalette::LinkVisited})
+    pal.setColor(QPalette::Disabled, role, ModernLight::TextTertiary);
+
+  pal.setColor(QPalette::Disabled, QPalette::Highlight, ModernLight::BorderWeak);
+  pal.setColor(QPalette::Disabled, QPalette::Base, ModernLight::Window);
+  pal.setColor(QPalette::Disabled, QPalette::AlternateBase, ModernLight::Window);
+  pal.setColor(QPalette::Disabled, QPalette::Window, ModernLight::Window);
+  pal.setColor(QPalette::Disabled, QPalette::Button, ModernLight::Frame);
 }
 
 void RDStyle::polish(QWidget *widget)
 {
-  if(qobject_cast<QAbstractSlider *>(widget) || qobject_cast<QTabBar *>(widget))
+  const QString typographyRole = widget->property("typographyRole").toString();
+  if(!typographyRole.isEmpty())
+  {
+    QFont roleFont = QApplication::font();
+
+    if(typographyRole == lit("sectionTitle"))
+      roleFont.setWeight(QFont::Medium);
+    else if(typographyRole == lit("pageTitle"))
+    {
+      roleFont.setWeight(QFont::DemiBold);
+      if(roleFont.pointSizeF() > 0.0)
+        roleFont.setPointSizeF(roleFont.pointSizeF() * 1.28);
+    }
+    else
+      roleFont.setWeight(QFont::Normal);
+
+    widget->setFont(roleFont);
+
+    if(typographyRole == lit("secondary"))
+    {
+      QPalette secondaryPalette = widget->palette();
+      secondaryPalette.setColor(
+          QPalette::WindowText,
+          m_Scheme == LightModern ? ModernLight::TextSecondary
+                                  : secondaryPalette.color(QPalette::Disabled, QPalette::WindowText));
+      widget->setPalette(secondaryPalette);
+    }
+  }
+
+  if(widget->property("uiRole").toString() == lit("settingsSidebar"))
+  {
+    QPalette sidebarPalette = widget->palette();
+    if(m_Scheme == LightModern)
+      sidebarPalette.setColor(QPalette::Base, ModernLight::Window);
+    else
+      sidebarPalette.setColor(QPalette::Base, sidebarPalette.color(QPalette::Window));
+    widget->setPalette(sidebarPalette);
+  }
+
+  if(qobject_cast<QAbstractSlider *>(widget) || qobject_cast<QTabBar *>(widget) ||
+     (m_Scheme == LightModern && widget->inherits("QSplitterHandle")))
     widget->setAttribute(Qt::WA_Hover);
+
+  if(m_Scheme == LightModern &&
+     (widget->inherits("QSplitterHandle") || widget->inherits("RDTreeView") ||
+      widget->inherits("RDTableView")))
+    widget->setProperty("RDModernLight", true);
 
   QTabWidget *tabwidget = qobject_cast<QTabWidget *>(widget);
   if(tabwidget && tabwidget->inherits("ToolWindowManagerArea"))
@@ -284,12 +395,14 @@ void RDStyle::polish(QWidget *widget)
 
 void RDStyle::polish(QApplication *app)
 {
+  app->setProperty("RDModernLight", m_Scheme == LightModern);
   app->setPalette(standardPalette());
 }
 
 void RDStyle::unpolish(QWidget *widget)
 {
   Animation::stop(widget);
+  widget->setProperty("RDModernLight", false);
 
   QTabWidget *tabwidget = qobject_cast<QTabWidget *>(widget);
   if(tabwidget && tabwidget->inherits("ToolWindowManagerArea"))
@@ -390,8 +503,11 @@ QRect RDStyle::subControlRect(ComplexControl cc, const QStyleOptionComplex *opt,
     // shrink by the border
     ret.adjust(1, 1, -1, -1);
 
-    // don't have first/last buttons
-    if(sc == QStyle::SC_ScrollBarFirst || sc == QStyle::SC_ScrollBarLast)
+    // Modern scrollbars use the whole compact track and omit legacy arrow buttons. The complete
+    // 13px control remains the hit target while painting keeps the thumb visually narrow.
+    if(sc == QStyle::SC_ScrollBarFirst || sc == QStyle::SC_ScrollBarLast ||
+       (m_Scheme == LightModern &&
+        (sc == QStyle::SC_ScrollBarSubLine || sc == QStyle::SC_ScrollBarAddLine)))
       return QRect();
 
     const QStyleOptionSlider *scroll = qstyleoption_cast<const QStyleOptionSlider *>(opt);
@@ -404,7 +520,9 @@ QRect RDStyle::subControlRect(ComplexControl cc, const QStyleOptionComplex *opt,
       if(sc == QStyle::SC_ScrollBarAddLine)
         return ret.adjusted(ret.width() - Constants::ScrollButtonDim, 0, 0, 0);
 
-      const int buttonAdjust = Constants::ScrollButtonDim + Constants::ScrollBarMargin;
+      const int buttonAdjust = m_Scheme == LightModern
+                                   ? Constants::ScrollBarMargin
+                                   : Constants::ScrollButtonDim + Constants::ScrollBarMargin;
       ret.adjust(buttonAdjust, 0, -buttonAdjust, 0);
 
       if(sc == QStyle::SC_ScrollBarGroove)
@@ -441,7 +559,9 @@ QRect RDStyle::subControlRect(ComplexControl cc, const QStyleOptionComplex *opt,
       if(sc == QStyle::SC_ScrollBarAddLine)
         return ret.adjusted(0, ret.height() - Constants::ScrollButtonDim, 0, 0);
 
-      const int buttonAdjust = Constants::ScrollButtonDim + Constants::ScrollBarMargin;
+      const int buttonAdjust = m_Scheme == LightModern
+                                   ? Constants::ScrollBarMargin
+                                   : Constants::ScrollButtonDim + Constants::ScrollBarMargin;
       ret.adjust(0, buttonAdjust, 0, -buttonAdjust);
 
       if(sc == QStyle::SC_ScrollBarGroove)
@@ -680,9 +800,12 @@ QSize RDStyle::sizeFromContents(ContentsType type, const QStyleOption *opt, cons
   else if(type == CT_TabBarTab)
   {
     // have a maximum size for tabs
-    return size.boundedTo(QSize(Constants::TabMaxWidth, INT_MAX))
-               .expandedTo(QSize(Constants::TabMinWidth, 0)) +
-           QSize(Constants::TabMargin * 2, 0);
+    QSize ret = size.boundedTo(QSize(Constants::TabMaxWidth, INT_MAX))
+                    .expandedTo(QSize(Constants::TabMinWidth, 0)) +
+                QSize(Constants::TabMargin * 2, 0);
+    if(m_Scheme == LightModern)
+      ret.setHeight(qMax(ret.height(), 29));
+    return ret;
   }
   else if(type == CT_CheckBox || type == CT_RadioButton)
   {
@@ -801,6 +924,9 @@ QSize RDStyle::sizeFromContents(ContentsType type, const QStyleOption *opt, cons
 
     sz += QSize(Constants::ItemHeaderMargin * 2, Constants::ItemHeaderMargin);
 
+    if(m_Scheme == LightModern)
+      sz.setHeight(qMax(sz.height(), 24));
+
     return sz;
   }
 
@@ -809,6 +935,10 @@ QSize RDStyle::sizeFromContents(ContentsType type, const QStyleOption *opt, cons
 
 int RDStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt, const QWidget *widget) const
 {
+  if(metric == PM_DefaultFrameWidth && m_Scheme == LightModern &&
+     qobject_cast<const QAbstractItemView *>(widget))
+    return 0;
+
   if(metric == QStyle::PM_ButtonShiftHorizontal || metric == QStyle::PM_ButtonShiftVertical)
   {
     if(opt && (opt->state & State_AutoRaise) == 0)
@@ -816,13 +946,13 @@ int RDStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt, const QWid
   }
 
   if(metric == PM_ScrollBarExtent)
-    return Constants::ScrollButtonDim + 2;
+    return m_Scheme == LightModern ? 13 : Constants::ScrollButtonDim + 2;
   // not used for rendering but just as an estimate of how small a progress bar can get
   if(metric == PM_ProgressBarChunkWidth)
     return 10;
 
   if(metric == PM_SplitterWidth)
-    return 5;
+    return m_Scheme == LightModern ? 6 : 5;
 
   if(metric == PM_MenuBarHMargin || metric == PM_MenuBarVMargin)
     return 1;
@@ -863,6 +993,9 @@ int RDStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt, const QWid
 int RDStyle::styleHint(StyleHint stylehint, const QStyleOption *opt, const QWidget *widget,
                        QStyleHintReturn *returnData) const
 {
+  if(stylehint == QStyle::SH_Table_GridLineColor && m_Scheme == LightModern)
+    return int(ModernLight::BorderWeak.rgb());
+
   if(stylehint == QStyle::SH_EtchDisabledText || stylehint == QStyle::SH_DitherDisabledText)
     return 0;
 
@@ -928,6 +1061,56 @@ QIcon RDStyle::standardIcon(StandardPixmap standardIcon, const QStyleOption *opt
 void RDStyle::drawComplexControl(ComplexControl control, const QStyleOptionComplex *opt,
                                  QPainter *p, const QWidget *widget) const
 {
+  if(control == QStyle::CC_ToolButton && m_Scheme == LightModern &&
+     (opt->state & State_AutoRaise))
+  {
+    const QStyleOptionToolButton *toolbutton = qstyleoption_cast<const QStyleOptionToolButton *>(opt);
+    if(!toolbutton)
+      return;
+
+    p->save();
+    p->setRenderHint(QPainter::Antialiasing);
+
+    QColor fill;
+    if(opt->state & (State_On | State_Sunken))
+      fill = ModernLight::GreenSurface;
+    else if(opt->state & State_MouseOver)
+      fill = ModernLight::HoverSurface;
+
+    if(fill.isValid())
+    {
+      QPainterPath background;
+      background.addRoundedRect(QRectF(opt->rect).adjusted(0.5, 0.5, -0.5, -0.5),
+                                Constants::ModernControlCornerRadius,
+                                Constants::ModernControlCornerRadius);
+      p->fillPath(background, fill);
+    }
+
+    if(opt->state & State_HasFocus)
+    {
+      p->setPen(QPen(ModernLight::InteractionBlue, 1.0));
+      p->setBrush(Qt::NoBrush);
+      p->drawRoundedRect(QRectF(opt->rect).adjusted(0.5, 0.5, -0.5, -0.5),
+                         Constants::ModernControlCornerRadius,
+                         Constants::ModernControlCornerRadius);
+    }
+
+    p->restore();
+
+    QStyleOptionToolButton labelTextIcon = *toolbutton;
+    labelTextIcon.rect = subControlRect(control, opt, SC_ToolButton, widget);
+    proxy()->drawControl(CE_ToolButtonLabel, &labelTextIcon, p, widget);
+
+    if(shouldDrawToolButtonMenuArrow(toolbutton))
+    {
+      QStyleOptionToolButton menu = *toolbutton;
+      menu.rect = subControlRect(control, opt, SC_ToolButtonMenu, widget);
+      proxy()->drawPrimitive(PE_IndicatorArrowDown, &menu, p, widget);
+    }
+
+    return;
+  }
+
   // let the tweaked native style render autoraise tool buttons
   if(control == QStyle::CC_ToolButton && (opt->state & State_AutoRaise) == 0)
   {
@@ -981,7 +1164,8 @@ void RDStyle::drawComplexControl(ComplexControl control, const QStyleOptionCompl
     labelRect.setRight(subControlRect(CC_GroupBox, opt, QStyle::SC_GroupBoxFrame, widget).right());
     labelRect.adjust(-Constants::GroupHMargin / 2, 0, -Constants::GroupHMargin, 0);
 
-    p->setPen(QPen(opt->palette.brush(m_Scheme == Light ? QPalette::Mid : QPalette::Midlight), 1.0));
+    p->setPen(
+        QPen(opt->palette.brush(m_Scheme == Dark ? QPalette::Midlight : QPalette::Mid), 1.0));
     p->drawLine(labelRect.bottomLeft(), labelRect.bottomRight());
 
     if(opt->subControls & QStyle::SC_GroupBoxCheckBox)
@@ -1002,6 +1186,50 @@ void RDStyle::drawComplexControl(ComplexControl control, const QStyleOptionCompl
     p->setRenderHint(QPainter::Antialiasing);
 
     p->fillRect(opt->rect, opt->palette.brush(QPalette::Window));
+
+    if(m_Scheme == LightModern)
+    {
+      const QStyleOptionSlider *scroll = qstyleoption_cast<const QStyleOptionSlider *>(opt);
+      QRect slider = proxy()->subControlRect(CC_ScrollBar, opt, QStyle::SC_ScrollBarSlider, widget);
+
+      if(scroll && slider.isValid() && (opt->state & State_Enabled))
+      {
+        int visibleWidth = 6;
+        QColor thumb = ModernLight::ScrollThumb;
+
+        if(opt->state & State_Sunken)
+        {
+          visibleWidth = 9;
+          thumb = ModernLight::InteractionBlue;
+        }
+        else if(opt->state & State_MouseOver)
+        {
+          visibleWidth = 8;
+          thumb = ModernLight::ScrollHover;
+        }
+
+        QRectF visualSlider(slider);
+        if(scroll->orientation == Qt::Vertical)
+        {
+          const qreal centre = visualSlider.center().x();
+          visualSlider.setLeft(centre - visibleWidth * 0.5);
+          visualSlider.setRight(centre + visibleWidth * 0.5);
+        }
+        else
+        {
+          const qreal centre = visualSlider.center().y();
+          visualSlider.setTop(centre - visibleWidth * 0.5);
+          visualSlider.setBottom(centre + visibleWidth * 0.5);
+        }
+
+        QPainterPath path;
+        path.addRoundedRect(visualSlider, visibleWidth * 0.5, visibleWidth * 0.5);
+        p->fillPath(path, thumb);
+      }
+
+      p->restore();
+      return;
+    }
 
     QBrush hoverBrush;
     QBrush sliderBrush;
@@ -1165,8 +1393,10 @@ void RDStyle::drawComplexControl(ComplexControl control, const QStyleOptionCompl
     p->setRenderHint(QPainter::Antialiasing);
 
     QRect handleRect = subControlRect(control, opt, QStyle::SC_SliderHandle, widget);
-    QBrush handleBrush = (m_Scheme == Light) ? opt->palette.brush(QPalette::Dark)
-                                             : opt->palette.brush(QPalette::Text);
+    QBrush handleBrush = m_Scheme == LightModern
+                             ? QBrush(ModernLight::InteractionBlue)
+                             : (m_Scheme == Light ? opt->palette.brush(QPalette::Dark)
+                                                  : opt->palette.brush(QPalette::Text));
     QPainterPath path;
     path.addRoundedRect(handleRect, Constants::SliderHandleCornerRadius,
                         Constants::SliderHandleCornerRadius);
@@ -1458,6 +1688,30 @@ void RDStyle::drawPrimitive(PrimitiveElement element, const QStyleOption *opt, Q
   {
     const QStyleOptionFrame *frame = qstyleoption_cast<const QStyleOptionFrame *>(opt);
 
+    if(!frame)
+      return;
+
+    if(widget && widget->property("uiRole").toString() == lit("settingsCard"))
+    {
+      const QColor surface = m_Scheme == LightModern ? ModernLight::Base
+                                                      : opt->palette.color(QPalette::Base);
+      const QColor border = m_Scheme == LightModern ? ModernLight::Border
+                                                     : opt->palette.color(QPalette::Mid);
+
+      p->save();
+      p->setRenderHint(QPainter::Antialiasing);
+      QPainterPath card;
+      card.addRoundedRect(QRectF(opt->rect).adjusted(0.5, 0.5, -0.5, -0.5), 8.0, 8.0);
+      p->fillPath(card, surface);
+      QPen cardBorder(border);
+      cardBorder.setWidth(0);
+      cardBorder.setCosmetic(true);
+      p->setPen(cardBorder);
+      p->drawPath(card);
+      p->restore();
+      return;
+    }
+
     QStyleOptionFrame frameOpt = *frame;
     frameOpt.frameShape = QFrame::Panel;
     proxy()->drawControl(CE_ShapedFrame, &frameOpt, p, widget);
@@ -1465,7 +1719,15 @@ void RDStyle::drawPrimitive(PrimitiveElement element, const QStyleOption *opt, Q
   }
   else if(element == QStyle::PE_FrameFocusRect)
   {
-    // don't draw focus rects
+    if(m_Scheme == LightModern)
+    {
+      p->save();
+      p->setPen(QPen(ModernLight::InteractionBlue, 1.0));
+      p->setBrush(Qt::NoBrush);
+      p->drawRect(QRectF(opt->rect).adjusted(0.5, 0.5, -0.5, -0.5));
+      p->restore();
+    }
+
     return;
   }
   else if(element == QStyle::PE_FrameStatusBarItem)
@@ -1502,13 +1764,18 @@ void RDStyle::drawPrimitive(PrimitiveElement element, const QStyleOption *opt, Q
   else if(element == QStyle::PE_FrameTabBarBase)
   {
     QPen oldPen = p->pen();
-    p->setPen(QPen(outlineBrush(opt->palette), 0));
+    p->setPen(QPen(m_Scheme == LightModern ? ModernLight::BorderWeak
+                                           : outlineBrush(opt->palette).color(),
+                   0));
     p->drawLine(opt->rect.bottomLeft(), opt->rect.bottomRight());
     p->setPen(oldPen);
     return;
   }
   else if(element == QStyle::PE_FrameTabWidget)
   {
+    if(m_Scheme == LightModern)
+      return;
+
     const QStyleOptionTabWidgetFrame *tabwidget =
         qstyleoption_cast<const QStyleOptionTabWidgetFrame *>(opt);
 
@@ -1599,6 +1866,42 @@ void RDStyle::drawPrimitive(PrimitiveElement element, const QStyleOption *opt, Q
   {
     const QStyleOptionViewItem *viewitem = qstyleoption_cast<const QStyleOptionViewItem *>(opt);
 
+    if(widget && widget->property("uiRole").toString() == lit("settingsSidebar"))
+    {
+      const bool selected = viewitem->state & QStyle::State_Selected;
+      const bool hovered = viewitem->state & QStyle::State_MouseOver;
+
+      if(selected || hovered)
+      {
+        QColor fill = viewitem->palette.color(QPalette::Highlight);
+        if(m_Scheme == LightModern)
+          fill = selected ? ModernLight::GreenSurface : ModernLight::HoverSurface;
+
+        QRectF itemRect = QRectF(viewitem->rect).adjusted(10.0, 2.0, -10.0, -2.0);
+        p->save();
+        p->setRenderHint(QPainter::Antialiasing);
+        QPainterPath itemBackground;
+        itemBackground.addRoundedRect(itemRect, 7.0, 7.0);
+        p->fillPath(itemBackground, fill);
+
+        if(selected)
+        {
+          const QColor indicator = m_Scheme == LightModern
+                                       ? ModernLight::RenderDocGreen
+                                       : viewitem->palette.color(QPalette::Highlight);
+          QRectF indicatorRect(itemRect.left(), itemRect.top() + 8.0, 3.0,
+                               qMax(8.0, itemRect.height() - 16.0));
+          QPainterPath indicatorPath;
+          indicatorPath.addRoundedRect(indicatorRect, 1.5, 1.5);
+          p->fillPath(indicatorPath, indicator);
+        }
+
+        p->restore();
+      }
+
+      return;
+    }
+
     QPalette::ColorGroup group = QPalette::Normal;
 
     if((widget && !widget->isEnabled()) || !(viewitem->state & QStyle::State_Enabled))
@@ -1625,6 +1928,18 @@ void RDStyle::drawPrimitive(PrimitiveElement element, const QStyleOption *opt, Q
     {
       if(viewitem->backgroundBrush.style() != Qt::NoBrush)
         p->fillRect(viewitem->rect, viewitem->backgroundBrush);
+      else if(m_Scheme == LightModern && (viewitem->state & QStyle::State_MouseOver))
+        p->fillRect(viewitem->rect, ModernLight::HoverSurface);
+    }
+
+    if(m_Scheme == LightModern && (viewitem->state & QStyle::State_Selected) &&
+       (viewitem->state & QStyle::State_HasFocus))
+    {
+      p->save();
+      p->setPen(QPen(ModernLight::InteractionBlue, 1.0));
+      p->setBrush(Qt::NoBrush);
+      p->drawRect(QRectF(viewitem->rect).adjusted(0.5, 0.5, -0.5, -0.5));
+      p->restore();
     }
 
     return;
@@ -1635,8 +1950,11 @@ void RDStyle::drawPrimitive(PrimitiveElement element, const QStyleOption *opt, Q
 
 const QBrush &RDStyle::outlineBrush(const QPalette &pal, QPalette::ColorRole role) const
 {
+  if(role == QPalette::NoRole)
+    return m_Scheme == LightModern ? pal.brush(QPalette::Dark) : pal.brush(QPalette::Foreground);
+
   if(role == QPalette::Text || role == QPalette::WindowText)
-    return m_Scheme == Light ? pal.brush(QPalette::WindowText) : pal.brush(QPalette::Light);
+    return m_Scheme == Dark ? pal.brush(QPalette::Light) : pal.brush(QPalette::WindowText);
 
   return pal.brush(role);
 }
@@ -1644,11 +1962,32 @@ const QBrush &RDStyle::outlineBrush(const QPalette &pal, QPalette::ColorRole rol
 void RDStyle::drawControl(ControlElement control, const QStyleOption *opt, QPainter *p,
                           const QWidget *widget) const
 {
-  if(control == CE_PushButton)
+  if(control == CE_ToolButtonLabel && m_Scheme == LightModern)
+  {
+    const QStyleOptionToolButton *toolbutton = qstyleoption_cast<const QStyleOptionToolButton *>(opt);
+    if(toolbutton)
+    {
+      QStyleOptionToolButton modern = *toolbutton;
+      modern.icon = Resources::ModerniseIcon(toolbutton->icon);
+      RDTweakedNativeStyle::drawControl(control, &modern, p, widget);
+      return;
+    }
+  }
+  else if(control == CE_PushButton)
   {
     drawRoundedRectBorder(opt, p, widget, QPalette::Button, true);
 
-    QCommonStyle::drawControl(CE_PushButtonLabel, opt, p, widget);
+    const QStyleOptionButton *button = qstyleoption_cast<const QStyleOptionButton *>(opt);
+    if(m_Scheme == LightModern && button)
+    {
+      QStyleOptionButton modern = *button;
+      modern.icon = Resources::ModerniseIcon(button->icon);
+      QCommonStyle::drawControl(CE_PushButtonLabel, &modern, p, widget);
+    }
+    else
+    {
+      QCommonStyle::drawControl(CE_PushButtonLabel, opt, p, widget);
+    }
     return;
   }
   else if(control == CE_PushButtonBevel)
@@ -1809,6 +2148,53 @@ void RDStyle::drawControl(ControlElement control, const QStyleOption *opt, QPain
   {
     const QStyleOptionFrame *frame = qstyleoption_cast<const QStyleOptionFrame *>(opt);
 
+    if(!frame)
+      return;
+
+    if(m_Scheme == LightModern)
+    {
+      const QFrame::Shape shape = QFrame::Shape(frame->frameShape);
+      if(shape == QFrame::NoFrame)
+        return;
+
+      p->save();
+
+      if(shape == QFrame::HLine || shape == QFrame::VLine)
+      {
+        p->setPen(QPen(ModernLight::BorderWeak, 1.0));
+        if(shape == QFrame::HLine)
+        {
+          const int y = opt->rect.center().y();
+          p->drawLine(opt->rect.left(), y, opt->rect.right(), y);
+        }
+        else
+        {
+          const int x = opt->rect.center().x();
+          p->drawLine(x, opt->rect.top(), x, opt->rect.bottom());
+        }
+        p->restore();
+        return;
+      }
+
+      const bool panelShape = shape == QFrame::Panel || shape == QFrame::WinPanel ||
+                              shape == QFrame::StyledPanel;
+      const QFrame *frameWidget = qobject_cast<const QFrame *>(widget);
+
+      // Raised and sunken frames are legacy grouping devices. In Modern Light their parent surface
+      // owns the boundary, so the child frame must not redraw a second bevel or rectangle.
+      if(panelShape && frameWidget && frameWidget->frameShadow() != QFrame::Plain)
+      {
+        p->restore();
+        return;
+      }
+
+      p->setPen(QPen(panelShape ? ModernLight::BorderWeak : ModernLight::Border, 1.0));
+      p->setBrush(Qt::NoBrush);
+      p->drawRect(QRectF(opt->rect).adjusted(0.5, 0.5, -0.5, -0.5));
+      p->restore();
+      return;
+    }
+
     qreal lineWidth = qMax(1, frame->lineWidth);
 
     p->save();
@@ -1905,7 +2291,10 @@ void RDStyle::drawControl(ControlElement control, const QStyleOption *opt, QPain
       p->setClipRect(rect);
     }
 
-    p->fillPath(path, opt->palette.brush(QPalette::Highlight));
+    if(m_Scheme == LightModern)
+      p->fillPath(path, ModernLight::RenderDocGreen);
+    else
+      p->fillPath(path, opt->palette.brush(QPalette::Highlight));
 
     p->restore();
 
@@ -1917,7 +2306,31 @@ void RDStyle::drawControl(ControlElement control, const QStyleOption *opt, QPain
   }
   else if(control == QStyle::CE_Splitter)
   {
-    p->eraseRect(opt->rect);
+    if(m_Scheme != LightModern)
+    {
+      p->eraseRect(opt->rect);
+      return;
+    }
+
+    p->fillRect(opt->rect, opt->palette.brush(QPalette::Window));
+
+    const bool active = opt->state & (State_MouseOver | State_Sunken);
+    const QColor separator = active ? ModernLight::InteractionBlue : ModernLight::BorderWeak;
+    const int thickness = active ? 2 : 1;
+    QRect line = opt->rect;
+
+    if(line.width() < line.height())
+    {
+      line.setLeft(line.center().x() - thickness / 2);
+      line.setWidth(thickness);
+    }
+    else
+    {
+      line.setTop(line.center().y() - thickness / 2);
+      line.setHeight(thickness);
+    }
+
+    p->fillRect(line, separator);
     return;
   }
   else if(control == QStyle::CE_MenuBarEmptyArea)
@@ -1966,8 +2379,9 @@ void RDStyle::drawControl(ControlElement control, const QStyleOption *opt, QPain
     {
       int iconSize = proxy()->pixelMetric(QStyle::PM_SmallIconSize, opt, widget);
 
-      QPixmap pix =
-          menuitem->icon.pixmap(widgetWindow(widget), QSize(iconSize, iconSize),
+      const QIcon icon = m_Scheme == LightModern ? Resources::ModerniseIcon(menuitem->icon)
+                                                  : menuitem->icon;
+      QPixmap pix = icon.pixmap(widgetWindow(widget), QSize(iconSize, iconSize),
                                 (menuitem->state & State_Enabled) ? QIcon::Normal : QIcon::Disabled);
 
       if(!pix.isNull())
@@ -2071,11 +2485,13 @@ void RDStyle::drawControl(ControlElement control, const QStyleOption *opt, QPain
     // draw the icon, if it exists
     if(!menuitem->icon.isNull())
     {
+      const QIcon icon = m_Scheme == LightModern ? Resources::ModerniseIcon(menuitem->icon)
+                                                  : menuitem->icon;
       proxy()->drawItemPixmap(
           p, rect.toRect(), Qt::AlignLeft | Qt::AlignVCenter,
-          menuitem->icon.pixmap(widgetWindow(widget),
-                                QSize(Constants::MenuBarIconSize, Constants::MenuBarIconSize),
-                                menuitem->state & State_Enabled ? QIcon::Normal : QIcon::Disabled));
+          icon.pixmap(widgetWindow(widget),
+                      QSize(Constants::MenuBarIconSize, Constants::MenuBarIconSize),
+                      menuitem->state & State_Enabled ? QIcon::Normal : QIcon::Disabled));
     }
     else if(menuitem->checkType != QStyleOptionMenuItem::NotCheckable)
     {
@@ -2158,21 +2574,73 @@ void RDStyle::drawControl(ControlElement control, const QStyleOption *opt, QPain
 
     if(!tab->icon.isNull())
     {
-      proxy()->drawItemPixmap(
-          p, rect, Qt::AlignLeft | Qt::AlignVCenter,
-          tab->icon.pixmap(widgetWindow(widget), tab->iconSize,
-                           tab->state & State_Enabled ? QIcon::Normal : QIcon::Disabled));
+      const QIcon sourceIcon =
+          m_Scheme == LightModern ? Resources::ModerniseIcon(tab->icon) : tab->icon;
+      QPixmap icon = sourceIcon.pixmap(widgetWindow(widget), tab->iconSize,
+                                       tab->state & State_Enabled ? QIcon::Normal : QIcon::Disabled);
+
+      if(m_Scheme == LightModern && !icon.isNull())
+      {
+        QColor tint = ModernLight::TextSecondary;
+        if(!(tab->state & State_Enabled))
+          tint = ModernLight::TextTertiary;
+        else if(tab->state & State_Selected)
+          tint = ModernLight::RenderDocGreen;
+        else if(tab->state & State_MouseOver)
+          tint = ModernLight::InteractionBlue;
+
+        QPainter iconPainter(&icon);
+        iconPainter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+        iconPainter.fillRect(icon.rect(), tint);
+      }
+
+      proxy()->drawItemPixmap(p, rect, Qt::AlignLeft | Qt::AlignVCenter, icon);
 
       rect.setLeft(rect.left() + tab->iconSize.width() + Constants::TabMargin);
     }
 
+    QPalette textPalette = tab->palette;
+    if(m_Scheme == LightModern)
+      textPalette.setColor(QPalette::WindowText, tab->state & State_Selected
+                                                     ? ModernLight::Text
+                                                     : ModernLight::TextSecondary);
+
     proxy()->drawItemText(p, rect, Qt::AlignLeft | Qt::AlignVCenter | Qt::TextHideMnemonic,
-                          tab->palette, tab->state & State_Enabled, tab->text, QPalette::WindowText);
+                          textPalette, tab->state & State_Enabled, tab->text,
+                          QPalette::WindowText);
     return;
   }
   else if(control == QStyle::CE_TabBarTabShape)
   {
     const QStyleOptionTab *tab = qstyleoption_cast<const QStyleOptionTab *>(opt);
+
+    if(m_Scheme == LightModern)
+    {
+      const QRect rect = opt->rect;
+      QColor fill = ModernLight::Frame;
+
+      if(opt->state & State_Selected)
+        fill = ModernLight::Base;
+      else if(opt->state & State_MouseOver)
+        fill = ModernLight::HoverSurface;
+
+      p->save();
+      p->fillRect(rect, fill);
+      p->setPen(QPen(ModernLight::BorderWeak, 1.0));
+      p->drawLine(rect.topRight(), rect.bottomRight());
+
+      if(!(opt->state & State_Selected))
+        p->drawLine(rect.bottomLeft(), rect.bottomRight());
+
+      if(opt->state & State_Selected)
+      {
+        p->fillRect(QRect(rect.left() + 1, rect.top(), qMax(0, rect.width() - 2), 2),
+                    ModernLight::RenderDocGreen);
+      }
+
+      p->restore();
+      return;
+    }
 
     QRect rect = opt->rect;
 
@@ -2219,6 +2687,22 @@ void RDStyle::drawControl(ControlElement control, const QStyleOption *opt, QPain
   }
   else if(control == QStyle::CE_DockWidgetTitle)
   {
+    const QStyleOptionDockWidget *dockwidget = qstyleoption_cast<const QStyleOptionDockWidget *>(opt);
+
+    if(m_Scheme == LightModern && dockwidget)
+    {
+      const QRect rect = opt->rect;
+      p->fillRect(rect, ModernLight::DockTitle);
+      p->setPen(QPen(ModernLight::BorderWeak, 1.0));
+      p->drawLine(rect.bottomLeft(), rect.bottomRight());
+
+      proxy()->drawItemText(p, rect.adjusted(Constants::TabMargin, 0, -Constants::TabMargin, 0),
+                            Qt::AlignLeft | Qt::AlignVCenter | Qt::TextHideMnemonic,
+                            dockwidget->palette, dockwidget->state & State_Enabled,
+                            dockwidget->title, QPalette::WindowText);
+      return;
+    }
+
     QColor mid = opt->palette.color(QPalette::Mid);
     QColor window = opt->palette.color(QPalette::Window);
 
@@ -2242,8 +2726,6 @@ void RDStyle::drawControl(ControlElement control, const QStyleOption *opt, QPain
 
     p->restore();
 
-    const QStyleOptionDockWidget *dockwidget = qstyleoption_cast<const QStyleOptionDockWidget *>(opt);
-
     proxy()->drawItemText(p, rect.toRect().adjusted(Constants::TabMargin, 0, 0, 0),
                           Qt::AlignLeft | Qt::AlignTop | Qt::TextHideMnemonic, dockwidget->palette,
                           dockwidget->state & State_Enabled, dockwidget->title, QPalette::WindowText);
@@ -2258,9 +2740,23 @@ void RDStyle::drawControl(ControlElement control, const QStyleOption *opt, QPain
 
     p->save();
 
-    p->setPen(QPen(outlineBrush(opt->palette), 1.0));
+    if(m_Scheme == LightModern)
+    {
+      QColor fill = ModernLight::Frame;
+      if(opt->state & State_Sunken)
+        fill = ModernLight::SelectionSurface;
+      else if(opt->state & State_MouseOver)
+        fill = ModernLight::HoverSurface;
 
-    p->fillRect(rect, opt->palette.brush(QPalette::Midlight));
+      p->setPen(QPen(ModernLight::BorderWeak, 1.0));
+      p->fillRect(rect, fill);
+    }
+    else
+    {
+      p->setPen(QPen(outlineBrush(opt->palette), 1.0));
+      p->fillRect(rect, opt->palette.brush(QPalette::Midlight));
+    }
+
     p->drawLine(rect.bottomLeft(), rect.bottomRight());
     p->drawLine(rect.topRight(), rect.bottomRight());
 
@@ -2330,6 +2826,45 @@ void RDStyle::drawControl(ControlElement control, const QStyleOption *opt, QPain
 void RDStyle::drawRoundedRectBorder(const QStyleOption *opt, QPainter *p, const QWidget *widget,
                                     QPalette::ColorRole fillRole, bool shadow) const
 {
+  if(m_Scheme == LightModern)
+  {
+    QPen outlinePen(ModernLight::Border, 1.0);
+    if(opt->state & State_HasFocus)
+      outlinePen = QPen(ModernLight::InteractionBlue, 1.5);
+
+    p->save();
+    p->setRenderHint(QPainter::Antialiasing);
+
+    int xshift = proxy()->pixelMetric(PM_ButtonShiftHorizontal, opt, widget);
+    int yshift = proxy()->pixelMetric(PM_ButtonShiftVertical, opt, widget);
+    QRect rect = opt->rect.adjusted(0, 0, -1, -1);
+
+    if(opt->state & State_Sunken)
+    {
+      rect.translate(xshift, yshift);
+    }
+
+    QPainterPath path;
+    path.addRoundedRect(rect, Constants::ModernControlCornerRadius,
+                        Constants::ModernControlCornerRadius);
+
+    QBrush fill;
+    if(fillRole != QPalette::NoRole)
+      fill = opt->palette.brush(fillRole);
+    if(opt->state & State_Sunken)
+      fill = QBrush(ModernLight::SelectionSurface);
+    else if(shadow && (opt->state & State_Enabled) && (opt->state & State_MouseOver))
+      fill = QBrush(ModernLight::HoverSurface);
+
+    if(fill.style() != Qt::NoBrush)
+      p->fillPath(path, fill);
+
+    p->setPen(outlinePen);
+    p->drawPath(path.translated(QPointF(0.5, 0.5)));
+    p->restore();
+    return;
+  }
+
   QPen outlinePen(outlineBrush(opt->palette), 1.0);
 
   if(opt->state & State_HasFocus)

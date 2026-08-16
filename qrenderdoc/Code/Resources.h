@@ -121,6 +121,7 @@ class Resources
 {
 public:
   static void Initialise();
+  static QIcon ModerniseIcon(const QIcon &icon);
   ~Resources();
 
 #undef RESOURCE_DEF

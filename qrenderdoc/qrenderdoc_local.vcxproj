@@ -1769,9 +1769,12 @@
     <None Include="Code\pyrenderdoc\pyconversion.h" />
     <None Include="Code\pyrenderdoc\pyconversion.i" />
     <None Include="Code\pyrenderdoc\cosmetics.i" />
+    <None Include="Translations\apply_zh_CN.py" />
+    <None Include="Translations\qrenderdoc_zh_CN.ts" />
+    <None Include="Translations\qrenderdoc_zh_CN.qm" />
     <CustomBuild Include="Resources\resources.qrc">
-      <AdditionalInputs>Resources\resources.qrc;$(QtBinDir)\rcc.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Command>"$(QtBinDir)\rcc.exe" -name resources Resources\resources.qrc -o "$(IntDir)generated\qrc_resources.cpp"</Command>
+      <AdditionalInputs>Resources\resources.qrc;Resources\modern\*.svg;Resources\modern\color\*.svg;Resources\modern\mono\*.svg;Translations\qrenderdoc_zh_CN.ts;Translations\qrenderdoc_zh_CN.qm;$(QtBinDir)\lrelease.exe;$(QtBinDir)\rcc.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Command>"$(QtBinDir)\lrelease.exe" Translations\qrenderdoc_zh_CN.ts -qm Translations\qrenderdoc_zh_CN.qm &amp;&amp; "$(QtBinDir)\rcc.exe" -name resources Resources\resources.qrc -o "$(IntDir)generated\qrc_resources.cpp"</Command>
       <Message>RCC resources.qrc</Message>
       <Outputs>$(IntDir)generated\qrc_resources.cpp</Outputs>
     </CustomBuild>

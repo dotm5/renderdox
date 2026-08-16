@@ -27,10 +27,12 @@
 #include <QCommandLineParser>
 #include <QDir>
 #include <QFileInfo>
+#include <QLocale>
 #include <QRegularExpression>
 #include <QRegularExpressionMatch>
 #include <QStandardPaths>
 #include <QSysInfo>
+#include <QTranslator>
 #include "../../renderdoc/generated/product_identity.h"
 #include "Code/CaptureContext.h"
 #include "Code/QRDUtils.h"
@@ -181,6 +183,33 @@ void hideOption(QCommandLineOption &opt)
 #endif
 }
 
+static QString ResolveUILanguage(const rdcstr &configuredLanguage)
+{
+  QString language = configuredLanguage;
+  if(language == lit("system"))
+    language = QLocale::system().name();
+  else if(language != lit("en") && language != lit("zh_CN"))
+    language = lit("en");
+
+  return language;
+}
+
+static void InstallUITranslator(QApplication &application, QTranslator &translator,
+                                const rdcstr &configuredLanguage)
+{
+  const QString language = ResolveUILanguage(configuredLanguage);
+
+  // English source text is the stable fallback. Only install a translator when a supported
+  // non-English locale is selected, and keep the QTranslator alive for the application lifetime.
+  if(language.startsWith(lit("zh")))
+  {
+    if(translator.load(lit(":/i18n/qrenderdoc_zh_CN.qm")))
+      application.installTranslator(&translator);
+    else
+      qWarning() << "Couldn't load Simplified Chinese UI translation; using English fallback";
+  }
+}
+
 int main(int argc, char *argv[])
 {
   // call this as the very first thing - no-op on other platforms, but on linux it means
@@ -324,6 +353,7 @@ int main(int argc, char *argv[])
 #endif
 
   QApplication application(argc, argv);
+  QTranslator uiTranslator;
 #if defined(Q_OS_WIN32)
   QCoreApplication::setApplicationName(lit(RDOC_CONFIG_NAMESPACE));
 #endif
@@ -525,7 +555,13 @@ int main(int argc, char *argv[])
 
     QString configFilename = ConfigFilePath(lit("UI.config"));
 
-    if(!config.Load(configFilename))
+    const bool configLoaded = config.Load(configFilename);
+
+    // Install the translator before any QWidget-based window or dialog is constructed. The
+    // command-line parser above is non-visual and remains safe to initialise before this point.
+    InstallUITranslator(application, uiTranslator, config.UILanguage);
+
+    if(!configLoaded)
     {
       RDDialog::critical(
           NULL, CaptureContext::tr("Error loading config"),

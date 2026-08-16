@@ -284,7 +284,10 @@ void RDTableView::paintEvent(QPaintEvent *e)
     QPen prevPen = painter.pen();
     QBrush prevBrush = painter.brush();
 
-    QColor gridCol(QRgb(style()->styleHint(QStyle::SH_Table_GridLineColor, &opt, this)));
+    const bool modernGrid = property("RDModernLight").toBool();
+    QColor gridCol = modernGrid
+                         ? palette().color(QPalette::Light)
+                         : QColor(QRgb(style()->styleHint(QStyle::SH_Table_GridLineColor, &opt, this)));
 
     painter.setPen(QPen(gridCol, 0, gridStyle()));
     painter.setBrush(QBrush(gridCol));
@@ -296,26 +299,29 @@ void RDTableView::paintEvent(QPaintEvent *e)
       painter.drawLine(viewport()->rect().left(), y, viewport()->rect().right(), y);
     }
 
-    int gapSize = m_horizontalHeader->groupGapSize();
-
-    // draw lines for each column, and group gaps
-    for(int col = firstCol; col <= lastCol; col++)
+    if(!modernGrid)
     {
-      int x = columnViewportPosition(col) + columnWidth(col) - gridWidth;
+      int gapSize = m_horizontalHeader->groupGapSize();
 
-      if(m_horizontalHeader->hasGroupGap(col))
-        painter.drawRect(x, viewport()->rect().top(), gapSize, viewport()->rect().height());
-      else
-        painter.drawLine(x, viewport()->rect().top(), x, viewport()->rect().bottom());
-    }
-    for(int col = 0; col < m_pinnedColumns; col++)
-    {
-      int x = columnViewportPosition(col) + columnWidth(col) - gridWidth;
+      // draw lines for each column, and group gaps
+      for(int col = firstCol; col <= lastCol; col++)
+      {
+        int x = columnViewportPosition(col) + columnWidth(col) - gridWidth;
 
-      if(m_horizontalHeader->hasGroupGap(col))
-        painter.drawRect(x, viewport()->rect().top(), gapSize, viewport()->rect().height());
-      else
-        painter.drawLine(x, viewport()->rect().top(), x, viewport()->rect().bottom());
+        if(m_horizontalHeader->hasGroupGap(col))
+          painter.drawRect(x, viewport()->rect().top(), gapSize, viewport()->rect().height());
+        else
+          painter.drawLine(x, viewport()->rect().top(), x, viewport()->rect().bottom());
+      }
+      for(int col = 0; col < m_pinnedColumns; col++)
+      {
+        int x = columnViewportPosition(col) + columnWidth(col) - gridWidth;
+
+        if(m_horizontalHeader->hasGroupGap(col))
+          painter.drawRect(x, viewport()->rect().top(), gapSize, viewport()->rect().height());
+        else
+          painter.drawLine(x, viewport()->rect().top(), x, viewport()->rect().bottom());
+      }
     }
 
     painter.setPen(prevPen);

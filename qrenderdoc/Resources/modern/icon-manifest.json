@@ -1,0 +1,3246 @@
+{
+  "schema": 2,
+  "design_source": "RenderDoc Modern Light UI Codex Bundle v3, legacy PNG palette audit, seven ImageGen art-direction sheets, and the focused connector corrective reference",
+  "canonical_viewbox": [
+    0,
+    0,
+    24,
+    24
+  ],
+  "display_sizes_px": [
+    16,
+    20,
+    24,
+    32,
+    48
+  ],
+  "legacy_png_records": 142,
+  "logical_icons": 71,
+  "variants": [
+    "mono",
+    "legacy_color"
+  ],
+  "default_variant": "legacy_color",
+  "legacy_color_palette": {
+    "success_current_green": "#20A76B",
+    "warning_amber": "#A76B1D",
+    "error_red": "#B4473D",
+    "legacy_action_blue": "#3C86B8",
+    "legacy_light_blue": "#62A9D2",
+    "legacy_cyan": "#2FA9C5",
+    "legacy_orange": "#CF7628",
+    "legacy_yellow": "#D0A12A",
+    "legacy_purple": "#7557B5",
+    "legacy_magenta": "#C04783",
+    "neutral": "#66717D",
+    "neutral_light": "#87929D",
+    "chart_grid": "#B3BDC6"
+  },
+  "palette_policy": "Preserve legacy functional hue families with flat modern colours; colour is never the only state cue",
+  "small_size_strategy": "Prefer solid silhouettes, integer-aligned geometry, the maximum permitted 2 px detail stroke, two-unit semantic gaps, and direct rendering at each target size over smoothing a single raster",
+  "intentional_geometry_equivalences": [
+    [
+      "control_base_blue",
+      "control_play_blue"
+    ],
+    [
+      "control_reverse_base_blue",
+      "control_reverse_blue"
+    ]
+  ],
+  "semantic_distinctness_guards": [
+    [
+      "arrow_in",
+      "arrow_out"
+    ],
+    [
+      "arrow_refresh",
+      "arrow_undo"
+    ],
+    [
+      "arrow_refresh",
+      "update"
+    ],
+    [
+      "arrow_undo",
+      "update"
+    ],
+    [
+      "control_base_blue",
+      "control_start_blue"
+    ],
+    [
+      "control_cursor_blue",
+      "control_reverse_cursor_blue"
+    ],
+    [
+      "control_end_blue",
+      "control_start_blue"
+    ],
+    [
+      "control_nan_blue",
+      "control_reverse_nan_blue"
+    ],
+    [
+      "control_reverse_sample_blue",
+      "control_sample_blue"
+    ]
+  ],
+  "icons": [
+    {
+      "id": "action",
+      "source_file": "qrenderdoc/Resources/action.png",
+      "source_file_2x": "qrenderdoc/Resources/action@2x.png",
+      "source_sha256": "125faa4ff435a2cfd0307184f417363410c7c8d738c048bf30d61781dc9d3721",
+      "source_2x_sha256": "67b410680943caaf707e936eb6baf5ba54ca42a2117f9c8647cba0d0f5ca8142",
+      "qrc_alias": ":/modern/action.svg",
+      "semantic": "Execute or open the selected action",
+      "category": "navigation",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": true,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/action.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/action.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/action.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [],
+      "color_variant_source_colors": [
+        "#87929D"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b000_r0_c0_action.png",
+        "artifacts/icon-modernization/v3/reference-cells/b000_r0_c1_action@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:110",
+        "qrenderdoc/Widgets/AnnotationDisplay.cpp:75",
+        "qrenderdoc/Widgets/AnnotationDisplay.cpp:216",
+        "qrenderdoc/Windows/DescriptorViewer.cpp:1312",
+        "qrenderdoc/Windows/DescriptorViewer.ui:53",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.cpp:83",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.cpp:84",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:341",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:662",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:1071",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:1477",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:1883",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:2960",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:4127",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.cpp:105",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.cpp:106",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:541",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:590",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:989",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:1038",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:1437",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:1486",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:1885",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:1934",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:2812",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:3027",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:3076",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:3997",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:4046",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:4456",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:4505",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:4898",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:4947",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.cpp:92",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.cpp:93",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:662",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:1169",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:1676",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:2183",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:3670",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:4694",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.cpp:147",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.cpp:148",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:585",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:1012",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:1439",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:1866",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:3105",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:3416",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:4372",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:4604",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:4891",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:5318",
+        "qrenderdoc/Windows/TextureViewer.cpp:666",
+        "qrenderdoc/Windows/TextureViewer.cpp:2361"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "action_hover",
+      "source_file": "qrenderdoc/Resources/action_hover.png",
+      "source_file_2x": "qrenderdoc/Resources/action_hover@2x.png",
+      "source_sha256": "baf6078e6404f2cd3b205ee813752f7efe1068edbb25df87833aac4a36fadd14",
+      "source_2x_sha256": "817a7cee3ffb58739d259db6da3faff2acd0a58e3d8cc95d5ea3e19d32d242bb",
+      "qrc_alias": ":/modern/action_hover.svg",
+      "semantic": "Hovered execute/open action state",
+      "category": "navigation",
+      "states": [
+        "hover"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": true,
+      "semantic_color": "success_current",
+      "target_svg": "qrenderdoc/Resources/modern/action_hover.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/action_hover.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/action_hover.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "green"
+      ],
+      "color_variant_source_colors": [
+        "#20A76B"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b000_r0_c2_action_hover.png",
+        "artifacts/icon-modernization/v3/reference-cells/b000_r0_c3_action_hover@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:111",
+        "qrenderdoc/Widgets/AnnotationDisplay.cpp:75",
+        "qrenderdoc/Widgets/BufferFormatSpecifier.ui:213",
+        "qrenderdoc/Windows/DescriptorViewer.cpp:1312",
+        "qrenderdoc/Windows/LogView.ui:79",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.cpp:84",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.cpp:106",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.cpp:93",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.cpp:148",
+        "qrenderdoc/Windows/ResourceInspector.ui:226",
+        "qrenderdoc/Windows/TextureViewer.cpp:666",
+        "qrenderdoc/Windows/TextureViewer.cpp:2361"
+      ],
+      "notes": "State variant of action; preserve rightward direction"
+    },
+    {
+      "id": "add",
+      "source_file": "qrenderdoc/Resources/add.png",
+      "source_file_2x": "qrenderdoc/Resources/add@2x.png",
+      "source_sha256": "da87e981344895c580f2be444fb506da0cb20df4b5bd4f9d4880d7bfac7caf19",
+      "source_2x_sha256": "3ba6618db957c1b2e64392897324ca48880d63cc2985fe7ec14750439a96f575",
+      "qrc_alias": ":/modern/add.svg",
+      "semantic": "Add a new item",
+      "category": "status",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "radial",
+      "direction_sensitive": false,
+      "semantic_color": "success_current",
+      "target_svg": "qrenderdoc/Resources/modern/add.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/add.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/add.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "green"
+      ],
+      "color_variant_source_colors": [
+        "#20A76B"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b000_r0_c4_add.png",
+        "artifacts/icon-modernization/v3/reference-cells/b004_r3_c5_plugin_add.png",
+        "artifacts/icon-modernization/v3/reference-cells/b005_r0_c3_text_add.png",
+        "artifacts/icon-modernization/v3/reference-cells/b000_r0_c5_add@2x.png",
+        "artifacts/icon-modernization/v3/reference-cells/b005_r0_c0_plugin_add@2x.png",
+        "artifacts/icon-modernization/v3/reference-cells/b005_r0_c4_text_add@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:32",
+        "qrenderdoc/Windows/TextureViewer.ui:870"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "align",
+      "source_file": "qrenderdoc/Resources/align.png",
+      "source_file_2x": "qrenderdoc/Resources/align@2x.png",
+      "source_sha256": "b6673d3fa3f3960cf580a55cc24c480036cfdb98fdc84e02e64da0069f159811",
+      "source_2x_sha256": "02a5cdfd43b6d2e6b0f7cb98788cf09a4aa7130f811fc2fc47939d0d25df6b44",
+      "qrc_alias": ":/modern/align.svg",
+      "semantic": "Align data or columns",
+      "category": "view",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": true,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/align.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/align.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/align.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "orange",
+        "blue",
+        "yellow"
+      ],
+      "color_variant_source_colors": [
+        "#000000",
+        "#3C86B8",
+        "#CF7628",
+        "#66717D",
+        "#87929D"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b000_r1_c0_align.png",
+        "artifacts/icon-modernization/v3/reference-cells/b000_r1_c1_align@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:33",
+        "qrenderdoc/Windows/BufferViewer.ui:891"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "arrow_in",
+      "source_file": "qrenderdoc/Resources/arrow_in.png",
+      "source_file_2x": "qrenderdoc/Resources/arrow_in@2x.png",
+      "source_sha256": "e182c75f645d21eb965e0ffea6203ac2e0f5d19280b0a2964d8b55005c3f3948",
+      "source_2x_sha256": "499ca58ad82873b80f797f1abd5222242a7a6eee40e53a02dc869b16b7dd4049",
+      "qrc_alias": ":/modern/arrow_in.svg",
+      "semantic": "Collapse or move four directions inward",
+      "category": "navigation",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": true,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/arrow_in.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/arrow_in.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/arrow_in.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "green",
+        "yellow"
+      ],
+      "color_variant_source_colors": [
+        "#20A76B"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b000_r1_c2_arrow_in.png",
+        "artifacts/icon-modernization/v3/reference-cells/b000_r1_c3_arrow_in@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:34",
+        "qrenderdoc/Widgets/Extended/RDTreeView.cpp:350",
+        "qrenderdoc/Windows/BufferViewer.cpp:3026",
+        "qrenderdoc/Windows/EventBrowser.cpp:6307"
+      ],
+      "notes": "Four diagonal arrows terminate at the centre-facing corners; never reuse arrow_out geometry"
+    },
+    {
+      "id": "arrow_join",
+      "source_file": "qrenderdoc/Resources/arrow_join.png",
+      "source_file_2x": "qrenderdoc/Resources/arrow_join@2x.png",
+      "source_sha256": "9f2da68b85430a8eba6a89db7f3a9820345a501a36d3d108910d47fe2c310fcc",
+      "source_2x_sha256": "6246ec026c233756c9ab03be6e289b66bd51dba26d29cc880cad15a1a68964c3",
+      "qrc_alias": ":/modern/arrow_join.svg",
+      "semantic": "Join branches into the forward path",
+      "category": "navigation",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": true,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/arrow_join.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/arrow_join.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/arrow_join.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "green",
+        "yellow"
+      ],
+      "color_variant_source_colors": [
+        "#20A76B"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b000_r1_c4_arrow_join.png",
+        "artifacts/icon-modernization/v3/reference-cells/b000_r1_c5_arrow_join@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:35",
+        "qrenderdoc/Windows/BufferViewer.cpp:2515",
+        "qrenderdoc/Windows/BufferViewer.cpp:3030",
+        "qrenderdoc/Windows/BufferViewer.ui:917",
+        "qrenderdoc/Windows/PerformanceCounterViewer.ui:94"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "arrow_left",
+      "source_file": "qrenderdoc/Resources/arrow_left.png",
+      "source_file_2x": "qrenderdoc/Resources/arrow_left@2x.png",
+      "source_sha256": "ebae26728bf4054c4cd2bc8b2d6c364076d3b0dcdbaba49ad3b6d3fbc4ab9b0d",
+      "source_2x_sha256": "ced6b2267fddce021063eb774e78387c6872ba990bb41516ec6e63ef1124c831",
+      "qrc_alias": ":/modern/arrow_left.svg",
+      "semantic": "Move to the previous item",
+      "category": "navigation",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": true,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/arrow_left.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/arrow_left.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/arrow_left.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "green",
+        "yellow"
+      ],
+      "color_variant_source_colors": [
+        "#20A76B"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b000_r2_c0_arrow_left.png",
+        "artifacts/icon-modernization/v3/reference-cells/b000_r2_c1_arrow_left@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:36",
+        "qrenderdoc/Windows/Dialogs/VirtualFileDialog.ui:26",
+        "qrenderdoc/Windows/EventBrowser.ui:73",
+        "qrenderdoc/Windows/EventBrowser.ui:276",
+        "qrenderdoc/Windows/ShaderViewer.cpp:1375"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "arrow_out",
+      "source_file": "qrenderdoc/Resources/arrow_out.png",
+      "source_file_2x": "qrenderdoc/Resources/arrow_out@2x.png",
+      "source_sha256": "7d15d9880a4bfe2f78658c8878bd764df4b93e524ef0a76866889524a7fe69d0",
+      "source_2x_sha256": "0fcb12c3218fa8d818f24a2b230d847adf02bb6f5b286d5bb60ba76dadf39750",
+      "qrc_alias": ":/modern/arrow_out.svg",
+      "semantic": "Expand or move four directions outward",
+      "category": "navigation",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": true,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/arrow_out.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/arrow_out.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/arrow_out.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "green",
+        "yellow"
+      ],
+      "color_variant_source_colors": [
+        "#20A76B"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b000_r2_c2_arrow_out.png",
+        "artifacts/icon-modernization/v3/reference-cells/b000_r2_c3_arrow_out@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:68",
+        "qrenderdoc/Widgets/Extended/RDTreeView.cpp:349",
+        "qrenderdoc/Windows/BufferViewer.cpp:3025",
+        "qrenderdoc/Windows/EventBrowser.cpp:6306",
+        "qrenderdoc/Windows/TextureViewer.ui:362"
+      ],
+      "notes": "Four diagonal arrows terminate at the outer corners; never reuse arrow_in geometry"
+    },
+    {
+      "id": "arrow_refresh",
+      "source_file": "qrenderdoc/Resources/arrow_refresh.png",
+      "source_file_2x": "qrenderdoc/Resources/arrow_refresh@2x.png",
+      "source_sha256": "6141eaf716680ef3030c0db1252bb39bf3145e4a17225d787808c7731ba9358d",
+      "source_2x_sha256": "d0460e44ff1b6e4823cb6593ec540df9345febd446492baec4c0189b00d6a625",
+      "qrc_alias": ":/modern/arrow_refresh.svg",
+      "semantic": "Refresh the current view",
+      "category": "navigation",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": true,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/arrow_refresh.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/arrow_refresh.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/arrow_refresh.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "green",
+        "yellow"
+      ],
+      "color_variant_source_colors": [
+        "#20A76B"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b000_r2_c4_arrow_refresh.png",
+        "artifacts/icon-modernization/v3/reference-cells/b000_r2_c5_arrow_refresh@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:37",
+        "qrenderdoc/Windows/LogView.ui:56",
+        "qrenderdoc/Windows/ShaderViewer.ui:405"
+      ],
+      "notes": "Two separated horizontal curved arrows; solid 3 px bands keep the legacy refresh silhouette legible at 16 px"
+    },
+    {
+      "id": "arrow_right",
+      "source_file": "qrenderdoc/Resources/arrow_right.png",
+      "source_file_2x": "qrenderdoc/Resources/arrow_right@2x.png",
+      "source_sha256": "ff8d3907ca7259adca51cb47b2da3131b94d6c6fcab161064222010adf6e836e",
+      "source_2x_sha256": "9629c2513a1d3d99841daec3f68eb51b9105d03a23a01e09420b1c1d24f10bbf",
+      "qrc_alias": ":/modern/arrow_right.svg",
+      "semantic": "Move to the next item",
+      "category": "navigation",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": true,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/arrow_right.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/arrow_right.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/arrow_right.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "green",
+        "yellow"
+      ],
+      "color_variant_source_colors": [
+        "#20A76B"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b000_r3_c0_arrow_right.png",
+        "artifacts/icon-modernization/v3/reference-cells/b000_r3_c1_arrow_right@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:38",
+        "qrenderdoc/Windows/Dialogs/VirtualFileDialog.ui:46",
+        "qrenderdoc/Windows/EventBrowser.ui:87",
+        "qrenderdoc/Windows/EventBrowser.ui:290",
+        "qrenderdoc/Windows/PythonShell.ui:229",
+        "qrenderdoc/Windows/ShaderViewer.cpp:1370"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "arrow_undo",
+      "source_file": "qrenderdoc/Resources/arrow_undo.png",
+      "source_file_2x": "qrenderdoc/Resources/arrow_undo@2x.png",
+      "source_sha256": "5fdeb17eaf169982c42a8a7075dc02a0443fac8a1ad9213cf212725c4dbfdd4a",
+      "source_2x_sha256": "ef1581248275a7f7aa02361c588ac250282175103f39aa1dc2934aaab3d8f7e3",
+      "qrc_alias": ":/modern/arrow_undo.svg",
+      "semantic": "Undo the most recent operation",
+      "category": "navigation",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": true,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/arrow_undo.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/arrow_undo.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/arrow_undo.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "green",
+        "yellow"
+      ],
+      "color_variant_source_colors": [
+        "#20A76B"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b000_r3_c2_arrow_undo.png",
+        "artifacts/icon-modernization/v3/reference-cells/b000_r3_c3_arrow_undo@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:39",
+        "qrenderdoc/Windows/BufferViewer.cpp:2512",
+        "qrenderdoc/Windows/BufferViewer.cpp:3028",
+        "qrenderdoc/Windows/BufferViewer.ui:237",
+        "qrenderdoc/Windows/BufferViewer.ui:1037",
+        "qrenderdoc/Windows/Dialogs/ConfigEditor.cpp:429",
+        "qrenderdoc/Windows/EventBrowser.cpp:6311",
+        "qrenderdoc/Windows/ResourceInspector.ui:209",
+        "qrenderdoc/Windows/ShaderViewer.ui:425",
+        "qrenderdoc/Windows/TextureViewer.ui:192"
+      ],
+      "notes": "Solid leftward U-turn silhouette; never substitute a circular refresh arrow"
+    },
+    {
+      "id": "asterisk_orange",
+      "source_file": "qrenderdoc/Resources/asterisk_orange.png",
+      "source_file_2x": "qrenderdoc/Resources/asterisk_orange@2x.png",
+      "source_sha256": "30e5be55320060872499fb728c1c016e386ae0ed5e91ec6bd03a06e7eed29fa1",
+      "source_2x_sha256": "35ad4857446db1cc2e87eeb205dc1469e596bd7f53f88a64ee399ce581272dc8",
+      "qrc_alias": ":/modern/asterisk_orange.svg",
+      "semantic": "Attention or modified marker",
+      "category": "status",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "radial",
+      "direction_sensitive": false,
+      "semantic_color": "warning",
+      "target_svg": "qrenderdoc/Resources/modern/asterisk_orange.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/asterisk_orange.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/asterisk_orange.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "orange"
+      ],
+      "color_variant_source_colors": [
+        "#000000",
+        "#CF7628"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b000_r3_c4_asterisk_orange.png",
+        "artifacts/icon-modernization/v3/reference-cells/b000_r3_c5_asterisk_orange@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:40",
+        "qrenderdoc/Windows/BufferViewer.ui:369",
+        "qrenderdoc/Windows/EventBrowser.cpp:894",
+        "qrenderdoc/Windows/EventBrowser.cpp:6308",
+        "qrenderdoc/Windows/EventBrowser.ui:162",
+        "qrenderdoc/Windows/EventBrowser.ui:410"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "bookmark_blue",
+      "source_file": "qrenderdoc/Resources/bookmark_blue.png",
+      "source_file_2x": "qrenderdoc/Resources/bookmark_blue@2x.png",
+      "source_sha256": "0227821cac299180629d2ea73f7331ef484cbaf72f35ba9416c380c8c4712d5e",
+      "source_2x_sha256": "525221e12448995391845c1f6121a3a149eee4fe1d31ebe1fd312f21d0b63c34",
+      "qrc_alias": ":/modern/bookmark_blue.svg",
+      "semantic": "Bookmark the current item",
+      "category": "tools",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/bookmark_blue.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/bookmark_blue.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/bookmark_blue.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "blue"
+      ],
+      "color_variant_source_colors": [
+        "#3C86B8"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b001_r0_c0_bookmark_blue.png",
+        "artifacts/icon-modernization/v3/reference-cells/b001_r0_c1_bookmark_blue@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:112",
+        "qrenderdoc/Windows/ShaderViewer.cpp:1363",
+        "qrenderdoc/Windows/ShaderViewer.ui:355"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "bug",
+      "source_file": "qrenderdoc/Resources/bug.png",
+      "source_file_2x": "qrenderdoc/Resources/bug@2x.png",
+      "source_sha256": "e7137a1e9c29f0a7d5529785d4d49af254aad1d98e05901be8f25f4a295c8707",
+      "source_2x_sha256": "7b4e2c392a7a176d5fbba9cbd486d8c759b73a2bdb792be3fc4336ec05c1cf97",
+      "qrc_alias": ":/modern/bug.svg",
+      "semantic": "Debug a shader or event",
+      "category": "tools",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/bug.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/bug.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/bug.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "orange",
+        "blue"
+      ],
+      "color_variant_source_colors": [
+        "#000000",
+        "#CF7628",
+        "#66717D"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b001_r0_c2_bug.png",
+        "artifacts/icon-modernization/v3/reference-cells/b001_r0_c3_bug@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:41",
+        "qrenderdoc/Windows/MainWindow.cpp:1450",
+        "qrenderdoc/Windows/MainWindow.cpp:1462",
+        "qrenderdoc/Windows/MainWindow.cpp:1463"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "chart_curve",
+      "source_file": "qrenderdoc/Resources/chart_curve.png",
+      "source_file_2x": "qrenderdoc/Resources/chart_curve@2x.png",
+      "source_sha256": "611b7697c0a8f207ee28bf8f0ab709e661fffc0caf81345405037af780e17444",
+      "source_2x_sha256": "bbb2bb82c98015efef5f8a27da41e6a6be1fac798b10d7224db51a1b7ad5c3f7",
+      "qrc_alias": ":/modern/chart_curve.svg",
+      "semantic": "Open the curve or chart view",
+      "category": "view",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/chart_curve.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/chart_curve.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/chart_curve.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "green",
+        "red",
+        "blue"
+      ],
+      "color_variant_source_colors": [
+        "#000000",
+        "#20A76B",
+        "#B4473D",
+        "#3C86B8",
+        "#66717D",
+        "#B3BDC6"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b001_r0_c4_chart_curve.png",
+        "artifacts/icon-modernization/v3/reference-cells/b001_r0_c5_chart_curve@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:42",
+        "qrenderdoc/Windows/TextureViewer.ui:215"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "checkerboard",
+      "source_file": "qrenderdoc/Resources/checkerboard.png",
+      "source_file_2x": "qrenderdoc/Resources/checkerboard@2x.png",
+      "source_sha256": "13ad818aab54d0a17cc2572756285d96200afc967a6cab53b64f5e936c89d669",
+      "source_2x_sha256": "1535d2c8b6c3eaf0324bffc0fec229a6d2270cc0f94a417457b86201c4bd8446",
+      "qrc_alias": ":/modern/checkerboard.svg",
+      "semantic": "Toggle transparency checkerboard",
+      "category": "view",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "radial",
+      "direction_sensitive": false,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/checkerboard.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/checkerboard.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/checkerboard.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "orange"
+      ],
+      "color_variant_source_colors": [
+        "#000000",
+        "#CF7628"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b001_r1_c0_checkerboard.png",
+        "artifacts/icon-modernization/v3/reference-cells/b001_r1_c1_checkerboard@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:60",
+        "qrenderdoc/Windows/TextureViewer.ui:941"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "cog",
+      "source_file": "qrenderdoc/Resources/cog.png",
+      "source_file_2x": "qrenderdoc/Resources/cog@2x.png",
+      "source_sha256": "9b15c687dc9e4aebe320b6c8a8e44616657b3134ce2c29ffab0647322ef4d906",
+      "source_2x_sha256": "c405f27fb7f1a5cecb8fa1a776417f2d690d05a1793b054711f13d25c3807aef",
+      "qrc_alias": ":/modern/cog.svg",
+      "semantic": "Open settings",
+      "category": "tools",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/cog.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/cog.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/cog.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [],
+      "color_variant_source_colors": [
+        "#87929D"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b001_r1_c2_cog.png",
+        "artifacts/icon-modernization/v3/reference-cells/b001_r1_c3_cog@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:43",
+        "qrenderdoc/Windows/BufferViewer.ui:211",
+        "qrenderdoc/Windows/EventBrowser.ui:364"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "color_wheel",
+      "source_file": "qrenderdoc/Resources/color_wheel.png",
+      "source_file_2x": "qrenderdoc/Resources/color_wheel@2x.png",
+      "source_sha256": "80ba9f887425c61c227babdef984dec3dcd5a9e4bbbe23d752d7de404b9b0dc0",
+      "source_2x_sha256": "b5d4ea910ad7404a795cd631a52a00003e82d7d572b3fc529e71efdad7442b2e",
+      "qrc_alias": ":/modern/color_wheel.svg",
+      "semantic": "Choose or inspect a color",
+      "category": "view",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "radial",
+      "direction_sensitive": false,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/color_wheel.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/color_wheel.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/color_wheel.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "green",
+        "blue",
+        "purple",
+        "yellow",
+        "red",
+        "orange",
+        "cyan"
+      ],
+      "color_variant_source_colors": [
+        "#000000",
+        "#20A76B",
+        "#3C86B8",
+        "#CF7628",
+        "#D0A12A",
+        "#7557B5",
+        "#C04783",
+        "#66717D"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b001_r1_c4_color_wheel.png",
+        "artifacts/icon-modernization/v3/reference-cells/b001_r1_c5_color_wheel@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:44",
+        "qrenderdoc/Windows/TextureViewer.ui:921"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "connect",
+      "source_file": "qrenderdoc/Resources/connect.png",
+      "source_file_2x": "qrenderdoc/Resources/connect@2x.png",
+      "source_sha256": "15236871437a7b5f1ae326998b89417d7c1c3e7e4fe7d2cee017527d47ddd013",
+      "source_2x_sha256": "3f67aace74f6cfd2b8e608a397dc6cc04fa25e8cbab37ca18b2833551e43ef8d",
+      "qrc_alias": ":/modern/connect.svg",
+      "semantic": "Connect to a target",
+      "category": "tools",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": "success_current",
+      "target_svg": "qrenderdoc/Resources/modern/connect.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/connect.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/connect.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "blue"
+      ],
+      "color_variant_source_colors": [
+        "#000000",
+        "#20A76B",
+        "#3C86B8"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b001_r2_c0_connect.png",
+        "artifacts/icon-modernization/v3/reference-cells/b001_r2_c1_connect@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:46",
+        "qrenderdoc/Windows/Dialogs/LiveCapture.cpp:1295",
+        "qrenderdoc/Windows/Dialogs/RemoteManager.cpp:167",
+        "qrenderdoc/Windows/EventBrowser.cpp:6290",
+        "qrenderdoc/Windows/MainWindow.cpp:2102",
+        "qrenderdoc/Windows/MainWindow.cpp:2207"
+      ],
+      "notes": "Single cable and plug body with separated twin pins; no mirrored second body that can read as a dumbbell"
+    },
+    {
+      "id": "control_base_blue",
+      "source_file": "qrenderdoc/Resources/control_base_blue.png",
+      "source_file_2x": "qrenderdoc/Resources/control_base_blue@2x.png",
+      "source_sha256": "f0b321d29e26a6e59183225837741dad7262ff8c9dbc95e418a61e057dc852a7",
+      "source_2x_sha256": "15e7ad8a44d4425b5512f9d746e22929207133cb56688c3b4acfad7eace9a89d",
+      "qrc_alias": ":/modern/control_base_blue.svg",
+      "semantic": "Move to the base or first event",
+      "category": "playback",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": true,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/control_base_blue.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/control_base_blue.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/control_base_blue.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "blue"
+      ],
+      "color_variant_source_colors": [
+        "#3C86B8",
+        "#62A9D2"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b001_r2_c2_control_base_blue.png",
+        "artifacts/icon-modernization/v3/reference-cells/b001_r2_c3_control_base_blue@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:47"
+      ],
+      "notes": "Legacy-equivalent plain forward triangle; intentionally matches control_play_blue"
+    },
+    {
+      "id": "control_cursor_blue",
+      "source_file": "qrenderdoc/Resources/control_cursor_blue.png",
+      "source_file_2x": "qrenderdoc/Resources/control_cursor_blue@2x.png",
+      "source_sha256": "280df68165102a71cf32a36cad96e59ff729bf36b8e7530acddba87e76c28bd3",
+      "source_2x_sha256": "7b54ba9c8b834e5beec4cbe186d36d8e5fd143d91af75a824d9733870cf7cfaa",
+      "qrc_alias": ":/modern/control_cursor_blue.svg",
+      "semantic": "Move to the cursor event",
+      "category": "playback",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": true,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/control_cursor_blue.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/control_cursor_blue.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/control_cursor_blue.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "blue"
+      ],
+      "color_variant_source_colors": [
+        "#3C86B8",
+        "#62A9D2"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b001_r2_c4_control_cursor_blue.png",
+        "artifacts/icon-modernization/v3/reference-cells/b001_r2_c5_control_cursor_blue@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:48",
+        "qrenderdoc/Windows/ShaderViewer.cpp:949"
+      ],
+      "notes": "Forward triangle plus a right-side I-beam with a two-unit separation zone"
+    },
+    {
+      "id": "control_end_blue",
+      "source_file": "qrenderdoc/Resources/control_end_blue.png",
+      "source_file_2x": "qrenderdoc/Resources/control_end_blue@2x.png",
+      "source_sha256": "5847a3b16aa3aea320ded0b3df4202d483c595e0f4b3988ac5f3d8a42c5fb0ee",
+      "source_2x_sha256": "dbc705cb35ae6a3cf465ad5260f7ccb39949bf5862a9f2aadc36eedac410e293",
+      "qrc_alias": ":/modern/control_end_blue.svg",
+      "semantic": "Move to the end event",
+      "category": "playback",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": true,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/control_end_blue.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/control_end_blue.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/control_end_blue.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "blue"
+      ],
+      "color_variant_source_colors": [
+        "#3C86B8",
+        "#62A9D2"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b001_r3_c0_control_end_blue.png",
+        "artifacts/icon-modernization/v3/reference-cells/b001_r3_c1_control_end_blue@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:49",
+        "qrenderdoc/Windows/ShaderViewer.cpp:942"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "control_nan_blue",
+      "source_file": "qrenderdoc/Resources/control_nan_blue.png",
+      "source_file_2x": "qrenderdoc/Resources/control_nan_blue@2x.png",
+      "source_sha256": "1372f504fef85a7a4a80ae51ba61b5992af989b4f13e75a4b8e32df36561ac9a",
+      "source_2x_sha256": "0eadb02916fc4e6976258c119f836a80aeb8530e7bbb77dc9e82d2f3509782c4",
+      "qrc_alias": ":/modern/control_nan_blue.svg",
+      "semantic": "Move to the NaN-special event",
+      "category": "playback",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": true,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/control_nan_blue.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/control_nan_blue.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/control_nan_blue.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "blue"
+      ],
+      "color_variant_source_colors": [
+        "#3C86B8",
+        "#62A9D2",
+        "#66717D"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b001_r3_c2_control_nan_blue.png",
+        "artifacts/icon-modernization/v3/reference-cells/b001_r3_c3_control_nan_blue@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:51",
+        "qrenderdoc/Windows/ShaderViewer.cpp:966"
+      ],
+      "notes": "Hash marker distinguishes NaN navigation from sample navigation"
+    },
+    {
+      "id": "control_play_blue",
+      "source_file": "qrenderdoc/Resources/control_play_blue.png",
+      "source_file_2x": "qrenderdoc/Resources/control_play_blue@2x.png",
+      "source_sha256": "d5d7e4d050baa84c616643f7a9a3068014f3a3b724ebddc19e9bbb9646fe9dc3",
+      "source_2x_sha256": "700c1539e7f4713807dc1428bafa0b86fa5f753b331e174e306d04ba5114362b",
+      "qrc_alias": ":/modern/control_play_blue.svg",
+      "semantic": "Play forward",
+      "category": "playback",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": true,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/control_play_blue.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/control_play_blue.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/control_play_blue.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "blue"
+      ],
+      "color_variant_source_colors": [
+        "#3C86B8",
+        "#62A9D2"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b001_r3_c4_control_play_blue.png",
+        "artifacts/icon-modernization/v3/reference-cells/b001_r3_c5_control_play_blue@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:50",
+        "qrenderdoc/Windows/ShaderViewer.cpp:977",
+        "qrenderdoc/Windows/ShaderViewer.cpp:984",
+        "qrenderdoc/Windows/ShaderViewer.cpp:992",
+        "qrenderdoc/Windows/ShaderViewer.ui:508"
+      ],
+      "notes": "Legacy-equivalent plain forward triangle; intentionally matches control_base_blue"
+    },
+    {
+      "id": "control_reverse_base_blue",
+      "source_file": "qrenderdoc/Resources/control_reverse_base_blue.png",
+      "source_file_2x": "qrenderdoc/Resources/control_reverse_base_blue@2x.png",
+      "source_sha256": "bc019073f5365cd9396bae509acc456c4ca0310a4a5d6b420233f0e9e18eb7db",
+      "source_2x_sha256": "4e4242cedcdba91e3fedd117fc34e1e1049ca078f9055075bd44feb210dbe6e5",
+      "qrc_alias": ":/modern/control_reverse_base_blue.svg",
+      "semantic": "Move backward to the base event",
+      "category": "playback",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": true,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/control_reverse_base_blue.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/control_reverse_base_blue.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/control_reverse_base_blue.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "blue"
+      ],
+      "color_variant_source_colors": [
+        "#3C86B8",
+        "#62A9D2"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b002_r0_c0_control_reverse_base_blue.png",
+        "artifacts/icon-modernization/v3/reference-cells/b002_r0_c1_control_reverse_base_blue@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:53"
+      ],
+      "notes": "Legacy-equivalent plain reverse triangle; intentionally matches control_reverse_blue"
+    },
+    {
+      "id": "control_reverse_blue",
+      "source_file": "qrenderdoc/Resources/control_reverse_blue.png",
+      "source_file_2x": "qrenderdoc/Resources/control_reverse_blue@2x.png",
+      "source_sha256": "4bdc244cc13db59dd08ee990f5a9ebbffa26fdfa0eacd77c82d51eca48380fd0",
+      "source_2x_sha256": "5b3832f5a9843179431933d67d1c587e38d06aceaea5ba4cd702aa95ef5d4150",
+      "qrc_alias": ":/modern/control_reverse_blue.svg",
+      "semantic": "Play backward",
+      "category": "playback",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": true,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/control_reverse_blue.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/control_reverse_blue.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/control_reverse_blue.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "blue"
+      ],
+      "color_variant_source_colors": [
+        "#3C86B8",
+        "#62A9D2"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b002_r0_c2_control_reverse_blue.png",
+        "artifacts/icon-modernization/v3/reference-cells/b002_r0_c3_control_reverse_blue@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:52",
+        "qrenderdoc/Windows/ShaderViewer.cpp:912",
+        "qrenderdoc/Windows/ShaderViewer.cpp:919",
+        "qrenderdoc/Windows/ShaderViewer.cpp:927"
+      ],
+      "notes": "Legacy-equivalent plain reverse triangle; intentionally matches control_reverse_base_blue"
+    },
+    {
+      "id": "control_reverse_cursor_blue",
+      "source_file": "qrenderdoc/Resources/control_reverse_cursor_blue.png",
+      "source_file_2x": "qrenderdoc/Resources/control_reverse_cursor_blue@2x.png",
+      "source_sha256": "90fb082cf90b9d157ee05f7b56c8f9b58f015717de38eaf8cd6fa39bdad76cb7",
+      "source_2x_sha256": "de7d34398d6bbc23235a9f15dc8d5ad87edb3c2587272ad95b6fbcb31cedda11",
+      "qrc_alias": ":/modern/control_reverse_cursor_blue.svg",
+      "semantic": "Move backward to the cursor event",
+      "category": "playback",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": true,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/control_reverse_cursor_blue.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/control_reverse_cursor_blue.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/control_reverse_cursor_blue.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "blue"
+      ],
+      "color_variant_source_colors": [
+        "#3C86B8",
+        "#62A9D2"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b002_r0_c4_control_reverse_cursor_blue.png",
+        "artifacts/icon-modernization/v3/reference-cells/b002_r0_c5_control_reverse_cursor_blue@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:54",
+        "qrenderdoc/Windows/ShaderViewer.cpp:884"
+      ],
+      "notes": "Left-facing triangle plus the legacy right-side I-beam marker"
+    },
+    {
+      "id": "control_reverse_nan_blue",
+      "source_file": "qrenderdoc/Resources/control_reverse_nan_blue.png",
+      "source_file_2x": "qrenderdoc/Resources/control_reverse_nan_blue@2x.png",
+      "source_sha256": "94705547a7c2a285faea300d22979273983f0749c70bc7552492b27fd5c2a269",
+      "source_2x_sha256": "5bb12cb191436f04ea046e6761cb4f9df6da147068cf3295692381a072eccd9b",
+      "qrc_alias": ":/modern/control_reverse_nan_blue.svg",
+      "semantic": "Move backward to the NaN-special event",
+      "category": "playback",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": true,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/control_reverse_nan_blue.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/control_reverse_nan_blue.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/control_reverse_nan_blue.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "blue"
+      ],
+      "color_variant_source_colors": [
+        "#3C86B8",
+        "#62A9D2",
+        "#66717D"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b002_r1_c0_control_reverse_nan_blue.png",
+        "artifacts/icon-modernization/v3/reference-cells/b002_r1_c1_control_reverse_nan_blue@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:55",
+        "qrenderdoc/Windows/ShaderViewer.cpp:901"
+      ],
+      "notes": "Left-facing reverse control with hash marker"
+    },
+    {
+      "id": "control_reverse_sample_blue",
+      "source_file": "qrenderdoc/Resources/control_reverse_sample_blue.png",
+      "source_file_2x": "qrenderdoc/Resources/control_reverse_sample_blue@2x.png",
+      "source_sha256": "67b6b0027569687e6d1d7ffb2668ba2dce8ba7a1998afe9910467672c3a6308c",
+      "source_2x_sha256": "b594134a5bc68fa7584b2893951fc392b6d37f8fe1c227955cff297509e33d2d",
+      "qrc_alias": ":/modern/control_reverse_sample_blue.svg",
+      "semantic": "Move backward to the sample event",
+      "category": "playback",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": true,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/control_reverse_sample_blue.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/control_reverse_sample_blue.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/control_reverse_sample_blue.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "blue",
+        "red"
+      ],
+      "color_variant_source_colors": [
+        "#B4473D",
+        "#3C86B8",
+        "#62A9D2"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b002_r1_c2_control_reverse_sample_blue.png",
+        "artifacts/icon-modernization/v3/reference-cells/b002_r1_c3_control_reverse_sample_blue@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:56",
+        "qrenderdoc/Windows/ShaderViewer.cpp:891"
+      ],
+      "notes": "Left-facing reverse control with checker sample marker"
+    },
+    {
+      "id": "control_sample_blue",
+      "source_file": "qrenderdoc/Resources/control_sample_blue.png",
+      "source_file_2x": "qrenderdoc/Resources/control_sample_blue@2x.png",
+      "source_sha256": "fcb2ad34945cb8486e5654090889551ea10b7525873ee24c13fddd09c8f40d8c",
+      "source_2x_sha256": "59d88142d8ffd1c2f88cac10ea4656a116aca1973c00652272ecc3a5cf59c70e",
+      "qrc_alias": ":/modern/control_sample_blue.svg",
+      "semantic": "Move forward to the sample event",
+      "category": "playback",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": true,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/control_sample_blue.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/control_sample_blue.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/control_sample_blue.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "blue",
+        "red"
+      ],
+      "color_variant_source_colors": [
+        "#B4473D",
+        "#3C86B8",
+        "#62A9D2"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b002_r1_c4_control_sample_blue.png",
+        "artifacts/icon-modernization/v3/reference-cells/b002_r1_c5_control_sample_blue@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:57",
+        "qrenderdoc/Windows/ShaderViewer.cpp:956"
+      ],
+      "notes": "Right-facing forward control with checker sample marker"
+    },
+    {
+      "id": "control_start_blue",
+      "source_file": "qrenderdoc/Resources/control_start_blue.png",
+      "source_file_2x": "qrenderdoc/Resources/control_start_blue@2x.png",
+      "source_sha256": "25519e5e228f1474640eab35fe1dcaa1dd494319bf8491b233862d152feaf72f",
+      "source_2x_sha256": "f0f04e84531c494c869d38e0574eacd4f7d4c8d8971a5e366167c21512892c7d",
+      "qrc_alias": ":/modern/control_start_blue.svg",
+      "semantic": "Move to the start event",
+      "category": "playback",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": true,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/control_start_blue.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/control_start_blue.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/control_start_blue.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "blue"
+      ],
+      "color_variant_source_colors": [
+        "#3C86B8",
+        "#62A9D2"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b002_r2_c0_control_start_blue.png",
+        "artifacts/icon-modernization/v3/reference-cells/b002_r2_c1_control_start_blue@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:58",
+        "qrenderdoc/Windows/ShaderViewer.cpp:876"
+      ],
+      "notes": "Left stop bar plus a left-facing triangle, matching the legacy start control"
+    },
+    {
+      "id": "copy",
+      "source_file": "qrenderdoc/Resources/copy.png",
+      "source_file_2x": "qrenderdoc/Resources/copy@2x.png",
+      "source_sha256": "eaad37f80a88e470364973a2236e9fe4f6d19079b739ec731f7a02d26556a8c9",
+      "source_2x_sha256": "c06c37d7e9a1ed43f7538eea6b86ef94c7186466f6d7988a98c70189a0a17031",
+      "qrc_alias": ":/modern/copy.svg",
+      "semantic": "Copy the selected data",
+      "category": "files",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/copy.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/copy.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/copy.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "blue"
+      ],
+      "color_variant_source_colors": [
+        "#3C86B8"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b002_r2_c2_copy.png",
+        "artifacts/icon-modernization/v3/reference-cells/b002_r2_c3_copy@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:45",
+        "qrenderdoc/Widgets/Extended/RDTreeView.cpp:352",
+        "qrenderdoc/Windows/BufferViewer.cpp:3027",
+        "qrenderdoc/Windows/DebugMessageView.cpp:245",
+        "qrenderdoc/Windows/PipelineState/PipelineStateViewer.cpp:1171",
+        "qrenderdoc/Windows/ShaderMessageViewer.cpp:210"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "cross",
+      "source_file": "qrenderdoc/Resources/cross.png",
+      "source_file_2x": "qrenderdoc/Resources/cross@2x.png",
+      "source_sha256": "90e43f3101637c878b993641d87610047390c8ce5f6630484cf56f5e45083fbf",
+      "source_2x_sha256": "e9835c85d005b77e31b5e10a0f543dbdc7f1e897d097fab916d7fdb915d4ca9c",
+      "qrc_alias": ":/modern/cross.svg",
+      "semantic": "Close or cancel",
+      "category": "status",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "radial",
+      "direction_sensitive": false,
+      "semantic_color": "error",
+      "target_svg": "qrenderdoc/Resources/modern/cross.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/cross.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/cross.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "red"
+      ],
+      "color_variant_source_colors": [
+        "#B4473D"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b002_r2_c4_cross.png",
+        "artifacts/icon-modernization/v3/reference-cells/b002_r2_c5_cross@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:59",
+        "qrenderdoc/Windows/EventBrowser.cpp:866",
+        "qrenderdoc/Windows/EventBrowser.cpp:6309",
+        "qrenderdoc/Windows/MainWindow.cpp:1944",
+        "qrenderdoc/Windows/MainWindow.cpp:1968",
+        "qrenderdoc/Windows/MainWindow.cpp:2001",
+        "qrenderdoc/Windows/MainWindow.cpp:2212",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.cpp:1137",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.cpp:1234",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:2413",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:2442",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:2595",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:2624",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:2653",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:2682",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:3559",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:3619",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:3710",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:3741",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:3844",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.cpp:1138",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.cpp:1236",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:2446",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:2475",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:2682",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:3635",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:3664",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:3751",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:3810",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:3841",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.cpp:1232",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.cpp:1392",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:2785",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:2985",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:3014",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:3207",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:3236",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:3296",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:3325",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:4374",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:4433",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:4464",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.cpp:1058",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.cpp:1933",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:2370",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:2570",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:2596",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:2689",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:2720",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:2749",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:2911",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:3015",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:3041",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:4088",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:4147",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:4178",
+        "qrenderdoc/Windows/ResourceInspector.ui:69",
+        "qrenderdoc/Windows/ShaderViewer.cpp:1382",
+        "qrenderdoc/Windows/TextureViewer.ui:1304"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "cut",
+      "source_file": "qrenderdoc/Resources/cut.png",
+      "source_file_2x": "qrenderdoc/Resources/cut@2x.png",
+      "source_sha256": "7a9c12440945cfe271e2aa592b37a5cb73c124dd1f86fb4c5f89b7addae6202e",
+      "source_2x_sha256": "9e832f1243f58b6f28a6155a64da4f75d390f0f81c4e593762cea4ad09ffafa7",
+      "qrc_alias": ":/modern/cut.svg",
+      "semantic": "Cut the selected data",
+      "category": "files",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/cut.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/cut.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/cut.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "blue"
+      ],
+      "color_variant_source_colors": [
+        "#000000",
+        "#3C86B8",
+        "#66717D"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b002_r3_c0_cut.png",
+        "artifacts/icon-modernization/v3/reference-cells/b002_r3_c1_cut@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:61"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "del",
+      "source_file": "qrenderdoc/Resources/del.png",
+      "source_file_2x": "qrenderdoc/Resources/del@2x.png",
+      "source_sha256": "30fa81e8e3515871fa0ea835a0dfeebce75502bfb70b6473ee4cdcd6c94e81e3",
+      "source_2x_sha256": "f87d0ee23ea2fc5c931a25db02edd6c1c0747029cc5bd47c08e7a67e3f1ff7ce",
+      "qrc_alias": ":/modern/del.svg",
+      "semantic": "Delete or remove an item",
+      "category": "status",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "radial",
+      "direction_sensitive": false,
+      "semantic_color": "error",
+      "target_svg": "qrenderdoc/Resources/modern/del.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/del.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/del.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "red"
+      ],
+      "color_variant_source_colors": [
+        "#B4473D"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b002_r3_c2_del.png",
+        "artifacts/icon-modernization/v3/reference-cells/b002_r3_c3_del@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:62",
+        "qrenderdoc/Widgets/BufferFormatSpecifier.ui:185",
+        "qrenderdoc/Widgets/OrderedListEditor.cpp:106",
+        "qrenderdoc/Windows/Dialogs/LiveCapture.cpp:1273",
+        "qrenderdoc/Windows/EventBrowser.cpp:6472",
+        "qrenderdoc/Windows/MainWindow.cpp:1857",
+        "qrenderdoc/Windows/PythonShell.ui:249",
+        "qrenderdoc/Windows/ShaderViewer.ui:385",
+        "qrenderdoc/Windows/TextureViewer.ui:904"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "disconnect",
+      "source_file": "qrenderdoc/Resources/disconnect.png",
+      "source_file_2x": "qrenderdoc/Resources/disconnect@2x.png",
+      "source_sha256": "d79ca587e71fa6dc2fe27b2fb678b84b01b0509a1956ee8bd852417e860d5fa7",
+      "source_2x_sha256": "d60f57112451de8ed4ef6f8358d711e88a52e668726cfaaa7317c34c6975fbe7",
+      "qrc_alias": ":/modern/disconnect.svg",
+      "semantic": "Disconnect from a target",
+      "category": "tools",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": "error",
+      "target_svg": "qrenderdoc/Resources/modern/disconnect.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/disconnect.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/disconnect.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "blue"
+      ],
+      "color_variant_source_colors": [
+        "#000000",
+        "#B4473D",
+        "#3C86B8"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b002_r3_c4_disconnect.png",
+        "artifacts/icon-modernization/v3/reference-cells/b002_r3_c5_disconnect@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:63",
+        "qrenderdoc/Windows/Dialogs/LiveCapture.cpp:1455",
+        "qrenderdoc/Windows/Dialogs/RemoteManager.cpp:167",
+        "qrenderdoc/Windows/MainWindow.cpp:2102",
+        "qrenderdoc/Windows/MainWindow.cpp:2208"
+      ],
+      "notes": "Same two-prong plug family as connect, plus a visible X so the state remains distinct without color"
+    },
+    {
+      "id": "draw_vertex",
+      "source_file": "qrenderdoc/Resources/draw_vertex.png",
+      "source_file_2x": "qrenderdoc/Resources/draw_vertex@2x.png",
+      "source_sha256": "593d3bdf3ed7f318385c099d9498c3c7d6525db45bc1bb395cdd6d4a5a747515",
+      "source_2x_sha256": "7123f224c0e6185e4d94b1d88d030a64b3b123236dde7810ae0a5fb6b7591e38",
+      "qrc_alias": ":/modern/draw_vertex.svg",
+      "semantic": "Display or highlight mesh vertices",
+      "category": "view",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/draw_vertex.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/draw_vertex.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/draw_vertex.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "blue"
+      ],
+      "color_variant_source_colors": [
+        "#000000",
+        "#3C86B8",
+        "#66717D"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b003_r0_c0_draw_vertex.png",
+        "artifacts/icon-modernization/v3/reference-cells/b003_r0_c1_draw_vertex@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:64",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:5010",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:5401"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "filter",
+      "source_file": "qrenderdoc/Resources/filter.png",
+      "source_file_2x": "qrenderdoc/Resources/filter@2x.png",
+      "source_sha256": "0b32331747f11a9f19ed026ccafdc3224c7df23fe5686092cc7d8ae83d5e9aed",
+      "source_2x_sha256": "096d6b75ca4dd07c078f23a3495fcc1b93a43a34935ff2eccbce801e90f7758b",
+      "qrc_alias": ":/modern/filter.svg",
+      "semantic": "Filter the current data set",
+      "category": "view",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/filter.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/filter.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/filter.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "blue"
+      ],
+      "color_variant_source_colors": [
+        "#000000",
+        "#3C86B8"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b003_r0_c2_filter.png",
+        "artifacts/icon-modernization/v3/reference-cells/b003_r0_c3_filter@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:66",
+        "qrenderdoc/Windows/BufferViewer.cpp:2509",
+        "qrenderdoc/Windows/BufferViewer.cpp:3029",
+        "qrenderdoc/Windows/EventBrowser.ui:324"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "filter_reapply",
+      "source_file": "qrenderdoc/Resources/filter_reapply.png",
+      "source_file_2x": "qrenderdoc/Resources/filter_reapply@2x.png",
+      "source_sha256": "3f052a98e1ed983df385b9c2e4ac82ec67f3bba5e964871e249b1453f2e6f7bc",
+      "source_2x_sha256": "4fd03eb28f79fac60eda3ec68e44f5a0d67456b30abf8bb7e78b3a1fa4dcb608",
+      "qrc_alias": ":/modern/filter_reapply.svg",
+      "semantic": "Reapply the active filter",
+      "category": "view",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": true,
+      "semantic_color": "success_current",
+      "target_svg": "qrenderdoc/Resources/modern/filter_reapply.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/filter_reapply.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/filter_reapply.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "blue",
+        "green",
+        "yellow"
+      ],
+      "color_variant_source_colors": [
+        "#000000",
+        "#20A76B",
+        "#3C86B8"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b003_r0_c4_filter_reapply.png",
+        "artifacts/icon-modernization/v3/reference-cells/b003_r0_c5_filter_reapply@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:67"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "find",
+      "source_file": "qrenderdoc/Resources/find.png",
+      "source_file_2x": "qrenderdoc/Resources/find@2x.png",
+      "source_sha256": "989b024c9185effea92bacfd6b19cb44beed1eea3f39d13acfc08da3fab30481",
+      "source_2x_sha256": "9d9f72353b0a0440823942db1958b4748e69b68fd9d4c9c9519ef51a2b96211e",
+      "qrc_alias": ":/modern/find.svg",
+      "semantic": "Find a resource or event",
+      "category": "view",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/find.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/find.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/find.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [],
+      "color_variant_source_colors": [
+        "#87929D"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b003_r1_c0_find.png",
+        "artifacts/icon-modernization/v3/reference-cells/b003_r1_c1_find@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:65",
+        "qrenderdoc/Windows/EventBrowser.cpp:896",
+        "qrenderdoc/Windows/EventBrowser.ui:108",
+        "qrenderdoc/Windows/EventBrowser.ui:233",
+        "qrenderdoc/Windows/PixelHistoryView.cpp:895",
+        "qrenderdoc/Windows/ShaderMessageViewer.cpp:156",
+        "qrenderdoc/Windows/ShaderMessageViewer.cpp:218",
+        "qrenderdoc/Windows/ShaderViewer.ui:335",
+        "qrenderdoc/Windows/TextureViewer.ui:521"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "flag_green",
+      "source_file": "qrenderdoc/Resources/flag_green.png",
+      "source_file_2x": "qrenderdoc/Resources/flag_green@2x.png",
+      "source_sha256": "616968974fe53423f3146ffcbe087ea1b170dbb7f2e1abc49a829645bc7230f6",
+      "source_2x_sha256": "0d29dc0134bdbdfc41f9d77155718554d3cbf7ef8cbc46a0d3ce4f8310800517",
+      "qrc_alias": ":/modern/flag_green.svg",
+      "semantic": "Mark the current event",
+      "category": "status",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": true,
+      "semantic_color": "success_current",
+      "target_svg": "qrenderdoc/Resources/modern/flag_green.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/flag_green.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/flag_green.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "green",
+        "orange",
+        "yellow"
+      ],
+      "color_variant_source_colors": [
+        "#000000",
+        "#20A76B",
+        "#CF7628"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b003_r1_c2_flag_green.png",
+        "artifacts/icon-modernization/v3/reference-cells/b003_r1_c3_flag_green@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:69",
+        "qrenderdoc/Windows/EventBrowser.cpp:892",
+        "qrenderdoc/Windows/TextureViewer.cpp:2346",
+        "qrenderdoc/Windows/TimelineBar.cpp:641"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "flip_y",
+      "source_file": "qrenderdoc/Resources/flip_y.png",
+      "source_file_2x": "qrenderdoc/Resources/flip_y@2x.png",
+      "source_sha256": "ef1cd7936f3203592aaf06e951939b5d970d0e4afcc6d6c4b820b99d0f222464",
+      "source_2x_sha256": "ebd241b35190fe4fccebe9a4197eb0b3b4d58b56e8876892dfd05dd9994980a8",
+      "qrc_alias": ":/modern/flip_y.svg",
+      "semantic": "Flip the image vertically",
+      "category": "view",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": true,
+      "semantic_color": "success_current",
+      "target_svg": "qrenderdoc/Resources/modern/flip_y.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/flip_y.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/flip_y.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "green",
+        "yellow"
+      ],
+      "color_variant_source_colors": [
+        "#20A76B"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b003_r1_c4_flip_y.png",
+        "artifacts/icon-modernization/v3/reference-cells/b003_r1_c5_flip_y@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:70",
+        "qrenderdoc/Windows/TextureViewer.ui:404"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "folder",
+      "source_file": "qrenderdoc/Resources/folder.png",
+      "source_file_2x": "qrenderdoc/Resources/folder@2x.png",
+      "source_sha256": "8249c5b15d559972da83eb2167d56018a073ad541f65d9de043316940bb7b677",
+      "source_2x_sha256": "171054a9c3325ba5bcb51cc662e97a293e2320ea8a55e85e8f178edb95c7f087",
+      "qrc_alias": ":/modern/folder.svg",
+      "semantic": "Open a folder",
+      "category": "files",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/folder.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/folder.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/folder.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "yellow",
+        "orange"
+      ],
+      "color_variant_source_colors": [
+        "#D0A12A"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b003_r2_c0_folder.png",
+        "artifacts/icon-modernization/v3/reference-cells/b003_r2_c1_folder@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:71",
+        "qrenderdoc/Widgets/OrderedListEditor.cpp:121",
+        "qrenderdoc/Windows/Dialogs/VirtualFileDialog.cpp:56",
+        "qrenderdoc/Windows/EventBrowser.cpp:6313"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "folder_page_white",
+      "source_file": "qrenderdoc/Resources/folder_page_white.png",
+      "source_file_2x": "qrenderdoc/Resources/folder_page_white@2x.png",
+      "source_sha256": "63978b13ce48d36a3c4dfcd5cf259b00bd728ee42b4c122f9f4507a0392b4577",
+      "source_2x_sha256": "442f275a49ab9f310d2dbc9456c0413a60f82f27246cdc7baa6cf7599ae2866e",
+      "qrc_alias": ":/modern/folder_page_white.svg",
+      "semantic": "Open a file from a folder",
+      "category": "files",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/folder_page_white.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/folder_page_white.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/folder_page_white.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "orange",
+        "yellow"
+      ],
+      "color_variant_source_colors": [
+        "#000000",
+        "#62A9D2",
+        "#CF7628",
+        "#D0A12A"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b003_r2_c2_folder_page_white.png",
+        "artifacts/icon-modernization/v3/reference-cells/b003_r2_c3_folder_page_white@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:72",
+        "qrenderdoc/Widgets/OrderedListEditor.cpp:121",
+        "qrenderdoc/Windows/EventBrowser.cpp:6313",
+        "qrenderdoc/Windows/PythonShell.ui:182"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "help",
+      "source_file": "qrenderdoc/Resources/help.png",
+      "source_file_2x": "qrenderdoc/Resources/help@2x.png",
+      "source_sha256": "c83fabe32bc5e524a5817cf869ec375ce78b3fe35a88dc18d9f4b8cf5288a66b",
+      "source_2x_sha256": "1c83f42cd074bb84bd7242281309d30eb39b704e688aee6fb637e3f974ccac8a",
+      "qrc_alias": ":/modern/help.svg",
+      "semantic": "Open contextual help",
+      "category": "status",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/help.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/help.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/help.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "blue"
+      ],
+      "color_variant_source_colors": [
+        "#3C86B8"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b003_r2_c4_help.png",
+        "artifacts/icon-modernization/v3/reference-cells/b003_r2_c5_help@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:73",
+        "qrenderdoc/Widgets/BufferFormatSpecifier.ui:152"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "hourglass",
+      "source_file": "qrenderdoc/Resources/hourglass.png",
+      "source_file_2x": "qrenderdoc/Resources/hourglass@2x.png",
+      "source_sha256": "141af4cfae888d0ffaa4968fa917e7cd6d496259882918b1ed2f60f1e8b46b33",
+      "source_2x_sha256": "227fe0d9583e402f2d4757bde5227ee0b3473437c8cf4dd870f4c18cc17a6dfb",
+      "qrc_alias": ":/modern/hourglass.svg",
+      "semantic": "Operation is waiting or in progress",
+      "category": "tools",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/hourglass.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/hourglass.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/hourglass.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "orange",
+        "blue"
+      ],
+      "color_variant_source_colors": [
+        "#000000",
+        "#62A9D2",
+        "#CF7628"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b003_r3_c0_hourglass.png",
+        "artifacts/icon-modernization/v3/reference-cells/b003_r3_c1_hourglass@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:74",
+        "qrenderdoc/Windows/Dialogs/LiveCapture.cpp:119",
+        "qrenderdoc/Windows/Dialogs/LiveCapture.ui:95",
+        "qrenderdoc/Windows/Dialogs/RemoteManager.cpp:176",
+        "qrenderdoc/Windows/Dialogs/RemoteManager.cpp:544",
+        "qrenderdoc/Windows/Dialogs/RemoteManager.cpp:565",
+        "qrenderdoc/Windows/Dialogs/RemoteManager.ui:51"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "house",
+      "source_file": "qrenderdoc/Resources/house.png",
+      "source_file_2x": "qrenderdoc/Resources/house@2x.png",
+      "source_sha256": "85bcc07ec1f82ba03ee44cedc729e79cf85a2a850cb7e44bf7dea3241b3a5f34",
+      "source_2x_sha256": "392a1cbc7ba1749bb95cd841bd07d263a4019908f2f6b193e5bdd501b082a498",
+      "qrc_alias": ":/modern/house.svg",
+      "semantic": "Return to the home/default location",
+      "category": "tools",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/house.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/house.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/house.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "orange",
+        "blue"
+      ],
+      "color_variant_source_colors": [
+        "#000000",
+        "#3C86B8",
+        "#CF7628",
+        "#66717D"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b003_r3_c2_house.png",
+        "artifacts/icon-modernization/v3/reference-cells/b003_r3_c3_house@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:75",
+        "qrenderdoc/Widgets/MarkerBreadcrumbs.cpp:325",
+        "qrenderdoc/Windows/MainWindow.cpp:225",
+        "qrenderdoc/Windows/MainWindow.cpp:2030",
+        "qrenderdoc/Windows/MainWindow.cpp:2087"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "information",
+      "source_file": "qrenderdoc/Resources/information.png",
+      "source_file_2x": "qrenderdoc/Resources/information@2x.png",
+      "source_sha256": "a58cefbf74621d02eec56c64c36f594dbc2d9325f3bbf3db32c4a76a2f862d18",
+      "source_2x_sha256": "bcf9b788408bd931205a5a69fa660d99326bcd5588753362d4e0e9f4a109526f",
+      "qrc_alias": ":/modern/information.svg",
+      "semantic": "Show information",
+      "category": "status",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "vertical",
+      "direction_sensitive": false,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/information.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/information.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/information.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "blue"
+      ],
+      "color_variant_source_colors": [
+        "#3C86B8"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b003_r3_c4_information.png",
+        "artifacts/icon-modernization/v3/reference-cells/b003_r3_c5_information@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:76",
+        "qrenderdoc/Windows/Dialogs/CaptureDialog.ui:302",
+        "qrenderdoc/Windows/Dialogs/CaptureDialog.ui:321",
+        "qrenderdoc/Windows/Dialogs/CaptureDialog.ui:340",
+        "qrenderdoc/Windows/Dialogs/LiveCapture.ui:137",
+        "qrenderdoc/Windows/ShaderViewer.ui:315"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "link",
+      "source_file": "qrenderdoc/Resources/link.png",
+      "source_file_2x": "qrenderdoc/Resources/link@2x.png",
+      "source_sha256": "141499059d1ee47d7350fa456dde5f28ad4e1f5f05050bff64f99813aae8cdaf",
+      "source_2x_sha256": "458f32a9a32f7af43cde2f7675819c77ac496d8421a3b233ce7e30c21c51f3c4",
+      "qrc_alias": ":/modern/link.svg",
+      "semantic": "Create or follow a link",
+      "category": "tools",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/link.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/link.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/link.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [],
+      "color_variant_source_colors": [
+        "#87929D"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b004_r0_c0_link.png",
+        "artifacts/icon-modernization/v3/reference-cells/b004_r2_c1_page_white_link.png",
+        "artifacts/icon-modernization/v3/reference-cells/b004_r0_c1_link@2x.png",
+        "artifacts/icon-modernization/v3/reference-cells/b004_r2_c2_page_white_link@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/QRDUtils.cpp:815",
+        "qrenderdoc/Code/QRDUtils.cpp:975",
+        "qrenderdoc/Code/QRDUtils.cpp:1004",
+        "qrenderdoc/Code/QRDUtils.cpp:1075",
+        "qrenderdoc/Code/Resources.h:77",
+        "qrenderdoc/Windows/BufferViewer.ui:956",
+        "qrenderdoc/Windows/PipelineState/PipelineStateViewer.cpp:1179",
+        "qrenderdoc/Windows/TextureViewer.cpp:2362",
+        "qrenderdoc/Windows/TextureViewer.ui:535"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "page_go",
+      "source_file": "qrenderdoc/Resources/page_go.png",
+      "source_file_2x": "qrenderdoc/Resources/page_go@2x.png",
+      "source_sha256": "85bf5cf37e2f214165a6444124c278ffe6559688d018f59301ae76d904e89e5c",
+      "source_2x_sha256": "fdf2434fbd06a7b201ae8e5c86a87350a6d429bf736079d9b681c486729adeb7",
+      "qrc_alias": ":/modern/page_go.svg",
+      "semantic": "Open or export a document",
+      "category": "files",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": true,
+      "semantic_color": "success_current",
+      "target_svg": "qrenderdoc/Resources/modern/page_go.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/page_go.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/page_go.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "blue",
+        "green"
+      ],
+      "color_variant_source_colors": [
+        "#20A76B",
+        "#3C86B8"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b004_r0_c3_page_go.png",
+        "artifacts/icon-modernization/v3/reference-cells/b004_r0_c4_page_go@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:78",
+        "qrenderdoc/Windows/EventBrowser.cpp:6314",
+        "qrenderdoc/Windows/TextureViewer.cpp:2108"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "page_white_code",
+      "source_file": "qrenderdoc/Resources/page_white_code.png",
+      "source_file_2x": "qrenderdoc/Resources/page_white_code@2x.png",
+      "source_sha256": "650fea44c998100538a2eab6b2f590a49f81ca778445bcc0dc14a0c937f243bb",
+      "source_2x_sha256": "eb92fb8c89f65467adceacd3e51e4f8bb10002fd713751f490dce0b8c6af7299",
+      "qrc_alias": ":/modern/page_white_code.svg",
+      "semantic": "Open source code",
+      "category": "files",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/page_white_code.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/page_white_code.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/page_white_code.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "blue"
+      ],
+      "color_variant_source_colors": [
+        "#3C86B8",
+        "#87929D"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b004_r0_c5_page_white_code.png",
+        "artifacts/icon-modernization/v3/reference-cells/b004_r1_c0_page_white_code@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:79",
+        "qrenderdoc/Windows/Dialogs/VirtualFileDialog.cpp:55",
+        "qrenderdoc/Windows/TextureViewer.ui:504"
+      ],
+      "notes": "Angle brackets are paths, not text glyphs"
+    },
+    {
+      "id": "page_white_database",
+      "source_file": "qrenderdoc/Resources/page_white_database.png",
+      "source_file_2x": "qrenderdoc/Resources/page_white_database@2x.png",
+      "source_sha256": "9c360daff9f78a46d4a44b8e114ebb066c8db52a064f45a08bdf0d385f28659d",
+      "source_2x_sha256": "c75671538a9914c5f150a10e7b3e343d6b7be562f821815744b8e5abfcbf911e",
+      "qrc_alias": ":/modern/page_white_database.svg",
+      "semantic": "Open structured or database data",
+      "category": "files",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/page_white_database.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/page_white_database.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/page_white_database.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [],
+      "color_variant_source_colors": [
+        "#62A9D2",
+        "#87929D"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b004_r1_c1_page_white_database.png",
+        "artifacts/icon-modernization/v3/reference-cells/b004_r1_c2_page_white_database@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:80",
+        "qrenderdoc/Windows/Dialogs/VirtualFileDialog.cpp:54",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:103",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:103",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:103",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:103"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "page_white_delete",
+      "source_file": "qrenderdoc/Resources/page_white_delete.png",
+      "source_file_2x": "qrenderdoc/Resources/page_white_delete@2x.png",
+      "source_sha256": "1bf88594685dec69c5ffef3d9cc2b46330d209677030e564d3590f68da79eabd",
+      "source_2x_sha256": "4dd12f00d133e4e27ff85145c08935c6c65fb011643d781fadfb0c040995baca",
+      "qrc_alias": ":/modern/page_white_delete.svg",
+      "semantic": "Remove a document",
+      "category": "files",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": "error",
+      "target_svg": "qrenderdoc/Resources/modern/page_white_delete.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/page_white_delete.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/page_white_delete.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "red"
+      ],
+      "color_variant_source_colors": [
+        "#B4473D",
+        "#87929D"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b004_r1_c3_page_white_delete.png",
+        "artifacts/icon-modernization/v3/reference-cells/b004_r1_c4_page_white_delete@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:81",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:80",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:80",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:80",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:80"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "page_white_edit",
+      "source_file": "qrenderdoc/Resources/page_white_edit.png",
+      "source_file_2x": "qrenderdoc/Resources/page_white_edit@2x.png",
+      "source_sha256": "9f061ebfe8f3322f87afaffabfc8ba114196abd94efe48a7b96f0c8adc9d2cc8",
+      "source_2x_sha256": "a1993ab018813bdd126ddc50782adc4a661e30d686b2685f864930cedc108fe6",
+      "qrc_alias": ":/modern/page_white_edit.svg",
+      "semantic": "Edit a document",
+      "category": "files",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": "warning",
+      "target_svg": "qrenderdoc/Resources/modern/page_white_edit.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/page_white_edit.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/page_white_edit.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "orange"
+      ],
+      "color_variant_source_colors": [
+        "#A76B1D",
+        "#87929D"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b004_r1_c5_page_white_edit.png",
+        "artifacts/icon-modernization/v3/reference-cells/b004_r2_c0_page_white_edit@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:82",
+        "qrenderdoc/Windows/EventBrowser.cpp:4006",
+        "qrenderdoc/Windows/EventBrowser.cpp:6471",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:682",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:1091",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:1497",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:1903",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:2980",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:4147",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:610",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:1058",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:1506",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:1954",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:3096",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:4066",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:4525",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:4967",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:682",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:1189",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:1696",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:2203",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:3690",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:4714",
+        "qrenderdoc/Windows/PipelineState/PipelineStateViewer.cpp:1055",
+        "qrenderdoc/Windows/PipelineState/PipelineStateViewer.cpp:1074",
+        "qrenderdoc/Windows/PipelineState/PipelineStateViewer.cpp:1094",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:605",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:1032",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:1459",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:1886",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:3436",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:4392",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:4911",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:5338",
+        "qrenderdoc/Windows/PythonShell.ui:162",
+        "qrenderdoc/Windows/ResourceInspector.ui:192",
+        "qrenderdoc/Windows/TextureViewer.ui:887"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "page_white_link",
+      "source_file": "qrenderdoc/Resources/page_white_link.png",
+      "source_file_2x": "qrenderdoc/Resources/page_white_link@2x.png",
+      "source_sha256": "0da1f1896b9c5f483c231daee04d50d686a2633f76680fbae4463580e5ad4913",
+      "source_2x_sha256": "15e57ba331fc65ed98067370cce07960b63ab742967b44762ddde9a56fdeb641",
+      "qrc_alias": ":/modern/page_white_link.svg",
+      "semantic": "Link a document",
+      "category": "files",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/page_white_link.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/page_white_link.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/page_white_link.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [],
+      "color_variant_source_colors": [
+        "#87929D"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b004_r2_c1_page_white_link.png",
+        "artifacts/icon-modernization/v3/reference-cells/b004_r2_c2_page_white_link@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:83"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "page_white_stack",
+      "source_file": "qrenderdoc/Resources/page_white_stack.png",
+      "source_file_2x": "qrenderdoc/Resources/page_white_stack@2x.png",
+      "source_sha256": "d1ea66adbd70026df211e552406c8dd80095b4e52328f5631eca4f886be83135",
+      "source_2x_sha256": "75d97a2ea9b5d446c3da9cb791ae4511c459cdf011b95afe7afd3c0681a8e42a",
+      "qrc_alias": ":/modern/page_white_stack.svg",
+      "semantic": "View a stack of documents",
+      "category": "files",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/page_white_stack.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/page_white_stack.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/page_white_stack.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [],
+      "color_variant_source_colors": [
+        "#87929D"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b004_r2_c3_page_white_stack.png",
+        "artifacts/icon-modernization/v3/reference-cells/b004_r2_c4_page_white_stack@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:84",
+        "qrenderdoc/Windows/TextureViewer.ui:487"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "paste",
+      "source_file": "qrenderdoc/Resources/paste.png",
+      "source_file_2x": "qrenderdoc/Resources/paste@2x.png",
+      "source_sha256": "e30575871e562bb4c76b7d974384ab0cd1c6332676aabad5e75ed84250f7702d",
+      "source_2x_sha256": "e87fbeb8b86349821dca47ca806dd6e13acdc8a2d2f405e20663af1b74c0e5e6",
+      "qrc_alias": ":/modern/paste.svg",
+      "semantic": "Paste clipboard data",
+      "category": "files",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/paste.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/paste.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/paste.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "orange",
+        "blue"
+      ],
+      "color_variant_source_colors": [
+        "#000000",
+        "#3C86B8",
+        "#CF7628",
+        "#66717D"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b004_r2_c5_paste.png",
+        "artifacts/icon-modernization/v3/reference-cells/b004_r3_c0_paste@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:85"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "pixel_history",
+      "source_file": "qrenderdoc/Resources/pixel_history.png",
+      "source_file_2x": "qrenderdoc/Resources/pixel_history@2x.png",
+      "source_sha256": "7c027b284c0c08aef0c6228ceedf6468a3c6e62a325e867f46d6338eb158109d",
+      "source_2x_sha256": "ddac987bd5cf9ea9c746bdea6cbfc47ad34569941f61284c2d77867ab8abbe1a",
+      "qrc_alias": ":/modern/pixel_history.svg",
+      "semantic": "Open pixel history",
+      "category": "view",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": true,
+      "semantic_color": "success_current",
+      "target_svg": "qrenderdoc/Resources/modern/pixel_history.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/pixel_history.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/pixel_history.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "green"
+      ],
+      "color_variant_source_colors": [
+        "#000000",
+        "#20A76B"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b004_r3_c1_pixel_history.png",
+        "artifacts/icon-modernization/v3/reference-cells/b004_r3_c2_pixel_history@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:86",
+        "qrenderdoc/Windows/TextureViewer.ui:1209"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "plugin",
+      "source_file": "qrenderdoc/Resources/plugin.png",
+      "source_file_2x": "qrenderdoc/Resources/plugin@2x.png",
+      "source_sha256": "4b5fad4b6719893e465545b7d1d4060fa1df20fcd42865a3ff117f9b5d6016ba",
+      "source_2x_sha256": "70f29c3a2a31557c8efb3c33f9fd3b496bb4639a1b8974e5024d531a15590317",
+      "qrc_alias": ":/modern/plugin.svg",
+      "semantic": "Manage a plugin",
+      "category": "tools",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": "warning",
+      "target_svg": "qrenderdoc/Resources/modern/plugin.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/plugin.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/plugin.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "orange",
+        "yellow"
+      ],
+      "color_variant_source_colors": [
+        "#A76B1D",
+        "#CF7628"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b004_r3_c3_plugin.png",
+        "artifacts/icon-modernization/v3/reference-cells/b004_r3_c4_plugin@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/CaptureContext.cpp:770",
+        "qrenderdoc/Code/CaptureContext.cpp:805",
+        "qrenderdoc/Code/Resources.h:87",
+        "qrenderdoc/Windows/BufferViewer.ui:967",
+        "qrenderdoc/Windows/EventBrowser.ui:187",
+        "qrenderdoc/Windows/MainWindow.cpp:1663",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:146",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:146",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:146",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:149",
+        "qrenderdoc/Windows/TextureViewer.ui:546"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "plugin_add",
+      "source_file": "qrenderdoc/Resources/plugin_add.png",
+      "source_file_2x": "qrenderdoc/Resources/plugin_add@2x.png",
+      "source_sha256": "4060c5a15852540a514934a52946c173f36631a0c81cda6fe464635629c1cd54",
+      "source_2x_sha256": "3e951b298e6af507405a3465c9cf5bb356245e70903d1e56a68e8107ad97f911",
+      "qrc_alias": ":/modern/plugin_add.svg",
+      "semantic": "Add a plugin",
+      "category": "status",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": "success_current",
+      "target_svg": "qrenderdoc/Resources/modern/plugin_add.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/plugin_add.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/plugin_add.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "orange",
+        "green",
+        "yellow"
+      ],
+      "color_variant_source_colors": [
+        "#20A76B",
+        "#A76B1D",
+        "#CF7628"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b004_r3_c5_plugin_add.png",
+        "artifacts/icon-modernization/v3/reference-cells/b005_r0_c0_plugin_add@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:88",
+        "qrenderdoc/Windows/ShaderViewer.ui:455"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "save",
+      "source_file": "qrenderdoc/Resources/save.png",
+      "source_file_2x": "qrenderdoc/Resources/save@2x.png",
+      "source_sha256": "fb5704991813f94a197deb6981f8daddcb1216095591fb71ac0a6386909b9f3a",
+      "source_2x_sha256": "2256e814ed1c9cf712a1b1fa86e8a86dc05753b49377ee84ed70bd25227e9272",
+      "qrc_alias": ":/modern/save.svg",
+      "semantic": "Save the current data",
+      "category": "files",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/save.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/save.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/save.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "blue"
+      ],
+      "color_variant_source_colors": [
+        "#3C86B8"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b005_r0_c1_save.png",
+        "artifacts/icon-modernization/v3/reference-cells/b005_r0_c2_save@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:89",
+        "qrenderdoc/Widgets/BufferFormatSpecifier.ui:199",
+        "qrenderdoc/Windows/BufferViewer.cpp:2495",
+        "qrenderdoc/Windows/BufferViewer.cpp:2497",
+        "qrenderdoc/Windows/BufferViewer.ui:865",
+        "qrenderdoc/Windows/EventBrowser.cpp:4526",
+        "qrenderdoc/Windows/EventBrowser.cpp:4650",
+        "qrenderdoc/Windows/EventBrowser.cpp:6312",
+        "qrenderdoc/Windows/EventBrowser.ui:176",
+        "qrenderdoc/Windows/LogView.ui:96",
+        "qrenderdoc/Windows/PerformanceCounterViewer.ui:124",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:126",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:705",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:1114",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:1520",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:1926",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:3003",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:4170",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:126",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:633",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:1081",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:1529",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:1977",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:3119",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:4089",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:4548",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:4990",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:126",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:705",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:1212",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:1719",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:2226",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:3713",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:4737",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.cpp:544",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.cpp:546",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:126",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:628",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:1055",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:1482",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:1909",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:3459",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:4415",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:4934",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:5361",
+        "qrenderdoc/Windows/PythonShell.ui:202",
+        "qrenderdoc/Windows/ShaderMessageViewer.cpp:64",
+        "qrenderdoc/Windows/ShaderMessageViewer.cpp:69",
+        "qrenderdoc/Windows/ShaderMessageViewer.ui:53",
+        "qrenderdoc/Windows/TextureViewer.ui:470"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "text_add",
+      "source_file": "qrenderdoc/Resources/text_add.png",
+      "source_file_2x": "qrenderdoc/Resources/text_add@2x.png",
+      "source_sha256": "3522393ea23e8fee41299b4f7c8d493aac36ea7c1e5f134a83cfed3f42545ced",
+      "source_2x_sha256": "af68e3c287254b529d84c5dfe4b5b96341a9511b5e58abf95f1a05f130771b7a",
+      "qrc_alias": ":/modern/text_add.svg",
+      "semantic": "Create a text or document item",
+      "category": "files",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": "success_current",
+      "target_svg": "qrenderdoc/Resources/modern/text_add.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/text_add.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/text_add.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "blue",
+        "green"
+      ],
+      "color_variant_source_colors": [
+        "#20A76B",
+        "#3C86B8"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b005_r0_c3_text_add.png",
+        "artifacts/icon-modernization/v3/reference-cells/b005_r0_c4_text_add@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:90",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:648",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:1075",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:1502",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:1929",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:3479",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:4435",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:4954",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:5381"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "tick",
+      "source_file": "qrenderdoc/Resources/tick.png",
+      "source_file_2x": "qrenderdoc/Resources/tick@2x.png",
+      "source_sha256": "88af95df19b8ddffcbe63b38457ac039725b85373d3039ad5393e6503a936b0a",
+      "source_2x_sha256": "db0179654313473577ae3605e1aef538ae23cd46e5e1b14ea897aa1d112cfbd0",
+      "qrc_alias": ":/modern/tick.svg",
+      "semantic": "Confirm or indicate success",
+      "category": "status",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": "success_current",
+      "target_svg": "qrenderdoc/Resources/modern/tick.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/tick.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/tick.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "green",
+        "yellow"
+      ],
+      "color_variant_source_colors": [
+        "#20A76B"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b005_r0_c5_tick.png",
+        "artifacts/icon-modernization/v3/reference-cells/b005_r1_c0_tick@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:91",
+        "qrenderdoc/Windows/EventBrowser.cpp:866",
+        "qrenderdoc/Windows/EventBrowser.cpp:6310",
+        "qrenderdoc/Windows/MainWindow.cpp:1871",
+        "qrenderdoc/Windows/MainWindow.cpp:2000",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.cpp:1136",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.cpp:1233",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.cpp:1137",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.cpp:1235",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.cpp:1231",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.cpp:1391",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:2487",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.cpp:1057",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.cpp:1932"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "time",
+      "source_file": "qrenderdoc/Resources/time.png",
+      "source_file_2x": "qrenderdoc/Resources/time@2x.png",
+      "source_sha256": "e54906f20437da9ff7fbe9b56a8077f490a32bf413b67fb15e7799f7745cd57a",
+      "source_2x_sha256": "c2e070b7a93cd4d1a6781f869fe042d82c1f82ffc4974765e9699bc2c38c7394",
+      "qrc_alias": ":/modern/time.svg",
+      "semantic": "Show timing information",
+      "category": "view",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/time.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/time.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/time.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "blue",
+        "yellow",
+        "orange"
+      ],
+      "color_variant_source_colors": [
+        "#000000",
+        "#3C86B8",
+        "#D0A12A"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b005_r1_c1_time.png",
+        "artifacts/icon-modernization/v3/reference-cells/b005_r1_c2_time@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:92",
+        "qrenderdoc/Windows/EventBrowser.cpp:6315",
+        "qrenderdoc/Windows/EventBrowser.ui:131"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "timeline_marker",
+      "source_file": "qrenderdoc/Resources/timeline_marker.png",
+      "source_file_2x": "qrenderdoc/Resources/timeline_marker@2x.png",
+      "source_sha256": "e7548e173f08d57a4fc2ed70e4b27c175610ed0ce5151a823d810c50a182bf98",
+      "source_2x_sha256": "a3d6fda9a3e7fd31214e6bbc08f04539908b4feb7d54bed811caa5a4b66d04e4",
+      "qrc_alias": ":/modern/timeline_marker.svg",
+      "semantic": "Mark a position on the timeline",
+      "category": "view",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/timeline_marker.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/timeline_marker.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/timeline_marker.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "blue"
+      ],
+      "color_variant_source_colors": [
+        "#000000",
+        "#3C86B8",
+        "#87929D"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b005_r1_c3_timeline_marker.png",
+        "artifacts/icon-modernization/v3/reference-cells/b005_r1_c4_timeline_marker@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:93",
+        "qrenderdoc/Windows/EventBrowser.cpp:6315",
+        "qrenderdoc/Windows/EventBrowser.ui:145",
+        "qrenderdoc/Windows/TextureViewer.ui:1318"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "update",
+      "source_file": "qrenderdoc/Resources/update.png",
+      "source_file_2x": "qrenderdoc/Resources/update@2x.png",
+      "source_sha256": "98d44f4a016329db4d5d37ba9e4c74298755ef2b21c75ed9a7c868034840826d",
+      "source_2x_sha256": "e2ba174bb3105da042d5258afc33abe1c2b940a1a7815a25e612ab3f9b0f3cd6",
+      "qrc_alias": ":/modern/update.svg",
+      "semantic": "Update or reload data",
+      "category": "navigation",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": true,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/update.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/update.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/update.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "blue"
+      ],
+      "color_variant_source_colors": [
+        "#3C86B8",
+        "#62A9D2"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b005_r3_c3_update.png",
+        "artifacts/icon-modernization/v3/reference-cells/b005_r3_c4_update@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:95",
+        "qrenderdoc/Windows/MainWindow.cpp:391"
+      ],
+      "notes": "Two vertically split blue circulating arrows; intentionally distinct from the horizontal green refresh pair"
+    },
+    {
+      "id": "upfolder",
+      "source_file": "qrenderdoc/Resources/upfolder.png",
+      "source_file_2x": "qrenderdoc/Resources/upfolder@2x.png",
+      "source_sha256": "0921bdb488246d7bc0f42a4d4b55aa30def1125a48ebce04e943ed63f7feeaec",
+      "source_2x_sha256": "13b89fa76b5228910cf38c16a9115fcc4c9933f86984fd1ab4f50e18d88c7482",
+      "qrc_alias": ":/modern/upfolder.svg",
+      "semantic": "Move to the parent folder",
+      "category": "navigation",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": true,
+      "semantic_color": "success_current",
+      "target_svg": "qrenderdoc/Resources/modern/upfolder.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/upfolder.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/upfolder.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "yellow",
+        "orange",
+        "green"
+      ],
+      "color_variant_source_colors": [
+        "#000000",
+        "#20A76B",
+        "#D0A12A"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b005_r3_c5_upfolder.png",
+        "artifacts/icon-modernization/v3/reference-cells/b006_r0_c0_upfolder@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:94",
+        "qrenderdoc/Windows/Dialogs/VirtualFileDialog.ui:73"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "wand",
+      "source_file": "qrenderdoc/Resources/wand.png",
+      "source_file_2x": "qrenderdoc/Resources/wand@2x.png",
+      "source_sha256": "aba696dd9612f6f70a6fb286dd6d9ad11deb09c521afb2fb553e8b7306d6eb80",
+      "source_2x_sha256": "c50866f7d558b5b4d17e1b47865a859f300f6b8aa8c1b57cad75c12da43956de",
+      "qrc_alias": ":/modern/wand.svg",
+      "semantic": "Run an automatic helper operation",
+      "category": "tools",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": "warning",
+      "target_svg": "qrenderdoc/Resources/modern/wand.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/wand.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/wand.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "orange",
+        "blue"
+      ],
+      "color_variant_source_colors": [
+        "#000000",
+        "#3C86B8",
+        "#62A9D2",
+        "#CF7628",
+        "#66717D"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b006_r0_c1_wand.png",
+        "artifacts/icon-modernization/v3/reference-cells/b006_r0_c2_wand@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:96",
+        "qrenderdoc/Windows/BufferViewer.ui:257",
+        "qrenderdoc/Windows/TextureViewer.ui:166"
+      ],
+      "notes": "Long neutral shaft with a solid orange tip burst; no short pencil-like body"
+    },
+    {
+      "id": "wireframe_mesh",
+      "source_file": "qrenderdoc/Resources/wireframe_mesh.png",
+      "source_file_2x": "qrenderdoc/Resources/wireframe_mesh@2x.png",
+      "source_sha256": "b60bb4e5e44b83cf76a4c154b58a495a9367a3ac6cc86dd3fa316d9852da74fb",
+      "source_2x_sha256": "effee669b1f3f1b80895534c88e6709771ef3ad72676ae5442fb6711e97ec78c",
+      "qrc_alias": ":/modern/wireframe_mesh.svg",
+      "semantic": "Toggle wireframe mesh display",
+      "category": "view",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/wireframe_mesh.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/wireframe_mesh.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/wireframe_mesh.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [],
+      "color_variant_source_colors": [
+        "#66717D"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b006_r0_c3_wireframe_mesh.png",
+        "artifacts/icon-modernization/v3/reference-cells/b006_r0_c4_wireframe_mesh@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:97",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:514",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:397",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:450",
+        "qrenderdoc/Windows/PipelineState/PipelineStateViewer.cpp:701",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:400"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "wrench",
+      "source_file": "qrenderdoc/Resources/wrench.png",
+      "source_file_2x": "qrenderdoc/Resources/wrench@2x.png",
+      "source_sha256": "0149f17649f85866d19b503c0a75c592d5e6a2bd62cac1a11cbb180ecfcb3f79",
+      "source_2x_sha256": "f4f4770cbd622971ac771d3c04dc774cfd2343b7cfcf7761ae8c45b6559bc67b",
+      "qrc_alias": ":/modern/wrench.svg",
+      "semantic": "Open tools or configuration",
+      "category": "tools",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/wrench.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/wrench.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/wrench.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "blue"
+      ],
+      "color_variant_source_colors": [
+        "#3C86B8"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b006_r0_c5_wrench.png",
+        "artifacts/icon-modernization/v3/reference-cells/b006_r1_c0_wrench@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:98",
+        "qrenderdoc/Widgets/ComputeDebugSelector.ui:106",
+        "qrenderdoc/Windows/BufferViewer.cpp:2503",
+        "qrenderdoc/Windows/BufferViewer.cpp:2506",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:4187",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:4106",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:4754",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:4452",
+        "qrenderdoc/Windows/PixelHistoryView.cpp:917",
+        "qrenderdoc/Windows/ShaderMessageViewer.cpp:118",
+        "qrenderdoc/Windows/ShaderMessageViewer.cpp:216",
+        "qrenderdoc/Windows/TextureViewer.ui:1220"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    },
+    {
+      "id": "zoom",
+      "source_file": "qrenderdoc/Resources/zoom.png",
+      "source_file_2x": "qrenderdoc/Resources/zoom@2x.png",
+      "source_sha256": "912abe6f62e51c4f7431663b8f09fabd254461af44ab7ab10c6e790d20a0e4c7",
+      "source_2x_sha256": "cb5559c81922f0b5708c585e0463c191ebf9d2c5f579715d26b3a1f32964615b",
+      "qrc_alias": ":/modern/zoom.svg",
+      "semantic": "Zoom or inspect closely",
+      "category": "view",
+      "states": [
+        "normal",
+        "hover",
+        "disabled"
+      ],
+      "style": "outline",
+      "symmetry": "none",
+      "direction_sensitive": false,
+      "semantic_color": null,
+      "target_svg": "qrenderdoc/Resources/modern/zoom.svg",
+      "target_svg_color": "qrenderdoc/Resources/modern/color/zoom.svg",
+      "target_svg_mono": "qrenderdoc/Resources/modern/mono/zoom.svg",
+      "color_strategy": "legacy palette reconstruction",
+      "legacy_color_families": [
+        "orange",
+        "blue",
+        "yellow",
+        "cyan"
+      ],
+      "color_variant_source_colors": [
+        "#000000",
+        "#62A9D2",
+        "#CF7628"
+      ],
+      "reference_cells": [
+        "artifacts/icon-modernization/v3/reference-cells/b006_r1_c1_zoom.png",
+        "artifacts/icon-modernization/v3/reference-cells/b006_r1_c2_zoom@2x.png"
+      ],
+      "code_references": [
+        "qrenderdoc/Code/Resources.h:99",
+        "qrenderdoc/Windows/TextureViewer.ui:143"
+      ],
+      "notes": "Preserve the legacy action semantics"
+    }
+  ]
+}

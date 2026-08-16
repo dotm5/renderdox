@@ -24,29 +24,49 @@
 
 #include "StyleData.h"
 #include <QApplication>
+#include <QByteArray>
 #include "Code/QRDUtils.h"
 #include "RDStyle/RDStyle.h"
 #include "RDTweakedNativeStyle/RDTweakedNativeStyle.h"
 
 namespace StyleData
 {
+QString ThemeDescriptor::translatedName() const
+{
+  const QByteArray source = styleName.toUtf8();
+  return QApplication::translate("RDStyle", source.constData());
+}
+
+QString ThemeDescriptor::translatedDescription() const
+{
+  const QByteArray source = styleDescription.toUtf8();
+  return QApplication::translate("RDStyle", source.constData());
+}
+
 const ThemeDescriptor availStyles[] = {
     ThemeDescriptor(
-        lit("RDLight"), QApplication::translate("RDStyle", "Light"),
-        QApplication::translate(
-            "RDStyle", "Light: Cross-platform custom RenderDoc dark theme (black-on-white)."),
+        lit("RDLight"), QString::fromUtf8(QT_TRANSLATE_NOOP("RDStyle", "Modern Light")),
+        QString::fromUtf8(QT_TRANSLATE_NOOP(
+            "RDStyle",
+            "Modern Light: compact light theme with green identity and blue interactions.")),
+        []() { return new RDStyle(RDStyle::LightModern); }),
+
+    ThemeDescriptor(
+        lit("RDLightClassic"), QString::fromUtf8(QT_TRANSLATE_NOOP("RDStyle", "Classic Light")),
+        QString::fromUtf8(QT_TRANSLATE_NOOP(
+            "RDStyle", "Classic Light: original cross-platform RenderDoc light theme.")),
         []() { return new RDStyle(RDStyle::Light); }),
 
     ThemeDescriptor(
-        lit("RDDark"), QApplication::translate("RDStyle", "Dark"),
-        QApplication::translate(
-            "RDStyle", "Dark: Cross-platform custom RenderDoc dark theme (white-on-black)."),
+        lit("RDDark"), QString::fromUtf8(QT_TRANSLATE_NOOP("RDStyle", "Dark")),
+        QString::fromUtf8(QT_TRANSLATE_NOOP(
+            "RDStyle", "Dark: Cross-platform custom RenderDoc dark theme (white-on-black).")),
         []() { return new RDStyle(RDStyle::Dark); }),
 
     ThemeDescriptor(
-        lit("Native"), QApplication::translate("RDStyle", "Native"),
-        QApplication::translate("RDStyle",
-                                "Native: uses the built-in Qt native widgets for your platform."),
+        lit("Native"), QString::fromUtf8(QT_TRANSLATE_NOOP("RDStyle", "Native")),
+        QString::fromUtf8(QT_TRANSLATE_NOOP(
+            "RDStyle", "Native: uses the built-in Qt native widgets for your platform.")),
         []() { return new RDTweakedNativeStyle(NULL); }),
 };
 

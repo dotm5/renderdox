@@ -41,6 +41,9 @@ struct ThemeDescriptor
   QString styleName;
   QString styleDescription;
   std::function<QStyle *()> creator;
+
+  QString translatedName() const;
+  QString translatedDescription() const;
 };
 
 extern const ThemeDescriptor availStyles[];

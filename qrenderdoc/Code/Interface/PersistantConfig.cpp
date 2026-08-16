@@ -238,6 +238,9 @@ void PersistantConfig::applyValues(const QVariantMap &values)
 
   CONFIG_SETTINGS()
 
+  if(UILanguage != "system" && UILanguage != "en" && UILanguage != "zh_CN")
+    UILanguage = "system";
+
 // backwards compatibility code, to apply old values.
 #define RENAMED_SETTING(variantType, oldName, newName) \
   if(values.contains(lit(#oldName)))                   \
@@ -443,11 +446,18 @@ void PersistantConfig::UpdateEnumeratedProtocolDevices()
 
 bool PersistantConfig::SetStyle()
 {
+  // RDLightModern was used by early opt-in builds of the refreshed theme. RDLight now carries the
+  // modern light appearance so existing light-theme configurations receive the upgrade without a
+  // manual settings change. Keep the old appearance available explicitly as RDLightClassic.
+  if(UIStyle == "RDLightModern")
+    UIStyle = "RDLight";
+
   for(int i = 0; i < StyleData::numAvailable; i++)
   {
     if(UIStyle == rdcstr(StyleData::availStyles[i].styleID))
     {
       QStyle *style = StyleData::availStyles[i].creator();
+      qApp->setProperty("RDModernLight", UIStyle == "RDLight");
       Formatter::setPalette(style->standardPalette());
       QApplication::setStyle(style);
       return true;

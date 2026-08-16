@@ -402,6 +402,8 @@ FORMS    += Windows/Dialogs/AboutDialog.ui \
 
 RESOURCES += Resources/resources.qrc
 
+TRANSLATIONS += Translations/qrenderdoc_zh_CN.ts
+
 # Add ToolWindowManager
 
 SOURCES += 3rdparty/toolwindowmanager/ToolWindowManager.cpp \

@@ -682,6 +682,14 @@ void RDTreeView::drawRow(QPainter *painter, const QStyleOptionViewItem &options,
   {
     QPen p = painter->pen();
 
+    if(property("RDModernLight").toBool())
+    {
+      painter->setPen(QPen(options.palette.color(QPalette::Light), 1.0));
+      painter->drawLine(options.rect.bottomLeft(), options.rect.bottomRight());
+      painter->setPen(p);
+      return;
+    }
+
     QColor back = options.palette.color(QPalette::Active, QPalette::Background);
     QColor fore = options.palette.color(QPalette::Active, QPalette::Foreground);
 

@@ -2813,14 +2813,40 @@ void Formatter::setParams(const PersistantConfig &config)
 
   m_OffsetSizeDisplayMode = config.Formatter_OffsetSizeDisplayMode;
 
+#if defined(DCOMP_PLATFORM_WIN32)
+  // Qt 5 can resolve its empty Windows UI font to a legacy bitmap-oriented family on some
+  // locales. Keep explicit user choices untouched, but use the standard Windows UI face for the
+  // default so the whole widget hierarchy gets modern ClearType rendering from one place.
+  if(!m_Font && config.Font_Family.isEmpty())
+  {
+    QFontDatabase fontdb;
+    if(fontdb.families().contains(lit("Segoe UI")))
+    {
+      QFont appFont = QApplication::font();
+      appFont.setFamily(lit("Segoe UI"));
+      QApplication::setFont(appFont);
+    }
+  }
+#endif
+
   if(!m_Font)
   {
     m_Font = new QFont();
     m_FontBaseSize = QApplication::font().pointSizeF();
     m_FixedFont = new QFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+#if defined(DCOMP_PLATFORM_WIN32)
+    if(config.Font_MonoFamily.isEmpty())
+    {
+      QFontDatabase fontdb;
+      if(fontdb.families().contains(lit("Cascadia Mono")))
+        m_FixedFont->setFamily(lit("Cascadia Mono"));
+      else if(fontdb.families().contains(lit("Consolas")))
+        m_FixedFont->setFamily(lit("Consolas"));
+    }
+#endif
     m_FixedFontBaseSize = m_FixedFont->pointSizeF();
     m_DefaultFontFamily = QApplication::font().family();
-    m_DefaultMonoFontFamily = QFontDatabase::systemFont(QFontDatabase::FixedFont).family();
+    m_DefaultMonoFontFamily = m_FixedFont->family();
   }
 
   // this is only used for display to the user
@@ -2859,8 +2885,20 @@ void Formatter::setParams(const PersistantConfig &config)
 
 void Formatter::setPalette(QPalette palette)
 {
-  m_DarkChecker = palette.color(QPalette::Mid);
-  m_LightChecker = m_DarkChecker.lighter(150);
+  // The modern light theme specifies a deliberately low-contrast checkerboard so transparent
+  // texture areas don't overpower the inspected image. Other themes retain their established
+  // palette-derived checker colours.
+  if(palette.color(QPalette::Window) == QColor(0xF7, 0xF9, 0xFB) &&
+     palette.color(QPalette::Link) == QColor(0x47, 0x7E, 0xAA))
+  {
+    m_DarkChecker = QColor(0xE6, 0xEA, 0xED);
+    m_LightChecker = QColor(0xF8, 0xFA, 0xFB);
+  }
+  else
+  {
+    m_DarkChecker = palette.color(QPalette::Mid);
+    m_LightChecker = m_DarkChecker.lighter(150);
+  }
 
   DCOMP_SetColors(m_DarkChecker, m_LightChecker, IsDarkTheme());
 }

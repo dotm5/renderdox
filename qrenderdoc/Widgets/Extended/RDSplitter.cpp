@@ -64,6 +64,56 @@ bool RDSplitterHandle::collapsed() const
 
 void RDSplitterHandle::paintEvent(QPaintEvent *event)
 {
+  if(property("RDModernLight").toBool())
+  {
+    if(m_title.isEmpty())
+    {
+      QSplitterHandle::paintEvent(event);
+      return;
+    }
+
+    QPainter painter(this);
+    painter.fillRect(rect(), palette().brush(QPalette::Window));
+    painter.setRenderHint(QPainter::Antialiasing, true);
+
+    painter.setPen(QPen(palette().color(QPalette::Light), 1.0));
+    if(orientation() == Qt::Vertical)
+      painter.drawLine(rect().topLeft(), rect().topRight());
+    else
+      painter.drawLine(rect().topLeft(), rect().bottomLeft());
+
+    painter.setPen(palette().color(QPalette::LinkVisited));
+    const QRect titleRect = orientation() == Qt::Vertical ? rect().adjusted(22, 0, -8, 0) : rect();
+    painter.drawText(titleRect, Qt::AlignLeft | Qt::AlignVCenter, m_title);
+
+    if(m_parent->childrenCollapsible())
+    {
+      bool arrowUpLeft = (m_index == 0);
+      if(m_isCollapsed)
+        arrowUpLeft = !arrowUpLeft;
+
+      painter.setPen(QPen(palette().color(QPalette::LinkVisited), 1.5, Qt::SolidLine,
+                          Qt::RoundCap, Qt::RoundJoin));
+
+      if(orientation() == Qt::Vertical)
+      {
+        const QPoint centre(11, height() / 2);
+        const int direction = arrowUpLeft ? -1 : 1;
+        painter.drawLine(centre + QPoint(-4, -2 * direction), centre);
+        painter.drawLine(centre, centre + QPoint(4, -2 * direction));
+      }
+      else
+      {
+        const QPoint centre(width() / 2, 11);
+        const int direction = arrowUpLeft ? -1 : 1;
+        painter.drawLine(centre + QPoint(-2 * direction, -4), centre);
+        painter.drawLine(centre, centre + QPoint(-2 * direction, 4));
+      }
+    }
+
+    return;
+  }
+
   QPainter painter(this);
   QColor col = palette().color(QPalette::WindowText);
   painter.setPen(col);

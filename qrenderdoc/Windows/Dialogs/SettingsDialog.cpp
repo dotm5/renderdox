@@ -25,10 +25,19 @@
 #include "SettingsDialog.h"
 #include <float.h>
 #include <math.h>
+#include <QDialogButtonBox>
+#include <QFrame>
 #include <QFontDatabase>
+#include <QGridLayout>
 #include <QKeyEvent>
+#include <QLabel>
+#include <QListWidget>
+#include <QPushButton>
+#include <QScrollArea>
+#include <QSizePolicy>
 #include <QTextEdit>
 #include <QToolButton>
+#include <QVBoxLayout>
 #include "Code/Interface/QRDInterface.h"
 #include "Code/QRDUtils.h"
 #include "Styles/StyleData.h"
@@ -45,6 +54,8 @@ SettingsDialog::SettingsDialog(ICaptureContext &ctx, QWidget *parent)
 
   m_Init = true;
 
+  setupModernGeneralPage();
+
   m_ReplayOptions = new ReplayOptionsSelector(m_Ctx, false, this);
 
   ui->replayOptionsLayout->insertWidget(0, m_ReplayOptions);
@@ -52,13 +63,13 @@ SettingsDialog::SettingsDialog(ICaptureContext &ctx, QWidget *parent)
   QString styleChooseTooltip = ui->UIStyle->toolTip();
 
   for(int i = 0; i < StyleData::numAvailable; i++)
-    styleChooseTooltip += lit("<br>- ") + StyleData::availStyles[i].styleDescription;
+    styleChooseTooltip += lit("<br>- ") + StyleData::availStyles[i].translatedDescription();
 
   ui->UIStyle->setToolTip(styleChooseTooltip);
   ui->UIStyle_label->setToolTip(styleChooseTooltip);
 
   for(int i = 0; i < StyleData::numAvailable; i++)
-    ui->UIStyle->addItem(StyleData::availStyles[i].styleName);
+    ui->UIStyle->addItem(StyleData::availStyles[i].translatedName());
 
   QFontDatabase fontdb;
 
@@ -141,6 +152,8 @@ SettingsDialog::SettingsDialog(ICaptureContext &ctx, QWidget *parent)
   for(int i = 0; i < ui->tabWidget->count(); i++)
     ui->pages->addItem(ui->tabWidget->tabText(i));
 
+  setupNavigationIcons();
+
   for(int i = 0; i < (int)TimeUnit::Count; i++)
   {
     ui->EventBrowser_TimeUnit->addItem(UnitSuffix((TimeUnit)i));
@@ -148,15 +161,23 @@ SettingsDialog::SettingsDialog(ICaptureContext &ctx, QWidget *parent)
 
   for(int i = 0; i < (int)OffsetSizeDisplayMode::Count; i++)
   {
-    ui->Formatter_OffsetSizeDisplayMode->addItem((ToStr((OffsetSizeDisplayMode)i)));
+    QString displayName;
+    switch((OffsetSizeDisplayMode)i)
+    {
+      case OffsetSizeDisplayMode::Auto: displayName = tr("Auto"); break;
+      case OffsetSizeDisplayMode::Decimal: displayName = tr("Decimal"); break;
+      case OffsetSizeDisplayMode::Hexadecimal: displayName = tr("Hexadecimal"); break;
+      default: displayName = ToQStr((OffsetSizeDisplayMode)i); break;
+    }
+
+    ui->Formatter_OffsetSizeDisplayMode->addItem(displayName);
   }
 
   ui->pages->clearSelection();
   ui->pages->item(0)->setSelected(true);
   ui->tabWidget->setCurrentIndex(0);
 
-  ui->pages->setMinimumWidth(ui->pages->sizeHintForColumn(0));
-  ui->pages->adjustSize();
+  ui->pages->setFixedWidth(208);
 
   for(int i = 0; i < StyleData::numAvailable; i++)
   {
@@ -292,10 +313,13 @@ SettingsDialog::SettingsDialog(ICaptureContext &ctx, QWidget *parent)
   }
 #else
   ui->analyticsDescribeLabel->setText(tr("Analytics was disabled at compile time."));
+  ui->analyticsDescribeLabel->setProperty("uiRole", lit("settingsInfo"));
 
-  ui->analyticsAutoSubmit->setEnabled(false);
-  ui->analyticsManualCheck->setEnabled(false);
-  ui->analyticsOptOut->setEnabled(false);
+  // Keep the controls and their state model intact, but collapse the three meaningless disabled
+  // choices when analytics support was compiled out.
+  ui->analyticsAutoSubmit->hide();
+  ui->analyticsManualCheck->hide();
+  ui->analyticsOptOut->hide();
 #endif
 
   ui->AllowGlobalHook->setChecked(m_Ctx.Config().AllowGlobalHook);
@@ -355,6 +379,284 @@ SettingsDialog::~SettingsDialog()
     m_Ctx.RefreshStatus();
 
   delete ui;
+}
+
+void SettingsDialog::setupModernGeneralPage()
+{
+  setMinimumSize(1040, 720);
+  resize(1080, 760);
+
+  ui->gridLayout->setContentsMargins(0, 0, 0, 12);
+  ui->gridLayout->setHorizontalSpacing(0);
+  ui->gridLayout->setVerticalSpacing(8);
+
+  ui->pages->setFrameShape(QFrame::NoFrame);
+  ui->pages->setProperty("uiRole", lit("settingsSidebar"));
+  ui->pages->setIconSize(QSize(18, 18));
+  ui->pages->setSpacing(2);
+  ui->pages->setFixedWidth(208);
+
+  ui->tabWidget->setProperty("uiRole", lit("settingsPages"));
+  ui->okButton->setContentsMargins(12, 0, 12, 0);
+
+  if(QPushButton *ok = ui->okButton->button(QDialogButtonBox::Ok))
+  {
+    ok->setText(tr("OK"));
+    ok->setProperty("buttonRole", lit("primary"));
+    ok->setMinimumSize(88, 34);
+  }
+
+  // The generated UI retains every established setting widget and objectName. Reparenting those
+  // widgets into semantic cards keeps auto-connected slots, focusItem(), platform guards and
+  // configuration bindings stable while replacing only the presentation structure.
+  ui->verticalLayout_3->removeWidget(ui->groupBox);
+  ui->verticalLayout_3->removeWidget(ui->groupBox_9);
+
+  QScrollArea *scrollArea = new QScrollArea(ui->general);
+  scrollArea->setObjectName(lit("generalSettingsScroll"));
+  scrollArea->setFrameShape(QFrame::NoFrame);
+  scrollArea->setWidgetResizable(true);
+  scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+  scrollArea->setProperty("uiRole", lit("settingsPage"));
+
+  QWidget *scrollHost = new QWidget(scrollArea);
+  scrollHost->setObjectName(lit("generalSettingsScrollHost"));
+  scrollHost->setProperty("uiRole", lit("settingsPage"));
+
+  QHBoxLayout *hostLayout = new QHBoxLayout(scrollHost);
+  hostLayout->setContentsMargins(24, 20, 24, 24);
+  hostLayout->setSpacing(0);
+
+  QWidget *page = new QWidget(scrollHost);
+  page->setObjectName(lit("generalSettingsPage"));
+  page->setMaximumWidth(920);
+  page->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+  page->setProperty("uiRole", lit("settingsPage"));
+
+  QVBoxLayout *pageLayout = new QVBoxLayout(page);
+  pageLayout->setContentsMargins(0, 0, 0, 0);
+  pageLayout->setSpacing(16);
+
+  QLabel *pageTitle = new QLabel(tr("General"), page);
+  pageTitle->setObjectName(lit("generalPageTitle"));
+  pageTitle->setProperty("typographyRole", lit("pageTitle"));
+  QFont pageTitleFont = pageTitle->font();
+  pageTitleFont.setWeight(QFont::DemiBold);
+  if(pageTitleFont.pointSizeF() > 0.0)
+    pageTitleFont.setPointSizeF(pageTitleFont.pointSizeF() * 1.28);
+  pageTitle->setFont(pageTitleFont);
+  pageLayout->addWidget(pageTitle);
+
+  QLabel *pageDescription =
+      new QLabel(tr("Interface appearance, formatting, capture storage, security, and privacy."),
+                 page);
+  pageDescription->setObjectName(lit("generalPageDescription"));
+  pageDescription->setProperty("typographyRole", lit("secondary"));
+  pageDescription->setWordWrap(true);
+  pageLayout->addWidget(pageDescription);
+
+  auto createCard = [page, pageLayout](const QString &objectName, const QString &title,
+                                        const QString &helper) {
+    QFrame *card = new QFrame(page);
+    card->setObjectName(objectName);
+    card->setFrameShape(QFrame::StyledPanel);
+    card->setFrameShadow(QFrame::Plain);
+    card->setProperty("uiRole", lit("settingsCard"));
+    card->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+
+    QVBoxLayout *layout = new QVBoxLayout(card);
+    layout->setContentsMargins(18, 16, 18, 18);
+    layout->setSpacing(10);
+
+    QLabel *heading = new QLabel(title, card);
+    heading->setObjectName(objectName + lit("Title"));
+    heading->setProperty("typographyRole", lit("sectionTitle"));
+    QFont headingFont = heading->font();
+    headingFont.setWeight(QFont::Medium);
+    heading->setFont(headingFont);
+    layout->addWidget(heading);
+
+    if(!helper.isEmpty())
+    {
+      QLabel *hint = new QLabel(helper, card);
+      hint->setObjectName(objectName + lit("Hint"));
+      hint->setProperty("typographyRole", lit("secondary"));
+      hint->setWordWrap(true);
+      layout->addWidget(hint);
+    }
+
+    pageLayout->addWidget(card);
+    return layout;
+  };
+
+  auto configureGrid = [](QGridLayout *layout) {
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setHorizontalSpacing(24);
+    layout->setVerticalSpacing(8);
+    layout->setColumnMinimumWidth(0, 288);
+    layout->setColumnStretch(1, 1);
+  };
+
+  auto prepareControl = [](QWidget *control, int maximumWidth = 420) {
+    control->setMinimumHeight(34);
+    control->setMaximumWidth(maximumWidth);
+    control->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    control->setProperty("uiRole", lit("settingsControl"));
+  };
+
+  auto addSettingRow = [&prepareControl](QGridLayout *layout, int row, QLabel *label,
+                                         QWidget *control) {
+    label->setMinimumHeight(40);
+    label->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    label->setWordWrap(true);
+    prepareControl(control);
+    layout->addWidget(label, row, 0);
+    layout->addWidget(control, row, 1, Qt::AlignVCenter);
+  };
+
+  ui->UIStyle_label->setText(tr("Visual theme of the UI"));
+  ui->label_20->setText(tr("Default font family"));
+  ui->label_21->setText(tr("Monospaced font family"));
+  ui->label_27->setText(tr("Global font scale"));
+  ui->label_9->setText(tr("Prefer monospaced fonts in UI"));
+
+  QVBoxLayout *appearance = createCard(
+      lit("appearanceCard"), tr("Appearance"),
+      tr("Language and font changes take effect after restart."));
+  QGridLayout *appearanceGrid = new QGridLayout();
+  configureGrid(appearanceGrid);
+  appearance->addLayout(appearanceGrid);
+
+  QLabel *languageLabel = new QLabel(tr("Interface language"), page);
+  languageLabel->setObjectName(lit("UILanguage_label"));
+  m_UILanguage = new QComboBox(page);
+  m_UILanguage->setObjectName(lit("UILanguage"));
+  m_UILanguage->addItem(tr("Use system language"), lit("system"));
+  m_UILanguage->addItem(tr("English"), lit("en"));
+  m_UILanguage->addItem(tr("Simplified Chinese"), lit("zh_CN"));
+
+  QString configuredLanguage = m_Ctx.Config().UILanguage;
+  if(configuredLanguage != lit("system") && configuredLanguage != lit("en") &&
+     configuredLanguage != lit("zh_CN"))
+    configuredLanguage = lit("system");
+  int languageIndex = m_UILanguage->findData(configuredLanguage);
+  m_UILanguage->setCurrentIndex(qMax(0, languageIndex));
+
+  addSettingRow(appearanceGrid, 0, ui->UIStyle_label, ui->UIStyle);
+  addSettingRow(appearanceGrid, 1, languageLabel, m_UILanguage);
+  addSettingRow(appearanceGrid, 2, ui->label_20, ui->Font_Family);
+  addSettingRow(appearanceGrid, 3, ui->label_21, ui->Font_MonoFamily);
+  addSettingRow(appearanceGrid, 4, ui->label_27, ui->Font_GlobalScale);
+  addSettingRow(appearanceGrid, 5, ui->label_9, ui->Font_PreferMonospaced);
+  ui->Font_PreferMonospaced->setMaximumWidth(34);
+
+  QObject::connect(m_UILanguage, OverloadedSlot<int>::of(&QComboBox::currentIndexChanged), this,
+                   &SettingsDialog::UILanguage_currentIndexChanged);
+
+  QVBoxLayout *numberFormatting =
+      createCard(lit("numberFormattingCard"), tr("Number Formatting"), QString());
+  QGridLayout *numberGrid = new QGridLayout();
+  configureGrid(numberGrid);
+  numberFormatting->addLayout(numberGrid);
+  addSettingRow(numberGrid, 0, ui->label, ui->Formatter_MinFigures);
+  addSettingRow(numberGrid, 1, ui->label_2, ui->Formatter_MaxFigures);
+  addSettingRow(numberGrid, 2, ui->label_3, ui->Formatter_NegExp);
+  addSettingRow(numberGrid, 3, ui->label_4, ui->Formatter_PosExp);
+  addSettingRow(numberGrid, 4, ui->label_41, ui->Formatter_OffsetSizeDisplayMode);
+
+  QVBoxLayout *captureLocations =
+      createCard(lit("captureLocationsCard"), tr("Capture Locations"), QString());
+  QGridLayout *captureGrid = new QGridLayout();
+  captureGrid->setContentsMargins(0, 0, 0, 0);
+  captureGrid->setHorizontalSpacing(12);
+  captureGrid->setVerticalSpacing(8);
+  captureGrid->setColumnMinimumWidth(0, 288);
+  captureGrid->setColumnStretch(1, 1);
+  captureLocations->addLayout(captureGrid);
+
+  auto addPathRow = [](QGridLayout *layout, int row, QLabel *label, QLineEdit *path,
+                       QPushButton *browse) {
+    label->setMinimumHeight(40);
+    label->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    label->setWordWrap(true);
+    path->setMinimumHeight(34);
+    path->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    path->setProperty("uiRole", lit("settingsPath"));
+    path->setFont(Formatter::FixedFont());
+    browse->setText(SettingsDialog::tr("Browse..."));
+    browse->setFixedSize(88, 34);
+    browse->setProperty("uiRole", lit("settingsControl"));
+    layout->addWidget(label, row, 0);
+    layout->addWidget(path, row, 1, Qt::AlignVCenter);
+    layout->addWidget(browse, row, 2, Qt::AlignVCenter);
+  };
+  addPathRow(captureGrid, 0, ui->label_5, ui->tempDirectory,
+             ui->browseTempCaptureDirectory);
+  addPathRow(captureGrid, 1, ui->label_6, ui->saveDirectory,
+             ui->browseSaveCaptureDirectory);
+
+  QVBoxLayout *advanced =
+      createCard(lit("advancedSecurityCard"), tr("Advanced & Security"), QString());
+  QGridLayout *advancedGrid = new QGridLayout();
+  advancedGrid->setContentsMargins(0, 0, 0, 0);
+  advancedGrid->setHorizontalSpacing(12);
+  advancedGrid->setVerticalSpacing(4);
+  advancedGrid->setColumnMinimumWidth(0, 22);
+  advancedGrid->setColumnStretch(1, 1);
+  advanced->addLayout(advancedGrid);
+
+  auto addToggleRow = [](QGridLayout *layout, int row, QCheckBox *toggle, QLabel *label) {
+    toggle->setMinimumSize(18, 40);
+    toggle->setMaximumWidth(24);
+    toggle->setProperty("uiRole", lit("settingsControl"));
+    label->setMinimumHeight(40);
+    label->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    label->setWordWrap(true);
+    layout->addWidget(toggle, row, 0, Qt::AlignTop);
+    layout->addWidget(label, row, 1);
+  };
+  addToggleRow(advancedGrid, 0, ui->AllowGlobalHook, ui->globalHookLabel);
+  addToggleRow(advancedGrid, 1, ui->AllowProcessInject, ui->injectProcLabel);
+  addToggleRow(advancedGrid, 2, ui->CheckUpdate_AllowChecks, ui->label_8);
+  addToggleRow(advancedGrid, 3, ui->AlwaysReplayLocally, ui->label_10);
+
+  QVBoxLayout *privacy =
+      createCard(lit("privacyAnalyticsCard"), tr("Privacy & Analytics"), QString());
+  ui->analyticsDescribeLabel->setWordWrap(true);
+  ui->analyticsDescribeLabel->setProperty("typographyRole", lit("secondary"));
+  privacy->addWidget(ui->analyticsDescribeLabel);
+  privacy->addWidget(ui->analyticsAutoSubmit);
+  privacy->addWidget(ui->analyticsManualCheck);
+  privacy->addWidget(ui->analyticsOptOut);
+
+  pageLayout->addStretch(1);
+  hostLayout->addStretch(1);
+  hostLayout->addWidget(page, 1);
+  hostLayout->addStretch(1);
+  scrollArea->setWidget(scrollHost);
+  ui->verticalLayout_3->addWidget(scrollArea);
+
+  ui->line->hide();
+  ui->groupBox->hide();
+  ui->groupBox_9->hide();
+}
+
+void SettingsDialog::setupNavigationIcons()
+{
+  const char *icons[] = {
+      ":/modern/mono/cog.svg",          ":/modern/mono/wrench.svg",
+      ":/modern/mono/control_play_blue.svg", ":/modern/mono/checkerboard.svg",
+      ":/modern/mono/page_white_code.svg",   ":/modern/mono/action.svg",
+      ":/modern/mono/text_add.svg",     ":/modern/mono/connect.svg",
+  };
+
+  for(int i = 0; i < ui->pages->count(); i++)
+  {
+    QListWidgetItem *item = ui->pages->item(i);
+    item->setSizeHint(QSize(0, 40));
+    if(i < int(sizeof(icons) / sizeof(icons[0])))
+      item->setIcon(QIcon(QString::fromLatin1(icons[i])));
+  }
 }
 
 void SettingsDialog::focusItem(QString item)
@@ -446,6 +748,19 @@ void SettingsDialog::Font_GlobalScale_returnPressed()
 
   m_Ctx.Config().SetupFormatting();
 
+  m_Ctx.Config().Save();
+}
+
+void SettingsDialog::UILanguage_currentIndexChanged(int index)
+{
+  if(m_Init || !m_UILanguage || index < 0)
+    return;
+
+  const QString languageId = m_UILanguage->itemData(index).toString();
+  if(languageId != lit("system") && languageId != lit("en") && languageId != lit("zh_CN"))
+    return;
+
+  m_Ctx.Config().UILanguage = languageId;
   m_Ctx.Config().Save();
 }
 
