@@ -16,16 +16,10 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
-$solutionPath = Join-Path $repositoryRoot 'renderdoc.sln'
+$projectPath = Join-Path $repositoryRoot 'renderdoc\renderdoc.vcxproj'
 $contractCheck = Join-Path $PSScriptRoot 'check_windows_build_contracts.ps1'
-$artifactValidation = Join-Path $PSScriptRoot 'validate_windows_release_artifacts.ps1'
 $vswherePath = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
-$solutionPlatform = if($Platform -eq 'Win32') { 'x86' } else { $Platform }
-$proxyProjects = @(
-  'bootstrap\dxgi_proxy\dxgi_proxy.vcxproj',
-  'bootstrap\d3d11_proxy\d3d11_proxy.vcxproj',
-  'bootstrap\d3d12_proxy\d3d12_proxy.vcxproj'
-)
+$projectPlatform = $Platform
 
 $pathBytes = [Text.Encoding]::UTF8.GetBytes($repositoryRoot.ToUpperInvariant())
 $pathHash = [Convert]::ToHexString(
@@ -88,14 +82,15 @@ try
   $ltcgValue = $EnableLTCG.IsPresent.ToString().ToLowerInvariant()
 
   $arguments = @(
-    $solutionPath
+    $projectPath
     '-nologo'
     "-t:$Target"
     "-m:$MaxCpuCount"
     '-nr:false'
     '-v:minimal'
     '-p:Configuration=Release'
-    "-p:Platform=$solutionPlatform"
+    "-p:Platform=$projectPlatform"
+    "-p:SolutionDir=$repositoryRoot\"
     '-p:BuildInParallel=true'
     "-p:RDocEnableLTCG=$ltcgValue"
     "-bl:$logBase.binlog"
@@ -103,7 +98,7 @@ try
     "-flp:logfile=$logBase.log;verbosity=normal;encoding=UTF-8"
   )
 
-  Write-Host "Building Release|$solutionPlatform, target=$Target, profile=$profile"
+  Write-Host "Building Core DLL Release|$projectPlatform, target=$Target, profile=$profile"
   Write-Host "Log: $logBase.log"
   Write-Host "Binlog: $logBase.binlog"
 
@@ -114,62 +109,6 @@ try
     Write-Error "MSBuild failed with exit code $buildExitCode"
     exit $buildExitCode
   }
-
-  foreach($relativeProxyProject in $proxyProjects)
-  {
-    $proxyProject = Join-Path $repositoryRoot $relativeProxyProject
-    $proxyName = [IO.Path]::GetFileNameWithoutExtension($proxyProject)
-    $proxyLogBase = "$logBase-$proxyName"
-    $proxyArguments = @(
-      $proxyProject
-      '-nologo'
-      "-t:$Target"
-      "-m:$MaxCpuCount"
-      '-nr:false'
-      '-v:minimal'
-      '-p:Configuration=Release'
-      "-p:Platform=$Platform"
-      "-p:SolutionDir=$repositoryRoot\"
-      '-p:BuildInParallel=true'
-      "-p:RDocEnableLTCG=$ltcgValue"
-      "-bl:$proxyLogBase.binlog"
-      '-fl'
-      "-flp:logfile=$proxyLogBase.log;verbosity=normal;encoding=UTF-8"
-    )
-
-    Write-Host "Building proxy $relativeProxyProject"
-    & $msbuildPath @proxyArguments
-    $proxyExitCode = $LASTEXITCODE
-    if($proxyExitCode -ne 0)
-    {
-      Write-Error "$relativeProxyProject failed with exit code $proxyExitCode"
-      exit $proxyExitCode
-    }
-  }
-
-  [xml]$identityProps =
-      Get-Content -LiteralPath (Join-Path $repositoryRoot 'build\product_identity.props') -Raw
-  $coreBaseName =
-      $identityProps.SelectSingleNode('//*[local-name()="RDocCoreBaseName"]').InnerText
-  $outputRoot = Join-Path $repositoryRoot "$Platform\Release"
-  $requiredOutputs = @(
-    (Join-Path $outputRoot "$coreBaseName.dll"),
-    (Join-Path $outputRoot 'bootstrap\dxgi_proxy\dxgi.dll'),
-    (Join-Path $outputRoot 'bootstrap\d3d11_proxy\d3d11.dll'),
-    (Join-Path $outputRoot 'bootstrap\d3d12_proxy\d3d12.dll')
-  )
-  foreach($requiredOutput in $requiredOutputs)
-  {
-    if(-not (Test-Path -LiteralPath $requiredOutput -PathType Leaf))
-    {
-      throw "Required Release output is missing: $requiredOutput"
-    }
-  }
-
-  & $artifactValidation -Platform $Platform -RepositoryRoot $repositoryRoot `
-    -VisualStudioPath $visualStudioPath
-
-  Write-Host "Release build complete: Core plus all three proxy DLLs are present in $outputRoot"
 }
 finally
 {

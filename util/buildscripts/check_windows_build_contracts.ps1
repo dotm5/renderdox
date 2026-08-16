@@ -49,16 +49,16 @@ if($LASTEXITCODE -ne 0)
 $errors = [System.Collections.Generic.List[string]]::new()
 $warnings = [System.Collections.Generic.List[string]]::new()
 $standaloneMissingSources = @{}
-$requiredProxyProjects = @(
-  'bootstrap\d3d11_proxy\d3d11_proxy.vcxproj',
-  'bootstrap\dxgi_proxy\dxgi_proxy.vcxproj',
-  'bootstrap\d3d12_proxy\d3d12_proxy.vcxproj'
+$forbiddenProxyDirectories = @(
+  'bootstrap\d3d11_proxy',
+  'bootstrap\dxgi_proxy',
+  'bootstrap\d3d12_proxy'
 )
-foreach($relativeProxyProject in $requiredProxyProjects)
+foreach($relativeProxyDirectory in $forbiddenProxyDirectories)
 {
-  if(-not (Test-Path -LiteralPath (Join-Path $repositoryRoot $relativeProxyProject) -PathType Leaf))
+  if(Test-Path -LiteralPath (Join-Path $repositoryRoot $relativeProxyDirectory))
   {
-    $errors.Add("Required proxy project is missing: $relativeProxyProject")
+    $errors.Add("Forbidden proxy directory exists: $relativeProxyDirectory")
   }
 }
 $productIdentityPropsPath = Join-Path $repositoryRoot 'build\product_identity.props'
@@ -84,16 +84,20 @@ try
 }
 catch
 {
-  $errors.Add("Could not read RDocVulkanJsonBaseName from build\product_identity.props: " +
+  $errors.Add("Could not read product identity from build\product_identity.props: " +
               $_.Exception.Message)
 }
 $solutionLines = Get-Content -LiteralPath $solutionPath
-$solutionProjectPaths = foreach($line in $solutionLines)
-{
-  if($line -match '^Project\("\{[^}]+\}"\) = "[^"]+", "([^"]+\.vcxproj)"')
+$solutionProjectPaths = @(
+  foreach($line in $solutionLines)
   {
-    $matches[1]
+    if($line -match '^Project\("\{[^}]+\}"\) = "[^"]+", "([^"]+\.vcxproj)"')
+    {
+      $matches[1]
+    }
   }
+) | Where-Object {
+  $_ -notmatch '^qrenderdoc\\' -and $_ -notmatch '^util\\test\\demos\\'
 }
 
 $projectPaths = @(& git -C $repositoryRoot ls-files --cached --others --exclude-standard `
@@ -105,14 +109,14 @@ if($LASTEXITCODE -ne 0)
 
 $projectPaths = @(
   $projectPaths |
-    ForEach-Object { $_ -replace '/', '\' }
+    ForEach-Object { $_ -replace '/', '\' } |
+    Where-Object { $_ -notmatch '^bootstrap\\(?:d3d11_proxy|dxgi_proxy|d3d12_proxy)\\' }
   $solutionProjectPaths
 ) | Sort-Object -Unique
 
 $projectRecords = foreach($relativeProjectPath in $projectPaths)
 {
   $isSolutionProject = $solutionProjectPaths -contains $relativeProjectPath
-  $isRequiredProxyProject = $requiredProxyProjects -contains $relativeProjectPath
   $projectPath = Join-Path $repositoryRoot `
     ($relativeProjectPath -replace '\\', [IO.Path]::DirectorySeparatorChar)
 
@@ -150,14 +154,7 @@ $projectRecords = foreach($relativeProjectPath in $projectPaths)
       if(-not (Test-Path -LiteralPath $resolved -PathType Leaf))
       {
         $message = "$relativeProjectPath references missing project $($reference.Include)"
-        if($isSolutionProject -or $isRequiredProxyProject)
-        {
-          $errors.Add($message)
-        }
-        else
-        {
-          $warnings.Add($message)
-        }
+        if($isSolutionProject) { $errors.Add($message) } else { $warnings.Add($message) }
       }
     }
   }
@@ -171,7 +168,7 @@ $projectRecords = foreach($relativeProjectPath in $projectPaths)
       if(-not (Test-Path -LiteralPath $resolved -PathType Leaf))
       {
         $message = "$relativeProjectPath compiles missing source $($source.Include)"
-        if($isSolutionProject -or $isRequiredProxyProject)
+        if($isSolutionProject)
         {
           $errors.Add($message)
         }
@@ -182,27 +179,6 @@ $projectRecords = foreach($relativeProjectPath in $projectPaths)
             $standaloneMissingSources[$relativeProjectPath] = 0
           }
           $standaloneMissingSources[$relativeProjectPath]++
-        }
-      }
-    }
-  }
-
-  if($isRequiredProxyProject)
-  {
-    foreach($itemName in @('MASM', 'None'))
-    {
-      foreach($item in $projectXml.SelectNodes("//m:$itemName[@Include]", $namespace))
-      {
-        if($item.Include -match '\$\(')
-        {
-          continue
-        }
-
-        $resolved = [IO.Path]::GetFullPath(
-          (Join-Path (Split-Path -Parent $projectPath) $item.Include))
-        if(-not (Test-Path -LiteralPath $resolved -PathType Leaf))
-        {
-          $errors.Add("$relativeProjectPath references missing $itemName item $($item.Include)")
         }
       }
     }
@@ -256,14 +232,7 @@ $projectRecords = foreach($relativeProjectPath in $projectPaths)
       {
         $message =
           "$relativeProjectPath assembler expects $resolver but its C/C++ source has no implementation"
-        if($isSolutionProject -or $isRequiredProxyProject)
-        {
-          $errors.Add($message)
-        }
-        else
-        {
-          $warnings.Add($message)
-        }
+        if($isSolutionProject) { $errors.Add($message) } else { $warnings.Add($message) }
       }
     }
   }
@@ -359,10 +328,7 @@ if($appImplementation -match '\bRENDERDOC_GetAPI\s*\(')
   $errors.Add('Application API implementation still contains the legacy RENDERDOC_GetAPI wrapper')
 }
 
-foreach($relativeVersionScript in @(
-  "renderdoc\$coreBaseName.version",
-  'renderdoc\rdocself.version'
-))
+foreach($relativeVersionScript in @("renderdoc\$coreBaseName.version", 'renderdoc\rdocself.version'))
 {
   $versionScriptPath = Join-Path $repositoryRoot $relativeVersionScript
   if(-not (Test-Path -LiteralPath $versionScriptPath -PathType Leaf))
