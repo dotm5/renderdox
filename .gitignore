@@ -54,3 +54,8 @@ qrenderdoc/3rdparty/pyside
 .DS_Store
 plugins-*/
 __pycache__
+
+# Local-only analysis and validation evidence
+/reports/
+/docs/dgcore-injection-success-route-*.md
+/docs/renderdoc-v145-full-release-conflict-audit-*.md
