@@ -51,9 +51,10 @@ while replay uses the effective child state. Drawcall and Wireframe overlays
 collect only matching leaf draws that write the displayed target. Selecting an
 individual child keeps the ordinary single-action overlay path.
 
-The parent/child map is available as
-`reports/multiaction-action-map.json`. Unsupported mixed work remains visible
-as individual children instead of receiving a guessed parent state.
+The validation command can emit the parent/child map as
+`multiaction-action-map.json` below the selected local output directory.
+Unsupported mixed work remains visible as individual children instead of
+receiving a guessed parent state.
 
 ## Draw Evidence Package
 

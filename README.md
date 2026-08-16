@@ -76,7 +76,7 @@ pwsh -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass `
   -Target Rebuild -ChildPropagation OneGeneration
 ```
 
-See [Compiling.md](docs/CONTRIBUTING/Compiling.md) for the upstream platform requirements and [the RenderDox release audit](docs/renderdoc-v145-full-release-conflict-audit-20260816.md) for the downstream Windows build boundary.
+See [Compiling.md](docs/CONTRIBUTING/Compiling.md) for the upstream platform requirements. The matrix command above defines the downstream Windows Release boundary.
 
 Contributing & Development
 --------------
