@@ -1,0 +1,47 @@
+#include "../renderdoc/api/replay/version.h"
+#include "../renderdoc/generated/product_identity.h"
+#include <winresrc.h>
+
+#if defined(RDOC_SHIM_RESOURCE_64)
+#define RDOC_SHIM_PE_INTERNAL_NAME RDOC_SHIM64_FILENAME
+#define RDOC_SHIM_PE_ORIGINAL_FILENAME RDOC_SHIM64_FILENAME
+#else
+#define RDOC_SHIM_PE_INTERNAL_NAME RDOC_SHIM32_FILENAME
+#define RDOC_SHIM_PE_ORIGINAL_FILENAME RDOC_SHIM32_FILENAME
+#endif
+
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_UK
+#pragma code_page(1252)
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION RENDERDOC_VERSION_MAJOR,RENDERDOC_VERSION_MINOR,0,0
+ PRODUCTVERSION RENDERDOC_VERSION_MAJOR,RENDERDOC_VERSION_MINOR,0,0
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x40004L
+ FILETYPE 0x2L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "080904b0"
+        BEGIN
+            VALUE "CompanyName", "Baldur Karlsson"
+            VALUE "FileDescription", RDOC_SHIM_FILE_DESCRIPTION
+            VALUE "FileVersion", MAJOR_MINOR_VERSION_STRING ".0.0"
+            VALUE "InternalName", RDOC_SHIM_PE_INTERNAL_NAME
+            VALUE "LegalCopyright", "Copyright (c) 2026 Baldur Karlsson"
+            VALUE "OriginalFilename", RDOC_SHIM_PE_ORIGINAL_FILENAME
+            VALUE "ProductName", RDOC_PRODUCT_DISPLAY_NAME
+            VALUE "ProductVersion", FULL_VERSION_STRING
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x809, 1200
+    END
+END

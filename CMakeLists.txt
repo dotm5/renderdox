@@ -109,7 +109,9 @@ set(VULKAN_JSON_SUFFIX "" CACHE STRING "Suffix for the vulkan implicit_layer jso
 
 option(INTERNAL_SELF_CAPTURE "Internal option: enable self-capture" OFF)
 
-set(RDOC_BASE_NAME "dgcore")
+include("${CMAKE_CURRENT_SOURCE_DIR}/build/product_identity.cmake")
+
+set(RDOC_BASE_NAME "${RDOC_PRODUCT_CORE_BASE_NAME}")
 if(INTERNAL_SELF_CAPTURE)
     set(RDOC_BASE_NAME "rdocself")
     add_definitions(-DRDOC_SELFCAPTURE_LIMITEDAPI=1)

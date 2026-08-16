@@ -20,7 +20,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>RenderDoc Bug Reporter</string>
+   <string>Bug Reporter</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_4">
    <property name="spacing">
@@ -199,7 +199,7 @@
          </font>
         </property>
         <property name="text">
-         <string>RenderDoc Bug Reporter</string>
+         <string>Bug Reporter</string>
         </property>
        </widget>
       </item>

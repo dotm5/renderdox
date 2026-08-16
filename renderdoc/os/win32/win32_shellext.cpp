@@ -29,6 +29,7 @@
 
 #include <thumbcache.h>
 #include <windows.h>
+#include "../../generated/product_identity.h"
 #include "common/common.h"
 #include "common/dds_readwrite.h"
 #include "compressonator/CMP_Core.h"
@@ -41,11 +42,7 @@
 
 #include "stb/stb_image_resize2.h"
 
-// {5D6BF029-A6BA-417A-8523-120492B1DCE3}
-static const GUID CLSID_RDCThumbnailProvider = {0x5d6bf029,
-                                                0xa6ba,
-                                                0x417a,
-                                                {0x85, 0x23, 0x12, 0x4, 0x92, 0xb1, 0xdc, 0xe3}};
+static const GUID CLSID_RDCThumbnailProvider = RDOC_THUMBNAIL_HANDLER_CLSID_INITIALIZER;
 
 unsigned int numProviders = 0;
 

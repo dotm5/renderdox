@@ -6,4 +6,7 @@
   <ItemGroup>
     <ClInclude Include="renderdocshim.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="renderdocshim.rc" />
+  </ItemGroup>
 </Project>

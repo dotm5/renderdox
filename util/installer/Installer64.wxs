@@ -1,10 +1,11 @@
 <?xml version='1.0' encoding='windows-1252'?>
 <Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
-  <Product Name='RenderDoc' Id='*' UpgradeCode='D320753C-4B18-4905-A752-E68959943E7D'
+  <?include product_identity.wxi?>
+  <Product Name='$(var.RDocProductDisplayName)' Id='*' UpgradeCode='$(var.RDocInstallerUpgradeCode)'
     Language='1033' Codepage='1252' Version='$(env.RENDERDOC_VERSION).0' Manufacturer='Baldur Karlsson'>
 
-    <Package Id='*' Keywords='Installer' Description="Installer for RenderDoc"
-      Comments='RenderDoc Homepage is http://renderdoc.org/' Platform="x64" Manufacturer='Baldur Karlsson'
+    <Package Id='*' Keywords='Installer' Description="Installer for $(var.RDocProductDisplayName)"
+      Comments='$(var.RDocProductDisplayName) is derived from RenderDoc: https://renderdoc.org/' Platform="x64" Manufacturer='Baldur Karlsson'
       InstallerVersion='301' Languages='1033' Compressed='yes' SummaryCodepage='1252' />
 
     <InstallExecuteSequence>
@@ -15,7 +16,7 @@
 
     <Property Id="REINSTALLMODE" Value="amus"/> 
 
-    <Upgrade Id="D320753C-4B18-4905-A752-E68959943E7D">
+    <Upgrade Id="$(var.RDocInstallerUpgradeCode)">
       <UpgradeVersion Minimum="0.18.0"
         IncludeMinimum="yes"
         IncludeMaximum="yes"
@@ -29,54 +30,54 @@
     </Condition>
 
     <Media Id='1' Cabinet='renderdoc.cab' EmbedCab='yes' CompressionLevel='high' DiskPrompt="CD-ROM #1" />
-    <Property Id='DiskPrompt' Value="RenderDoc Installation [1]" />
+    <Property Id='DiskPrompt' Value="$(var.RDocProductDisplayName) Installation [1]" />
 
     <Directory Id='TARGETDIR' Name='SourceDir'>
       <Directory Id='ProgramFiles64Folder' Name='PFiles'>
-        <Directory Id='INSTALLDIR' Name='RenderDoc'>
+        <Directory Id='INSTALLDIR' Name='$(var.RDocProductDisplayName)'>
 
-          <Component Id='QRenderDoc' Win64="yes" Guid='44398F0D-3FE3-470A-A137-BDFDFE82353D'>
-            <File Id='qrenderdocEXE' Name='dgcoreui.exe' DiskId='1' Source='dist/Release64/dgcoreui.exe' KeyPath='yes'>
-              <Shortcut Id="startmenuRenderDoc" Directory="ProgramMenuDir" Name="RenderDoc" WorkingDirectory='INSTALLDIR' Icon="icon.ico" IconIndex="0" Advertise="yes" />
+          <Component Id='QRenderDoc' Win64="yes" Guid='*'>
+            <File Id='qrenderdocEXE' Name='$(var.RDocUIFilename)' DiskId='1' Source='dist/Release64/$(var.RDocUIFilename)' KeyPath='yes'>
+              <Shortcut Id="startmenuRenderDoc" Directory="ProgramMenuDir" Name="$(var.RDocProductDisplayName)" WorkingDirectory='INSTALLDIR' Icon="icon.ico" IconIndex="0" Advertise="yes" />
             </File>
 
             <RegistryValue Root="HKLM" Id="VerbRDC" Action="write"
-              Key="Software\Classes\RenderDoc.RDCCapture.1\shell\open\command"
+              Key="Software\Classes\$(var.RDocCaptureProgId)\shell\open\command"
               Value='"[#qrenderdocEXE]" "%1"'
               Type="expandable" />
             <RegistryValue Root="HKLM" Id="VerbDescRDC" Action="write"
-              Key="Software\Classes\RenderDoc.RDCCapture.1"
-              Value='RenderDoc Capture Log (.rdc)'
+              Key="Software\Classes\$(var.RDocCaptureProgId)"
+              Value='$(var.RDocProductDisplayName) Capture Log (.rdc)'
               Type="expandable" />
             <RegistryValue Root="HKLM" Id="VerbIconRDC" Action="write"
-              Key="Software\Classes\RenderDoc.RDCCapture.1\DefaultIcon"
+              Key="Software\Classes\$(var.RDocCaptureProgId)\DefaultIcon"
               Value='[#qrenderdocEXE]'
               Type="expandable" />
             <RegistryValue Root="HKLM" Id="RDCProgIDCLSID" Action="write"
-              Key="Software\Classes\RenderDoc.RDCCapture.1\CLSID"
-              Value='{5D6BF029-A6BA-417A-8523-120492B1DCE3}'
+              Key="Software\Classes\$(var.RDocCaptureProgId)\CLSID"
+              Value='{$(var.RDocThumbnailHandlerClsid)}'
               Type="expandable" />
 
             <RegistryValue Root="HKLM" Id="VerbCAP" Action="write"
-              Key="Software\Classes\RenderDoc.RDCSettings.1\shell\open\command"
+              Key="Software\Classes\$(var.RDocSettingsProgId)\shell\open\command"
               Value='"[#qrenderdocEXE]" "%1"'
               Type="expandable" />
             <RegistryValue Root="HKLM" Id="VerbDescCAP" Action="write"
-              Key="Software\Classes\RenderDoc.RDCSettings.1"
-              Value='RenderDoc Capture Settings (.cap)'
+              Key="Software\Classes\$(var.RDocSettingsProgId)"
+              Value='$(var.RDocProductDisplayName) Capture Settings (.cap)'
               Type="expandable" />
             <RegistryValue Root="HKLM" Id="VerbIconCAP" Action="write"
-              Key="Software\Classes\RenderDoc.RDCSettings.1\DefaultIcon"
+              Key="Software\Classes\$(var.RDocSettingsProgId)\DefaultIcon"
               Value='[#qrenderdocEXE]'
               Type="expandable" />
 
           </Component>
 
-          <Component Id='RenderDocCPP' Win64="yes" Guid='9D5949F9-0447-47B6-829D-77465E1FDAD9'>
-            <File Id='RenderDocCPP' Name='dgcore.dll' DiskId='1' Source='dist/Release64/dgcore.dll' KeyPath='yes' />
-            <File Id='RenderDocJSON' Name='dgcore.json' DiskId='1' Source='dist/Release64/dgcore.json' />
+          <Component Id='RenderDocCPP' Win64="yes" Guid='*'>
+            <File Id='RenderDocCPP' Name='$(var.RDocCoreFilename)' DiskId='1' Source='dist/Release64/$(var.RDocCoreFilename)' KeyPath='yes' />
+            <File Id='RenderDocJSON' Name='$(var.RDocVulkanJsonFilename)' DiskId='1' Source='dist/Release64/$(var.RDocVulkanJsonFilename)' />
             <File Id='D3DCompiler47DLL64' Name='d3dcompiler_47.dll' DiskId='1' Source='dist/Release64/d3dcompiler_47.dll' />
-            <File Id='RenderDocSHIM' Name='dgcoreshim64.dll' DiskId='1' Source='dist/Release64/dgcoreshim64.dll' />
+            <File Id='RenderDocSHIM' Name='$(var.RDocShim64Filename)' DiskId='1' Source='dist/Release64/$(var.RDocShim64Filename)' />
             <File Id='dbghelpDLL' Name='dbghelp.dll' DiskId='1' Source='dist/Release64/dbghelp.dll' />
             <File Id='symsrvDLL' Name='symsrv.dll' DiskId='1' Source='dist/Release64/symsrv.dll' />
             <File Id='symsrvYES' Name='symsrv.yes' DiskId='1' Source='dist/Release64/symsrv.yes' />
@@ -84,11 +85,11 @@
             <File Id='RenderDocAPIheader' Name='renderdoc_app.h' DiskId='1' Source='dist/Release64/renderdoc_app.h' />
 
             <RegistryValue Root="HKLM" Id="RDCCLSID" Action="write"
-              Key="Software\Classes\CLSID\{5D6BF029-A6BA-417A-8523-120492B1DCE3}"
-              Value='RenderDoc Thumbnail Handler'
+              Key="Software\Classes\CLSID\{$(var.RDocThumbnailHandlerClsid)}"
+              Value='$(var.RDocProductDisplayName) Thumbnail Handler'
               Type="expandable" />
             <RegistryValue Root="HKLM" Id="RDCCLSIDServer" Action="write"
-              Key="Software\Classes\CLSID\{5D6BF029-A6BA-417A-8523-120492B1DCE3}\InprocServer32"
+              Key="Software\Classes\CLSID\{$(var.RDocThumbnailHandlerClsid)}\InprocServer32"
               Value='[#RenderDocCPP]'
               Type="expandable" />
 
@@ -99,15 +100,15 @@
               Type="integer" />
           </Component>
 
-          <Component Id='LICENSE' Win64="yes" Guid='71534ACB-DF6B-4956-A14C-566925D77AB0'>
+          <Component Id='LICENSE' Win64="yes" Guid='*'>
             <File Id='LICENSE' Name='LICENSE.rtf' DiskId='1' Source='util/installer/LICENSE.rtf' KeyPath='yes' />
           </Component>
 
-          <Component Id='RenderDocCMD' Win64="yes" Guid='3443061F-2B11-4661-8535-4319D97B375C'>
-            <File Id='RenderDocCMD' Name='dgcorecmd.exe' DiskId='1' Source='dist/Release64/dgcorecmd.exe' KeyPath='yes' />
+          <Component Id='RenderDocCMD' Win64="yes" Guid='*'>
+            <File Id='RenderDocCMD' Name='$(var.RDocCommandFilename)' DiskId='1' Source='dist/Release64/$(var.RDocCommandFilename)' KeyPath='yes' />
           </Component>
 
-          <Component Id='Qt' Win64="yes" Guid='E1BC516F-F611-4C7B-8F3E-A459F026FC4E'>
+          <Component Id='Qt' Win64="yes" Guid='*'>
             <File Id='Qt5Core' Name='Qt5Core.dll' DiskId='1' Source='dist/Release64/Qt5Core.dll' KeyPath='yes' />
             <File Id='Qt5Gui' Name='Qt5Gui.dll' DiskId='1' Source='dist/Release64/Qt5Gui.dll' />
             <File Id='Qt5Network' Name='Qt5Network.dll' DiskId='1' Source='dist/Release64/Qt5Network.dll' />
@@ -117,14 +118,14 @@
             <File Id='libssl' Name='libssl-1_1-x64.dll' DiskId='1' Source='dist/Release64/libssl-1_1-x64.dll' />
           </Component>
 
-          <Component Id='Python' Win64="yes" Guid='CE2C9D5B-9040-47C7-8E42-B79B52AE93EB'>
+          <Component Id='Python' Win64="yes" Guid='*'>
             <File Id='Python36' Name='python36.dll' DiskId='1' Source='dist/Release64/python36.dll' KeyPath='yes' />
             <File Id='PythonLibsZIP' Name='python36.zip' DiskId='1' Source='dist/Release64/python36.zip' />
             <File Id='CTypes' Name='_ctypes.pyd' DiskId='1' Source='dist/Release64/_ctypes.pyd' />
             <File Id='Shiboken2' Name='shiboken2.dll' DiskId='1' Source='dist/Release64/shiboken2.dll' />
           </Component>
 
-          <Component Id='Documentation' Win64="yes" Guid='C49ABF1D-1D73-469B-A44A-DD9470E85F19'>
+          <Component Id='Documentation' Win64="yes" Guid='*'>
             <File Id='Documentation' Name='renderdoc.chm' DiskId='1' Source='dist/Release64/renderdoc.chm' KeyPath='yes'>
               <Shortcut Id="startmenuDocs" Directory="ProgramMenuDir" Name="RenderDoc Documentation" Icon='chm.ico' Advertise="yes" />
             </File>
@@ -132,20 +133,20 @@
 
           <Directory Id='qtplugins' Name='qtplugins'>
             <Directory Id='qtplugins_imageformats' Name='imageformats'>
-              <Component Id='qt_imgplugin' Win64="yes" Guid='4346BD2C-4005-47FF-BEE7-9C30978EF7E5'>
+              <Component Id='qt_imgplugin' Win64="yes" Guid='*'>
                 <File Id='qsvg' Name='qsvg.dll' DiskId='1' Source='dist/Release64/qtplugins/imageformats/qsvg.dll' KeyPath='yes' />
               </Component>
             </Directory>
 
             <Directory Id='qtplugins_platform' Name='platforms'>
-              <Component Id='qt_platplugin' Win64="yes" Guid='9C12C689-DFAE-4958-8CEE-D573867B2E98'>
+              <Component Id='qt_platplugin' Win64="yes" Guid='*'>
                 <File Id='qwindows' Name='qwindows.dll' DiskId='1' Source='dist/Release64/qtplugins/platforms/qwindows.dll' KeyPath='yes' />
               </Component>
             </Directory>
           </Directory>
 
           <Directory Id='PySide2' Name='PySide2'>
-            <Component Id='PySide2Deps' Win64="yes" Guid='A864541A-DDC3-4149-B03F-A48B7ED16DAB'>
+            <Component Id='PySide2Deps' Win64="yes" Guid='*'>
               <File Id='pyside2dll' Name='pyside2.dll' DiskId='1' Source='dist/Release64/PySide2/pyside2.dll' KeyPath='yes' />
               <File Id='PS2QtCore' Name='QtCore.pyd' DiskId='1' Source='dist/Release64/PySide2/QtCore.pyd' />
               <File Id='PS2QtGui' Name='QtGui.pyd' DiskId='1' Source='dist/Release64/PySide2/QtGui.pyd' />
@@ -158,7 +159,7 @@
           <Directory Id='plugins' Name='plugins'>
             <Directory Id='plugins_amd' Name='amd'>
               <Directory Id='plugins_amd_isa' Name='isa'>
-                <Component Id='gcn_plugin' Win64="yes" Guid='02B13D5B-DA43-4AFF-B35B-CF4A241C2CEE'>
+                <Component Id='gcn_plugin' Win64="yes" Guid='*'>
                   <File Id='amdspvEXE' Name='amdspv.exe' DiskId='1' Source='dist/Release64/plugins/amd/isa/amdspv.exe' KeyPath='yes' />
                   <File Id='spvgenDLL' Name='spvgen.dll' DiskId='1' Source='dist/Release64/plugins/amd/isa/spvgen.dll' />
                   <File Id='virtualcontextEXE' Name='VirtualContext.exe' DiskId='1' Source='dist/Release64/plugins/amd/isa/VirtualContext.exe' />
@@ -166,19 +167,19 @@
               </Directory>
               
               <Directory Id='plugins_amd_rgp' Name='rgp'>
-                <Component Id='rgp_plugin' Win64="yes" Guid='6F6ED705-A22F-4CE7-BC12-86332BC5263D'>
+                <Component Id='rgp_plugin' Win64="yes" Guid='*'>
                   <File Id='amdrgpDLL' Name='DevDriverAPI-x64.dll' DiskId='1' Source='dist/Release64/plugins/amd/rgp/DevDriverAPI-x64.dll' KeyPath='yes' />
                 </Component>
               </Directory>
               
               <Directory Id='plugins_amd_ags' Name='ags'>
-                <Component Id='ags_plugin' Win64="yes" Guid='B7BD4CB6-0823-4EA0-8A86-A77CBA2BE6B0'>
+                <Component Id='ags_plugin' Win64="yes" Guid='*'>
                   <File Id='amdagsDLL' Name='amd_ags_x64.dll' DiskId='1' Source='dist/Release64/plugins/amd/ags/amd_ags_x64.dll' KeyPath='yes' />
                 </Component>
               </Directory>
 
               <Directory Id='plugins_amd_counters' Name='counters'>
-                <Component Id='gpa_plugin' Win64="yes" Guid='F248EE26-5919-4F9B-8727-6C2CEFA0DC2C'>
+                <Component Id='gpa_plugin' Win64="yes" Guid='*'>
                   <File Id='GPUPerfAPICountersx64' Name='GPUPerfAPICounters-x64.dll' DiskId='1' Source='dist/Release64/plugins/amd/counters/GPUPerfAPICounters-x64.dll' KeyPath='yes' />
                   <File Id='GPUPerfAPIDX11x64' Name='GPUPerfAPIDX11-x64.dll' DiskId='1' Source='dist/Release64/plugins/amd/counters/GPUPerfAPIDX11-x64.dll' />
                   <File Id='GPUPerfAPIDX12x64' Name='GPUPerfAPIDX12-x64.dll' DiskId='1' Source='dist/Release64/plugins/amd/counters/GPUPerfAPIDX12-x64.dll' />
@@ -189,7 +190,7 @@
             </Directory>
 
             <Directory Id='plugins_android' Name='android'>
-              <Component Id='android_plugin' Win64="yes" Guid='328B7D53-1323-4D9B-8966-3D8567E3723B'>
+              <Component Id='android_plugin' Win64="yes" Guid='*'>
                 <File Id='APKarm32' Name='org.renderdoc.renderdoccmd.arm32.apk' DiskId='1' Source='dist/Release64/plugins/android/org.renderdoc.renderdoccmd.arm32.apk' KeyPath='yes' />
                 <File Id='APKarm64' Name='org.renderdoc.renderdoccmd.arm64.apk' DiskId='1' Source='dist/Release64/plugins/android/org.renderdoc.renderdoccmd.arm64.apk' />
                 <File Id='adb' Name='adb.exe' DiskId='1' Source='dist/Release64/plugins/android/adb.exe' />
@@ -199,13 +200,13 @@
             </Directory>
 
             <Directory Id='plugins_d3d12' Name='d3d12'>
-              <Component Id='d3d12_plugin' Win64="yes" Guid='383E6D55-F140-44E3-91B5-E98EEAAB28A7'>
+              <Component Id='d3d12_plugin' Win64="yes" Guid='*'>
                 <File Id='dxcompiler' Name='dxcompiler.dll' DiskId='1' Source='dist/Release64/plugins/d3d12/dxcompiler.dll' KeyPath='yes' />
               </Component>
             </Directory>
 
             <Directory Id='plugins_spirv' Name='spirv'>
-              <Component Id='spirv_plugin' Win64="yes" Guid='15566608-0D77-42D2-9B6C-D43698C4C46D'>
+              <Component Id='spirv_plugin' Win64="yes" Guid='*'>
                 <File Id='spirvcross' Name='spirv-cross.exe' DiskId='1' Source='dist/Release64/plugins/spirv/spirv-cross.exe' KeyPath='yes' />
                 <File Id='spirvdis' Name='spirv-dis.exe' DiskId='1' Source='dist/Release64/plugins/spirv/spirv-dis.exe' />
                 <File Id='spirvas' Name='spirv-as.exe' DiskId='1' Source='dist/Release64/plugins/spirv/spirv-as.exe' />
@@ -215,11 +216,11 @@
           </Directory>
 
           <Directory Id='renderdocX86' Name='x86'>
-            <Component Id='renderdocX86Bins' Win64="yes" Guid='EB58A048-899A-4239-B229-DA9781C431F8'>
-              <File Id='renderdocX86DLL' Name='dgcore.dll' DiskId='1' Source='dist/Release64/x86/dgcore.dll' KeyPath='yes' />
-              <File Id='renderdocX86JSON' Name='dgcore.json' DiskId='1' Source='dist/Release64/x86/dgcore.json' />
-              <File Id='renderdocshimX86DLL' Name='dgcoreshim32.dll' DiskId='1' Source='dist/Release64/x86/dgcoreshim32.dll' />
-              <File Id='renderdocX86CMD' Name='dgcorecmd.exe' DiskId='1' Source='dist/Release64/x86/dgcorecmd.exe' />
+            <Component Id='renderdocX86Bins' Win64="yes" Guid='*'>
+              <File Id='renderdocX86DLL' Name='$(var.RDocCoreFilename)' DiskId='1' Source='dist/Release64/x86/$(var.RDocCoreFilename)' KeyPath='yes' />
+              <File Id='renderdocX86JSON' Name='$(var.RDocVulkanJsonFilename)' DiskId='1' Source='dist/Release64/x86/$(var.RDocVulkanJsonFilename)' />
+              <File Id='renderdocshimX86DLL' Name='$(var.RDocShim32Filename)' DiskId='1' Source='dist/Release64/x86/$(var.RDocShim32Filename)' />
+              <File Id='renderdocX86CMD' Name='$(var.RDocCommandFilename)' DiskId='1' Source='dist/Release64/x86/$(var.RDocCommandFilename)' />
               <File Id='dbghelp32DLL' Name='dbghelp.dll' DiskId='1' Source='dist/Release64/x86/dbghelp.dll' />
               <File Id='symsrv32DLL' Name='symsrv.dll' DiskId='1' Source='dist/Release64/x86/symsrv.dll' />
               <File Id='symsrv32YES' Name='symsrv.yes' DiskId='1' Source='dist/Release64/x86/symsrv.yes' />
@@ -227,11 +228,11 @@
               <File Id='D3DCompiler47DLL32' Name='d3dcompiler_47.dll' DiskId='1' Source='dist/Release64/x86/d3dcompiler_47.dll' />
 
               <RegistryValue Root="HKLM" Id="RDCCLSID32" Action="write"
-                Key="Software\Wow6432Node\Classes\CLSID\{5D6BF029-A6BA-417A-8523-120492B1DCE3}"
-                Value='RenderDoc Thumbnail Handler'
+                Key="Software\Wow6432Node\Classes\CLSID\{$(var.RDocThumbnailHandlerClsid)}"
+                Value='$(var.RDocProductDisplayName) Thumbnail Handler'
                 Type="expandable" />
               <RegistryValue Root="HKLM" Id="RDCCLSIDServer32" Action="write"
-                Key="Software\Wow6432Node\Classes\CLSID\{5D6BF029-A6BA-417A-8523-120492B1DCE3}\InprocServer32"
+                Key="Software\Wow6432Node\Classes\CLSID\{$(var.RDocThumbnailHandlerClsid)}\InprocServer32"
                 Value='[#renderdocX86DLL]'
                 Type="expandable" />
 
@@ -249,85 +250,85 @@
       </Directory>
 
       <Directory Id="ProgramMenuFolder" Name="Programs">
-        <Directory Id="ProgramMenuDir" Name="RenderDoc">
-          <Component Id="ProgramMenuDir" Guid="D0755B01-F8D5-4DFE-8D21-DA4ED84B555D">
+        <Directory Id="ProgramMenuDir" Name="$(var.RDocProductDisplayName)">
+          <Component Id="ProgramMenuDir" Guid="*">
             <RemoveFolder Id='ProgramMenuDir' On='uninstall' />
             <RegistryValue Root='HKCU' Key='Software\[Manufacturer]\[ProductName]' Type='string' Value='' KeyPath='yes' />
           </Component>
         </Directory>
       </Directory>
-      <Component Id="ImageOpenWith" Guid="BD518767-45FB-412F-86E8-E741AAA48906">
+      <Component Id="ImageOpenWith" Guid="*">
         <RegistryValue Root="HKLM" Id="RDCOpenWithCommand" Action="write" KeyPath='yes'
-          Key="Software\Classes\Applications\dgcoreui.exe\shell\open\command"
+          Key="Software\Classes\Applications\$(var.RDocUIFilename)\shell\open\command"
           Value='"[#qrenderdocEXE]" "%1"'
           Type="string" />
 
         <RegistryValue Root="HKLM" Id="RDCOpenWithDDS" Action="write"
-          Key="Software\Classes\Applications\dgcoreui.exe\SupportedTypes"
+          Key="Software\Classes\Applications\$(var.RDocUIFilename)\SupportedTypes"
           Name='.dds'  Value='' Type="string" />
         <RegistryValue Root="HKLM" Id="RDCOpenWithHDR" Action="write"
-          Key="Software\Classes\Applications\dgcoreui.exe\SupportedTypes"
+          Key="Software\Classes\Applications\$(var.RDocUIFilename)\SupportedTypes"
           Name='.hdr'  Value='' Type="string" />
         <RegistryValue Root="HKLM" Id="RDCOpenWithJPG" Action="write"
-          Key="Software\Classes\Applications\dgcoreui.exe\SupportedTypes"
+          Key="Software\Classes\Applications\$(var.RDocUIFilename)\SupportedTypes"
           Name='.jpg'  Value='' Type="string" />
         <RegistryValue Root="HKLM" Id="RDCOpenWithJPEG" Action="write"
-          Key="Software\Classes\Applications\dgcoreui.exe\SupportedTypes"
+          Key="Software\Classes\Applications\$(var.RDocUIFilename)\SupportedTypes"
           Name='.jpeg'  Value='' Type="string" />
         <RegistryValue Root="HKLM" Id="RDCOpenWithPNG" Action="write"
-          Key="Software\Classes\Applications\dgcoreui.exe\SupportedTypes"
+          Key="Software\Classes\Applications\$(var.RDocUIFilename)\SupportedTypes"
           Name='.png'  Value='' Type="string" />
         <RegistryValue Root="HKLM" Id="RDCOpenWithEXR" Action="write"
-          Key="Software\Classes\Applications\dgcoreui.exe\SupportedTypes"
+          Key="Software\Classes\Applications\$(var.RDocUIFilename)\SupportedTypes"
           Name='.exr'  Value='' Type="string" />
         <RegistryValue Root="HKLM" Id="RDCOpenWithTGA" Action="write"
-          Key="Software\Classes\Applications\dgcoreui.exe\SupportedTypes"
+          Key="Software\Classes\Applications\$(var.RDocUIFilename)\SupportedTypes"
           Name='.tga'  Value='' Type="string" />
         <RegistryValue Root="HKLM" Id="RDCOpenWithBMP" Action="write"
-          Key="Software\Classes\Applications\dgcoreui.exe\SupportedTypes"
+          Key="Software\Classes\Applications\$(var.RDocUIFilename)\SupportedTypes"
           Name='.bmp'  Value='' Type="string" />
         <RegistryValue Root="HKLM" Id="RDCOpenWithGIF" Action="write"
-          Key="Software\Classes\Applications\dgcoreui.exe\SupportedTypes"
+          Key="Software\Classes\Applications\$(var.RDocUIFilename)\SupportedTypes"
           Name='.gif'  Value='' Type="string" />
         <RegistryValue Root="HKLM" Id="RDCOpenWithPSD" Action="write"
-          Key="Software\Classes\Applications\dgcoreui.exe\SupportedTypes"
+          Key="Software\Classes\Applications\$(var.RDocUIFilename)\SupportedTypes"
           Name='.psd'  Value='' Type="string" />
         <RegistryValue Root="HKLM" Id="RDCOpenWithProgidDDS" Action="write"
-          Key="Software\Classes\.dds\OpenWithProgids" Name='RenderDoc.RDCCapture.1'  Value='' Type="string" />
+          Key="Software\Classes\.dds\OpenWithProgids" Name='$(var.RDocCaptureProgId)'  Value='' Type="string" />
         <RegistryValue Root="HKLM" Id="RDCOpenWithProgidHDR" Action="write"
-          Key="Software\Classes\.hdr\OpenWithProgids" Name='RenderDoc.RDCCapture.1'  Value='' Type="string" />
+          Key="Software\Classes\.hdr\OpenWithProgids" Name='$(var.RDocCaptureProgId)'  Value='' Type="string" />
         <RegistryValue Root="HKLM" Id="RDCOpenWithProgidJPG" Action="write"
-          Key="Software\Classes\.jpg\OpenWithProgids" Name='RenderDoc.RDCCapture.1'  Value='' Type="string" />
+          Key="Software\Classes\.jpg\OpenWithProgids" Name='$(var.RDocCaptureProgId)'  Value='' Type="string" />
         <RegistryValue Root="HKLM" Id="RDCOpenWithProgidJPEG" Action="write"
-          Key="Software\Classes\.jpeg\OpenWithProgids" Name='RenderDoc.RDCCapture.1' Value='' Type="string" />
+          Key="Software\Classes\.jpeg\OpenWithProgids" Name='$(var.RDocCaptureProgId)' Value='' Type="string" />
         <RegistryValue Root="HKLM" Id="RDCOpenWithProgidPNG" Action="write"
-          Key="Software\Classes\.png\OpenWithProgids" Name='RenderDoc.RDCCapture.1'  Value='' Type="string" />
+          Key="Software\Classes\.png\OpenWithProgids" Name='$(var.RDocCaptureProgId)'  Value='' Type="string" />
         <RegistryValue Root="HKLM" Id="RDCOpenWithProgidEXR" Action="write"
-          Key="Software\Classes\.exr\OpenWithProgids" Name='RenderDoc.RDCCapture.1'  Value='' Type="string" />
+          Key="Software\Classes\.exr\OpenWithProgids" Name='$(var.RDocCaptureProgId)'  Value='' Type="string" />
         <RegistryValue Root="HKLM" Id="RDCOpenWithProgidTGA" Action="write"
-          Key="Software\Classes\.tga\OpenWithProgids" Name='RenderDoc.RDCCapture.1'  Value='' Type="string" />
+          Key="Software\Classes\.tga\OpenWithProgids" Name='$(var.RDocCaptureProgId)'  Value='' Type="string" />
         <RegistryValue Root="HKLM" Id="RDCOpenWithProgidBMP" Action="write"
-          Key="Software\Classes\.bmp\OpenWithProgids" Name='RenderDoc.RDCCapture.1'  Value='' Type="string" />
+          Key="Software\Classes\.bmp\OpenWithProgids" Name='$(var.RDocCaptureProgId)'  Value='' Type="string" />
         <RegistryValue Root="HKLM" Id="RDCOpenWithProgidGIF" Action="write"
-          Key="Software\Classes\.gif\OpenWithProgids" Name='RenderDoc.RDCCapture.1'  Value='' Type="string" />
+          Key="Software\Classes\.gif\OpenWithProgids" Name='$(var.RDocCaptureProgId)'  Value='' Type="string" />
         <RegistryValue Root="HKLM" Id="RDCOpenWithProgidPSD" Action="write"
-          Key="Software\Classes\.psd\OpenWithProgids" Name='RenderDoc.RDCCapture.1'  Value='' Type="string" />
+          Key="Software\Classes\.psd\OpenWithProgids" Name='$(var.RDocCaptureProgId)'  Value='' Type="string" />
       </Component>
-      <Component Id="ImageThumbnailProvider" Guid="E79B67C0-1128-4471-80C5-6233EF37414C">
+      <Component Id="ImageThumbnailProvider" Guid="*">
         <RegistryValue Root="HKLM" Id="RDCProvider" Action="write" KeyPath='yes'
-          Key="Software\Classes\RenderDoc.RDCCapture.1\ShellEx\{e357fccd-a995-4576-b01f-234630154e96}"
-          Value='{5D6BF029-A6BA-417A-8523-120492B1DCE3}'
+          Key="Software\Classes\$(var.RDocCaptureProgId)\ShellEx\{e357fccd-a995-4576-b01f-234630154e96}"
+          Value='{$(var.RDocThumbnailHandlerClsid)}'
           Type="expandable" />
       </Component>
 
-      <Component Id="FileExtensionRDC" Guid="65374649-9C72-40A1-97EC-F92BAE7C80F4">
-        <ProgId Id='RenderDoc.RDCCapture.1' Description='RenderDoc Capture Log (.rdc)'>
+      <Component Id="FileExtensionRDC" Guid="$(var.RDocFileAssociationRdcComponentGuid)">
+        <ProgId Id='$(var.RDocCaptureProgId)' Description='$(var.RDocProductDisplayName) Capture Log (.rdc)'>
           <Extension Id='rdc' />
         </ProgId>
       </Component>
 
-      <Component Id="FileExtensionCAP"  Guid="1029AAEF-2700-428B-9FCA-67CC1F6BDE85">
-        <ProgId Id='RenderDoc.RDCSettings.1' Description='RenderDoc Capture Settings (.cap)'>
+      <Component Id="FileExtensionCAP" Guid="$(var.RDocFileAssociationCapComponentGuid)">
+        <ProgId Id='$(var.RDocSettingsProgId)' Description='$(var.RDocProductDisplayName) Capture Settings (.cap)'>
           <Extension Id='cap' />
         </ProgId>
       </Component>
@@ -412,7 +413,7 @@
       <Custom Action="RemoveHash" Before="LaunchConditions"/>
     </InstallUISequence>
 
-    <Feature Id='Complete' Title='RenderDoc' Description='Everything included.' AllowAdvertise='no' Absent='disallow' Display='expand' Level='1' ConfigurableDirectory='INSTALLDIR'>
+    <Feature Id='Complete' Title='$(var.RDocProductDisplayName)' Description='Everything included.' AllowAdvertise='no' Absent='disallow' Display='expand' Level='1' ConfigurableDirectory='INSTALLDIR'>
       <Feature Id='MainProgram' Title='Program' Description='The main executable with everything needed to capture and replay.' AllowAdvertise='no' Absent='disallow' Level='1'>
         <ComponentRef Id='QRenderDoc' />
         <ComponentRef Id='RenderDocCPP' />
@@ -464,7 +465,7 @@
         <ComponentRef Id='Documentation' />
       </Feature>
 
-      <Feature Id='FileExts' Title='File Associations' Description='Associate .rdc (Capture logs) and .cap (Capture settings) files with RenderDoc.' Level='1'>
+      <Feature Id='FileExts' Title='File Associations' Description='Associate .rdc (Capture logs) and .cap (Capture settings) files with $(var.RDocProductDisplayName).' Level='1'>
         <ComponentRef Id='ImageThumbnailProvider' />
         <ComponentRef Id='FileExtensionRDC' />
         <ComponentRef Id='FileExtensionCAP' />

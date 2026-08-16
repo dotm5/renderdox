@@ -18,8 +18,10 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
+$identity = Get-Content -LiteralPath (Join-Path $repositoryRoot 'build\product_identity.json') `
+  -Raw -Encoding UTF8 | ConvertFrom-Json
 if (-not $QRenderDoc) {
-  $QRenderDoc = Join-Path $repositoryRoot 'x64\Development\QRenderTest.exe'
+  $QRenderDoc = Join-Path $repositoryRoot "x64\Development\$($identity.uiBaseName).exe"
 }
 
 $QRenderDoc = (Resolve-Path -LiteralPath $QRenderDoc).Path

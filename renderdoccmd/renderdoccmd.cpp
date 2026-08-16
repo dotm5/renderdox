@@ -27,9 +27,7 @@
 #include <app/renderdoc_app.h>
 #include <replay/version.h>
 #include <string>
-#if defined(_WIN32)
 #include "../renderdoc/generated/product_identity.h"
-#endif
 
 static const char *command_executable_name()
 {

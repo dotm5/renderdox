@@ -7,7 +7,7 @@ atomically publishes the completed package.
 
 ```powershell
 python .\draw-evidence.py `
-  --qrenderdoc ..\..\x64\Development\qrendertest.exe `
+  --qrenderdoc ..\..\x64\Development\dgcoreui.exe `
   --capture D:\captures\frame.rdc `
   --event 211 `
   --output D:\evidence

@@ -33,8 +33,11 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
+$identity = Get-Content -LiteralPath (Join-Path $repositoryRoot 'build\product_identity.json') `
+  -Raw -Encoding UTF8 | ConvertFrom-Json
 if (-not $RenderDocCmd) {
-  $RenderDocCmd = Join-Path $repositoryRoot 'x64\Development\rendertestcmd.exe'
+  $RenderDocCmd = Join-Path $repositoryRoot `
+    "x64\Development\$($identity.commandBaseName).exe"
 }
 
 $RenderDocCmd = (Resolve-Path -LiteralPath $RenderDocCmd).Path
@@ -102,8 +105,8 @@ $renderdocLayerPath = Split-Path -Parent $RenderDocCmd
 $environment = @{
   VK_IMPLICIT_LAYER_PATH = $renderdocLayerPath
   VK_LAYER_PATH = $renderdocLayerPath
-  ENABLE_VULKAN_RENDERDOC_CAPTURE = '1'
 }
+$environment[[string]$identity.vulkanEnableVar] = '1'
 if ($Cases | Where-Object { $_.StartsWith('VK_') }) {
   if (-not $VulkanSdk) {
     throw 'VulkanSdk is required when Vulkan cases are selected'

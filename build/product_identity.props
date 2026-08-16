@@ -11,9 +11,18 @@
     <RDocShimBaseName>dgcoreshim</RDocShimBaseName>
     <RDocConfigNamespace>DComp</RDocConfigNamespace>
     <RDocLogNamespace>DComp</RDocLogNamespace>
+    <RDocCaptureProgId>DComp.RDCCapture.1</RDocCaptureProgId>
+    <RDocSettingsProgId>DComp.RDCSettings.1</RDocSettingsProgId>
+    <RDocGlobalHookDataBaseName>DCompGlobalHookData</RDocGlobalHookDataBaseName>
+    <RDocGlobalHookData32Name>DCompGlobalHookData32</RDocGlobalHookData32Name>
+    <RDocGlobalHookData64Name>DCompGlobalHookData64</RDocGlobalHookData64Name>
+    <RDocCrashHandlerReadyEventFallback>DCompCrashHandlerReady</RDocCrashHandlerReadyEventFallback>
     <RDocReplayBaseName>dgcore</RDocReplayBaseName>
     <RDocVulkanJsonBaseName>dgcore</RDocVulkanJsonBaseName>
     <RDocVulkanLayerName>VK_LAYER_DCOMP_Capture</RDocVulkanLayerName>
     <RDocVulkanEnableVar>ENABLE_VULKAN_DCOMP_CAPTURE</RDocVulkanEnableVar>
+    <RDocVulkanDisableVar>DISABLE_VULKAN_DCOMP_CAPTURE</RDocVulkanDisableVar>
+    <RDocInstallerUpgradeCode>E3F97EDC-4102-5A09-AFD9-6F6D5FEBF75A</RDocInstallerUpgradeCode>
+    <RDocThumbnailHandlerClsid>1AF5EE79-1CFC-52E0-BC1A-E810DC1BD5F9</RDocThumbnailHandlerClsid>
   </PropertyGroup>
 </Project>

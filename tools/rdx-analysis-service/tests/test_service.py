@@ -81,7 +81,7 @@ class FakeRunner:
 
 class ServiceTests(unittest.TestCase):
     def make_service(self, directory):
-        executable = os.path.join(directory, "qrendertest.exe")
+        executable = os.path.join(directory, "dgcoreui.exe")
         capture = os.path.join(directory, "capture.rdc")
         open(executable, "wb").close()
         open(capture, "wb").close()

@@ -274,10 +274,21 @@ static rdcstr GenerateJSON(const rdcstr &sopath)
   idx = json.find(enableVarString);
   while(idx >= 0)
   {
-    json = json.substr(0, idx) + "ENABLE_VULKAN_" + strupper(VulkanLayerJSONBasename) + "_CAPTURE" +
+    json = json.substr(0, idx) + RENDERDOC_VULKAN_LAYER_VAR +
            json.substr(idx + sizeof(enableVarString) - 1);
 
     idx = json.find(enableVarString);
+  }
+
+  const char disableVarString[] = "@VULKAN_DISABLE_VAR@";
+
+  idx = json.find(disableVarString);
+  while(idx >= 0)
+  {
+    json = json.substr(0, idx) + RENDERDOC_VULKAN_LAYER_DISABLE_VAR +
+           json.substr(idx + sizeof(disableVarString) - 1);
+
+    idx = json.find(disableVarString);
   }
 
   const char layerNameString[] = "@VULKAN_LAYER_NAME@";
@@ -285,7 +296,7 @@ static rdcstr GenerateJSON(const rdcstr &sopath)
   idx = json.find(layerNameString);
   while(idx >= 0)
   {
-    json = json.substr(0, idx) + "VK_LAYER_" + strupper(VulkanLayerJSONBasename) + "_Capture" +
+    json = json.substr(0, idx) + RENDERDOC_VULKAN_LAYER_NAME +
            json.substr(idx + sizeof(layerNameString) - 1);
 
     idx = json.find(layerNameString);

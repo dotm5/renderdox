@@ -46,6 +46,9 @@ CrashDialog::CrashDialog(PersistantConfig &cfg, QVariantMap crashReportJSON, QWi
     : QDialog(parent), ui(new Ui::CrashDialog), m_Config(cfg)
 {
   ui->setupUi(this);
+  const QString reporterName = tr("%1 Bug Reporter").arg(lit(RDOC_PRODUCT_DISPLAY_NAME));
+  setWindowTitle(reporterName);
+  ui->rdocName->setText(reporterName);
 
   m_NetManager = new QNetworkAccessManager(this);
 

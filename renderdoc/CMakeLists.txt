@@ -1,7 +1,7 @@
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(RDOC_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set(RDOC_DEFINITIONS PRIVATE -DRENDERDOC_EXPORTS)
+set(RDOC_DEFINITIONS PRIVATE -DDCOMP_EXPORTS)
 set(RDOC_INCLUDES
     PRIVATE ${RDOC_SOURCE_DIR}
     PRIVATE ${RDOC_SOURCE_DIR}/3rdparty)
@@ -481,7 +481,7 @@ set(data
     data/glsl/debug_sample.frag
     data/hlsl/quadswizzle.hlsl
     data/sourcecodepro.ttf
-    driver/vulkan/dgcore.json)
+    driver/vulkan/${RDOC_PRODUCT_CORE_BASE_NAME}.json)
 
 set(data_objects)
 

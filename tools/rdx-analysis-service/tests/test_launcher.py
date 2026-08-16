@@ -14,7 +14,7 @@ class _TimedOutProcess:
 
     def wait(self, timeout=None):
         if not self.terminated:
-            raise subprocess.TimeoutExpired("qrendertest", timeout)
+            raise subprocess.TimeoutExpired("dgcoreui", timeout)
         self.returncode = 0
         return self.returncode
 
@@ -33,7 +33,7 @@ class LauncherTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             capture = os.path.join(directory, "capture.rdc")
             entry = os.path.join(directory, "entry.py")
-            qrenderdoc = os.path.join(directory, "qrendertest.exe")
+            qrenderdoc = os.path.join(directory, "dgcoreui.exe")
             for path in (capture, entry, qrenderdoc):
                 with open(path, "wb") as stream:
                     stream.write(b"fixture")

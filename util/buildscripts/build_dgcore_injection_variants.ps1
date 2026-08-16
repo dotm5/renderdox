@@ -17,8 +17,12 @@ $ErrorActionPreference = 'Stop'
 
 $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
 $projectPath = Join-Path $repositoryRoot 'renderdoc\renderdoc.vcxproj'
-$sourceDll = Join-Path $repositoryRoot 'x64\Release\dgcore.dll'
+$identityPath = Join-Path $repositoryRoot 'build\product_identity.json'
+$identity = Get-Content -LiteralPath $identityPath -Raw | ConvertFrom-Json
+$coreFilename = "$($identity.coreBaseName).dll"
+$sourceDll = Join-Path $repositoryRoot "x64\Release\$coreFilename"
 $contractCheck = Join-Path $PSScriptRoot 'check_windows_build_contracts.ps1'
+$embeddedDxilCheck = Join-Path $PSScriptRoot 'check_windows_embedded_dxil.ps1'
 $vswherePath = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
 
 if(-not (Test-Path -LiteralPath $vswherePath -PathType Leaf))
@@ -63,7 +67,7 @@ if(-not $OutputDirectory)
   $artifactRoot = Join-Path (Split-Path -Parent $repositoryRoot) 'artifacts'
   $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
   $OutputDirectory = Join-Path $artifactRoot `
-    "dgcore-recursive-routes-x64-Release-$stamp-$shortCommit"
+    "$($identity.coreBaseName)-recursive-routes-x64-Release-$stamp-$shortCommit"
 }
 $OutputDirectory = [IO.Path]::GetFullPath($OutputDirectory)
 
@@ -152,8 +156,9 @@ foreach($variant in $variants)
     throw "Expected DLL was not produced: $sourceDll"
   }
 
-  $destinationDll = Join-Path $variantDirectory 'dgcore.dll'
+  $destinationDll = Join-Path $variantDirectory $coreFilename
   Copy-Item -LiteralPath $sourceDll -Destination $destinationDll
+  & $embeddedDxilCheck -DllPath $destinationDll
 
   $dependentsText = (& $DumpbinPath /dependents $destinationDll) -join [Environment]::NewLine
   if($LASTEXITCODE -ne 0)
@@ -186,7 +191,7 @@ foreach($variant in $variants)
   $variantReport = [ordered]@{
     name = $variant.Name
     description = $variant.Description
-    dll = 'dgcore.dll'
+    dll = $coreFilename
     bytes = $file.Length
     sha256 = $hash
     exports_dcomp_get_api = $true
@@ -216,7 +221,7 @@ $manifest | ConvertTo-Json -Depth 8 | Set-Content `
   -LiteralPath (Join-Path $OutputDirectory 'manifest.json') -Encoding utf8
 
 $readme = @'
-# dgcore recursive injection builds
+# {CORE_BASE_NAME} recursive injection builds
 
 Source commit: {SOURCE_COMMIT}
 
@@ -231,6 +236,7 @@ the former x64dbg/CE suspended-process injection route.
 `manifest.json` and each `build-contract.json` contain hashes and build flags.
 '@
 $readme = $readme.Replace('{SOURCE_COMMIT}', $commit)
+$readme = $readme.Replace('{CORE_BASE_NAME}', $identity.coreBaseName)
 $readme | Set-Content -LiteralPath (Join-Path $OutputDirectory 'README.md') -Encoding utf8
 
 Write-Host "Completed: $OutputDirectory"

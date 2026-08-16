@@ -5,10 +5,23 @@ mkdir -p "${REPO_ROOT}/dist"
 # pushd into the git checkout
 pushd "${REPO_ROOT}"
 
+python3 util/buildscripts/generate_product_identity.py --check || exit 1
+
+identity_field() {
+	python3 -c 'import json, sys; print(json.load(open(sys.argv[1], encoding="utf-8"))[sys.argv[2]])' \
+		build/product_identity.json "$1"
+}
+
+CORE_BASE_NAME="$(identity_field coreBaseName)" || exit 1
+UI_BASE_NAME="$(identity_field uiBaseName)" || exit 1
+COMMAND_BASE_NAME="$(identity_field commandBaseName)" || exit 1
+
 # Build 32-bit Release
 MSYS2_ARG_CONV_EXCL="*" msbuild.exe /nologo /m /fl4 /flp4':Verbosity=minimal;Encoding=ASCII;logfile=dist/build32.log' renderdoc.sln /t:Rebuild /p:'Configuration=Release;Platform=x86'
 
-if [ ! -f ./Win32/Release/dgcore.dll ] || [ ! -f ./Win32/Release/dgcoreui.exe ] || [ ! -f ./Win32/Release/dgcorecmd.exe ] ; then
+if [ ! -f "./Win32/Release/${CORE_BASE_NAME}.dll" ] || \
+   [ ! -f "./Win32/Release/${UI_BASE_NAME}.exe" ] || \
+   [ ! -f "./Win32/Release/${COMMAND_BASE_NAME}.exe" ] ; then
 	echo "Failed to build 32-bit release mode.";
 	exit 1;
 fi
@@ -16,7 +29,9 @@ fi
 # Build 64-bit Release
 MSYS2_ARG_CONV_EXCL="*" msbuild.exe /nologo /m /fl4 /flp4':Verbosity=minimal;Encoding=ASCII;logfile=dist/build64.log' renderdoc.sln /t:Rebuild /p:'Configuration=Release;Platform=x64'
 
-if [ ! -f ./x64/Release/dgcore.dll ] || [ ! -f ./x64/Release/dgcoreui.exe ] || [ ! -f ./x64/Release/dgcorecmd.exe ] ; then
+if [ ! -f "./x64/Release/${CORE_BASE_NAME}.dll" ] || \
+   [ ! -f "./x64/Release/${UI_BASE_NAME}.exe" ] || \
+   [ ! -f "./x64/Release/${COMMAND_BASE_NAME}.exe" ] ; then
 	echo "Failed to build 64-bit release mode.";
 	exit 1;
 fi

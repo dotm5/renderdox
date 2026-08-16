@@ -26,6 +26,7 @@
 #include <QApplication>
 #include <QLabel>
 #include <QString>
+#include "../../../renderdoc/generated/product_identity.h"
 #include "Code/QRDUtils.h"
 #include "ui_AboutDialog.h"
 #include "version.h"
@@ -33,6 +34,8 @@
 AboutDialog::AboutDialog(QWidget *parent) : QDialog(parent), ui(new Ui::AboutDialog)
 {
   ui->setupUi(this);
+  setWindowTitle(tr("About %1").arg(lit(RDOC_PRODUCT_DISPLAY_NAME)));
+  ui->rdocName->setText(lit(RDOC_PRODUCT_DISPLAY_NAME));
 
   QString hash = QString::fromLatin1(DCOMP_GetCommitHash());
 

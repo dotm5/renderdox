@@ -8,7 +8,7 @@ Protocol schema version `1` is defined in `schemas/rdx-protocol.schema.json`.
 
 ```powershell
 python tools\rdx-analysis-service\rdx-service.py `
-  --qrenderdoc D:\rdoc-port\wt-followup\x64\Development\qrendertest.exe `
+  --qrenderdoc D:\rdoc-port\dcomp-isolated\x64\Development\dgcoreui.exe `
   --output-root D:\rdx-service-data
 ```
 

@@ -875,7 +875,7 @@
       <item>
        <widget class="QPushButton" name="launch">
         <property name="toolTip">
-         <string>Launch the selected program with RenderDoc enabled for capture</string>
+         <string>Launch the selected program with capture enabled</string>
         </property>
         <property name="text">
          <string>Launch</string>

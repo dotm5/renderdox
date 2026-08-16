@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include "../generated/product_identity.h"
+
 /////////////////////////////////////////////////
 // Option macros
 // From: http://www.codersnotes.com/notes/easy-preprocessor-defines/
@@ -150,8 +152,9 @@ enum
   RenderDoc_ForwardPortStride = 10,
 };
 
-#define RENDERDOC_VULKAN_LAYER_NAME "VK_LAYER_DCOMP_Capture"
-#define RENDERDOC_VULKAN_LAYER_VAR "ENABLE_VULKAN_DCOMP_CAPTURE"
+#define RENDERDOC_VULKAN_LAYER_NAME RDOC_VULKAN_LAYER_NAME
+#define RENDERDOC_VULKAN_LAYER_VAR RDOC_VULKAN_ENABLE_VAR
+#define RENDERDOC_VULKAN_LAYER_DISABLE_VAR RDOC_VULKAN_DISABLE_VAR
 
 #define RENDERDOC_ANDROID_LIBRARY "libVkLayer_GLES_DComp.so"
 

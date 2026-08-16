@@ -839,7 +839,7 @@ namespace DXCEnumerateAndCheck {
     <ItemGroup Condition="$(DXCExecutable.Length) &gt; 0">
       <ResourceCompile>
         <AdditionalIncludeDirectories>$(DXILBakedDirParam)</AdditionalIncludeDirectories>
-        <PreprocessorDefinitions>DCOMP_BAKED_DXC_SHADERS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+        <PreprocessorDefinitions>RENDERDOC_BAKED_DXC_SHADERS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       </ResourceCompile>
     </ItemGroup>
   </Target>
@@ -879,17 +879,18 @@ namespace DXCEnumerateAndCheck {
                                             0     1    2
       -->
       <MajorVersion>$(VersionFile.Substring($(MajorVersionStart)).Split('
-')[0].Split(' ')[2])</MajorVersion>
+')[0].Trim().Split(' ')[2])</MajorVersion>
       <MinorVersionStart>$(VersionFile.IndexOf('#define RENDERDOC_VERSION_MINOR'))</MinorVersionStart>
       <MinorVersion>$(VersionFile.Substring($(MinorVersionStart)).Split('
-')[0].Split(' ')[2])</MinorVersion>
+')[0].Trim().Split(' ')[2])</MinorVersion>
     </PropertyGroup>
     <Message Text="Processing layer JSON file for DComp $(MajorVersion).$(MinorVersion)" Importance="High" />
     <!-- Read the template json, replace the major/minor versions -->
     <PropertyGroup>
       <VulkanLayerName>$(RDocVulkanLayerName)</VulkanLayerName>
       <VulkanEnableVar>$(RDocVulkanEnableVar)</VulkanEnableVar>
-      <JSONContents>$([System.IO.File]::ReadAllText('$(SolutionDir)renderdoc/driver/vulkan/$(RDocVulkanJsonBaseName).json').Replace('@RENDERDOC_VERSION_MAJOR@', '$(MajorVersion)').Replace('@RENDERDOC_VERSION_MINOR@', '$(MinorVersion)').Replace('@VULKAN_LAYER_MODULE_PATH@', '.\\$(TargetFileName)').Replace('@VULKAN_LAYER_NAME@', $(VulkanLayerName)).Replace('@VULKAN_ENABLE_VAR@', $(VulkanEnableVar.ToUpper())))</JSONContents>
+      <VulkanDisableVar>$(RDocVulkanDisableVar)</VulkanDisableVar>
+      <JSONContents>$([System.IO.File]::ReadAllText('$(SolutionDir)renderdoc/driver/vulkan/$(RDocVulkanJsonBaseName).json').Replace('@RENDERDOC_VERSION_MAJOR@', '$(MajorVersion)').Replace('@RENDERDOC_VERSION_MINOR@', '$(MinorVersion)').Replace('@VULKAN_LAYER_MODULE_PATH@', '.\\$(TargetFileName)').Replace('@VULKAN_LAYER_NAME@', $(VulkanLayerName)).Replace('@VULKAN_ENABLE_VAR@', $(VulkanEnableVar.ToUpper())).Replace('@VULKAN_DISABLE_VAR@', $(VulkanDisableVar.ToUpper())))</JSONContents>
     </PropertyGroup>
     <!-- Remove the pre-rename descriptor so the Vulkan loader cannot discover both layers. -->
     <Delete Files="$(OutDir)renderdoc.json"

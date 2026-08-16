@@ -139,6 +139,9 @@
       <EntryPointSymbol>dll_entry</EntryPointSymbol>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
+    <ResourceCompile>
+      <PreprocessorDefinitions>RDOC_SHIM_RESOURCE_64=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -193,12 +196,18 @@
       <EntryPointSymbol>dll_entry</EntryPointSymbol>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
+    <ResourceCompile>
+      <PreprocessorDefinitions>RDOC_SHIM_RESOURCE_64=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="renderdocshim.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="renderdocshim.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="renderdocshim.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

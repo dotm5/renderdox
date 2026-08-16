@@ -48,6 +48,29 @@ if($LASTEXITCODE -ne 0)
 
 $errors = [System.Collections.Generic.List[string]]::new()
 $warnings = [System.Collections.Generic.List[string]]::new()
+$identityContractsPath = Join-Path $PSScriptRoot 'check_windows_identity_contracts.ps1'
+if(-not (Test-Path -LiteralPath $identityContractsPath -PathType Leaf))
+{
+  $errors.Add('Windows identity validation script is missing: ' +
+              'util\buildscripts\check_windows_identity_contracts.ps1')
+}
+else
+{
+  try
+  {
+    & $identityContractsPath
+  }
+  catch
+  {
+    $errors.Add($_.Exception.Message)
+  }
+}
+$embeddedDxilCheckPath = Join-Path $PSScriptRoot 'check_windows_embedded_dxil.ps1'
+if(-not (Test-Path -LiteralPath $embeddedDxilCheckPath -PathType Leaf))
+{
+  $errors.Add('Embedded DXIL validation script is missing: ' +
+              'util\buildscripts\check_windows_embedded_dxil.ps1')
+}
 $standaloneMissingSources = @{}
 $requiredBootstrapProjects = @(
   'bootstrap\dxgi_proxy\dxgi_proxy.vcxproj',
@@ -266,7 +289,7 @@ $projectRecords = foreach($relativeProjectPath in $projectPaths)
     "-p:Platform=$Platform" `
     "-p:SolutionDir=$repositoryRoot\" `
     "-p:RDocEnableLTCG=$ltcgValue" `
-    '-getProperty:ProjectGuid;WholeProgramOptimization;LinkTimeCodeGeneration;TargetFileName;OutDir;IntDir' `
+    '-getProperty:ProjectGuid;PlatformToolset;WholeProgramOptimization;LinkTimeCodeGeneration;TargetFileName;OutDir;IntDir' `
     2>&1
   if($LASTEXITCODE -ne 0)
   {
@@ -293,6 +316,11 @@ $projectRecords = foreach($relativeProjectPath in $projectPaths)
      $properties.LinkTimeCodeGeneration -eq 'UseLinkTimeCodeGeneration')
   {
     $errors.Add("Fast Release still enables LTCG: $relativeProjectPath")
+  }
+  if($properties.PlatformToolset -match '^v14[0-2]$')
+  {
+    $errors.Add("Legacy Visual Studio toolset remains in ${relativeProjectPath}: " +
+                $properties.PlatformToolset)
   }
 
   [pscustomobject]@{
@@ -406,6 +434,75 @@ $mainProject = Get-Content -LiteralPath `
 if(-not $mainProject.Contains('$(RDocVulkanJsonBaseName).json'))
 {
   $errors.Add('renderdoc.vcxproj does not use the central Vulkan JSON basename')
+}
+if(-not $mainProject.Contains('RENDERDOC_BAKED_DXC_SHADERS=1') -or
+   $mainProject.Contains('DCOMP_BAKED_DXC_SHADERS'))
+{
+  $errors.Add('renderdoc.vcxproj does not use the upstream baked-DXIL build macro')
+}
+
+$resourceScript = Get-Content -LiteralPath `
+  (Join-Path $repositoryRoot 'renderdoc\data\renderdoc.rc') -Raw
+if($resourceScript -notmatch `
+    '(?m)^\s*#\s*(?:ifdef\s+|if\s+defined\s*\(?\s*)RENDERDOC_BAKED_DXC_SHADERS\b' -or
+   $resourceScript.Contains('DCOMP_BAKED_DXC_SHADERS'))
+{
+  $errors.Add('renderdoc.rc and renderdoc.vcxproj do not share the upstream ' +
+              'baked-DXIL build macro')
+}
+
+$coreCMake = Get-Content -LiteralPath `
+  (Join-Path $repositoryRoot 'renderdoc\CMakeLists.txt') -Raw
+if(-not $coreCMake.Contains('-DDCOMP_EXPORTS'))
+{
+  $errors.Add('renderdoc/CMakeLists.txt does not define DCOMP_EXPORTS')
+}
+
+$directoryBuildTargets = Get-Content -LiteralPath `
+  (Join-Path $repositoryRoot 'Directory.Build.targets') -Raw
+foreach($requiredStaticRuntimeContract in @('DCompStaticRuntime', 'DCompCoreRuntimeProject',
+                                             '<RuntimeLibrary>MultiThreaded</RuntimeLibrary>'))
+{
+  if(-not $directoryBuildTargets.Contains($requiredStaticRuntimeContract))
+  {
+    $errors.Add("Directory.Build.targets is missing injected static-CRT contract: " +
+                $requiredStaticRuntimeContract)
+  }
+}
+
+$qtUiProject = 'qrenderdoc\qrenderdoc_local.vcxproj'
+$qtUiProjectText = Get-Content -LiteralPath `
+  (Join-Path $repositoryRoot $qtUiProject) -Raw
+if(-not $qtUiProjectText.Contains(
+    '<RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>'))
+{
+  $errors.Add("$qtUiProject no longer preserves the Qt/Python-compatible /MD ABI")
+}
+
+$legacyMacroMatches = @(& git -C $repositoryRoot grep --text -n -E `
+  'RENDERDOC_(EXPORTS|PLATFORM_WIN32)' -- renderdoc qrenderdoc `
+  ':(exclude)renderdoc/3rdparty/**' ':(exclude)qrenderdoc/3rdparty/**' 2>$null)
+$legacyMacroExitCode = $LASTEXITCODE
+if($legacyMacroExitCode -eq 0)
+{
+  foreach($legacyMacroMatch in $legacyMacroMatches)
+  {
+    $errors.Add("Legacy runtime build macro remains: $legacyMacroMatch")
+  }
+}
+elseif($legacyMacroExitCode -ne 1)
+{
+  throw "git grep failed while checking legacy build macros with exit code $legacyMacroExitCode"
+}
+else
+{
+  # A no-match result is success for this check. Reset the native exit code so callers that invoke
+  # this script in-process do not mistake git grep's expected exit code 1 for a contract failure.
+  & git -C $repositoryRoot rev-parse --is-inside-work-tree | Out-Null
+  if($LASTEXITCODE -ne 0)
+  {
+    throw 'Could not restore the successful Git contract-check state'
+  }
 }
 
 $vulkanProjectPath = 'renderdoc\driver\vulkan\renderdoc_vulkan.vcxproj'

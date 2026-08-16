@@ -6,6 +6,7 @@ import os
 import re
 import sys
 import tempfile
+import uuid
 from pathlib import Path
 from xml.sax.saxutils import escape as xml_escape
 
@@ -14,7 +15,9 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 MANIFEST_PATH = REPOSITORY_ROOT / "build" / "product_identity.json"
 PROPS_PATH = REPOSITORY_ROOT / "build" / "product_identity.props"
 PRI_PATH = REPOSITORY_ROOT / "build" / "product_identity.pri"
+CMAKE_IDENTITY_PATH = REPOSITORY_ROOT / "build" / "product_identity.cmake"
 HEADER_PATH = REPOSITORY_ROOT / "renderdoc" / "generated" / "product_identity.h"
+WIX_INCLUDE_PATH = REPOSITORY_ROOT / "build" / "product_identity.wxi"
 
 DISPLAY_FIELDS = ("productDisplayName", "uiDisplayName")
 BASENAME_FIELDS = (
@@ -25,10 +28,29 @@ BASENAME_FIELDS = (
     "shimBaseName",
 )
 NAMESPACE_FIELDS = ("configNamespace", "logNamespace")
-EXPECTED_FIELDS = {"schemaVersion", *DISPLAY_FIELDS, *BASENAME_FIELDS, *NAMESPACE_FIELDS}
+VULKAN_FIELDS = ("vulkanLayerName", "vulkanEnableVar")
+GUID_FIELDS = (
+    "installerUpgradeCode",
+    "thumbnailHandlerClsid",
+    "fileAssociationRdcComponentGuid",
+    "fileAssociationCapComponentGuid",
+)
+EXPECTED_FIELDS = {
+    "schemaVersion",
+    *DISPLAY_FIELDS,
+    *BASENAME_FIELDS,
+    *NAMESPACE_FIELDS,
+    *VULKAN_FIELDS,
+    *GUID_FIELDS,
+}
 VALID_BASENAME = re.compile(r"^[a-z][a-z0-9_]*$")
 VALID_DISPLAY_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 ._+()&'\-]{0,63}$")
 VALID_NAMESPACE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+VALID_VULKAN_LAYER = re.compile(r"^VK_LAYER_[A-Za-z0-9_]+$")
+VALID_ENVIRONMENT_VARIABLE = re.compile(r"^[A-Z][A-Z0-9_]+$")
+VALID_GUID = re.compile(
+    r"^[0-9A-F]{8}-[0-9A-F]{4}-[1-5][0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$"
+)
 WINDOWS_RESERVED_NAMES = {
     "con",
     "prn",
@@ -71,7 +93,7 @@ def load_identity():
     if extra:
         raise IdentityError("Unknown manifest fields: {}".format(", ".join(extra)))
 
-    if type(identity["schemaVersion"]) is not int or identity["schemaVersion"] != 1:
+    if type(identity["schemaVersion"]) is not int or identity["schemaVersion"] != 2:
         raise IdentityError("Unsupported schemaVersion: {!r}".format(identity["schemaVersion"]))
 
     for field in DISPLAY_FIELDS:
@@ -103,6 +125,26 @@ def load_identity():
         if value.split(".", 1)[0].casefold() in WINDOWS_RESERVED_NAMES:
             raise IdentityError("{} is a reserved Windows device name".format(field))
 
+    if not VALID_VULKAN_LAYER.fullmatch(identity["vulkanLayerName"]):
+        raise IdentityError(
+            "vulkanLayerName must match {}".format(VALID_VULKAN_LAYER.pattern)
+        )
+    if not VALID_ENVIRONMENT_VARIABLE.fullmatch(identity["vulkanEnableVar"]):
+        raise IdentityError(
+            "vulkanEnableVar must match {}".format(
+                VALID_ENVIRONMENT_VARIABLE.pattern
+            )
+        )
+    if not identity["vulkanEnableVar"].startswith("ENABLE_"):
+        raise IdentityError("vulkanEnableVar must start with ENABLE_")
+
+    for field in GUID_FIELDS:
+        value = identity[field]
+        if not isinstance(value, str) or not VALID_GUID.fullmatch(value):
+            raise IdentityError("{} must be an uppercase RFC 4122 GUID".format(field))
+    if len({identity[field] for field in GUID_FIELDS}) != len(GUID_FIELDS):
+        raise IdentityError("Every installer identity GUID must be unique")
+
     if len(set(identity[field].lower() for field in BASENAME_FIELDS)) != len(BASENAME_FIELDS):
         raise IdentityError("Every output basename must be unique")
 
@@ -124,7 +166,38 @@ def c_string(value):
     return json.dumps(value, ensure_ascii=True)
 
 
+def cmake_string(value):
+    return value.replace("\\", "\\\\").replace('"', '\\"').replace(";", "\\;")
+
+
+def c_guid_initializer(value):
+    guid = uuid.UUID(value)
+    data4 = (guid.clock_seq_hi_variant, guid.clock_seq_low) + tuple(
+        guid.node.to_bytes(6, byteorder="big")
+    )
+    return "{{0x{:08x}, 0x{:04x}, 0x{:04x}, {{{}}}}}".format(
+        guid.time_low,
+        guid.time_mid,
+        guid.time_hi_version,
+        ", ".join("0x{:02x}".format(byte) for byte in data4),
+    )
+
+
+def derived_identity(identity):
+    namespace = identity["configNamespace"]
+    return {
+        "captureProgId": namespace + ".RDCCapture.1",
+        "settingsProgId": namespace + ".RDCSettings.1",
+        "globalHookDataBaseName": namespace + "GlobalHookData",
+        "globalHookData32Name": namespace + "GlobalHookData32",
+        "globalHookData64Name": namespace + "GlobalHookData64",
+        "crashHandlerReadyEventFallback": namespace + "CrashHandlerReady",
+        "vulkanDisableVar": "DISABLE_" + identity["vulkanEnableVar"][len("ENABLE_") :],
+    }
+
+
 def render_props(identity):
+    derived = derived_identity(identity)
     properties = (
         ("RDocProductDisplayName", identity["productDisplayName"]),
         ("RDocUIDisplayName", identity["uiDisplayName"]),
@@ -135,10 +208,22 @@ def render_props(identity):
         ("RDocShimBaseName", identity["shimBaseName"]),
         ("RDocConfigNamespace", identity["configNamespace"]),
         ("RDocLogNamespace", identity["logNamespace"]),
+        ("RDocCaptureProgId", derived["captureProgId"]),
+        ("RDocSettingsProgId", derived["settingsProgId"]),
+        ("RDocGlobalHookDataBaseName", derived["globalHookDataBaseName"]),
+        ("RDocGlobalHookData32Name", derived["globalHookData32Name"]),
+        ("RDocGlobalHookData64Name", derived["globalHookData64Name"]),
+        (
+            "RDocCrashHandlerReadyEventFallback",
+            derived["crashHandlerReadyEventFallback"],
+        ),
         ("RDocReplayBaseName", identity["coreBaseName"]),
         ("RDocVulkanJsonBaseName", identity["coreBaseName"]),
-        ("RDocVulkanLayerName", "VK_LAYER_DCOMP_Capture"),
-        ("RDocVulkanEnableVar", "ENABLE_VULKAN_DCOMP_CAPTURE"),
+        ("RDocVulkanLayerName", identity["vulkanLayerName"]),
+        ("RDocVulkanEnableVar", identity["vulkanEnableVar"]),
+        ("RDocVulkanDisableVar", derived["vulkanDisableVar"]),
+        ("RDocInstallerUpgradeCode", identity["installerUpgradeCode"]),
+        ("RDocThumbnailHandlerClsid", identity["thumbnailHandlerClsid"]),
     )
 
     lines = [
@@ -183,6 +268,7 @@ def render_header(identity):
     shim = identity["shimBaseName"]
     config_namespace = identity["configNamespace"]
     log_namespace = identity["logNamespace"]
+    derived = derived_identity(identity)
 
     values = (
         ("RDOC_PRODUCT_DISPLAY_NAME", product),
@@ -194,6 +280,19 @@ def render_header(identity):
         ("RDOC_SHIM_BASE_NAME", shim),
         ("RDOC_CONFIG_NAMESPACE", config_namespace),
         ("RDOC_LOG_NAMESPACE", log_namespace),
+        ("RDOC_CAPTURE_PROGID", derived["captureProgId"]),
+        ("RDOC_SETTINGS_PROGID", derived["settingsProgId"]),
+        ("RDOC_GLOBAL_HOOK_DATA_BASE_NAME", derived["globalHookDataBaseName"]),
+        ("RDOC_GLOBAL_HOOK_DATA32_NAME", derived["globalHookData32Name"]),
+        ("RDOC_GLOBAL_HOOK_DATA64_NAME", derived["globalHookData64Name"]),
+        (
+            "RDOC_CRASH_HANDLER_READY_EVENT_FALLBACK",
+            derived["crashHandlerReadyEventFallback"],
+        ),
+        ("RDOC_THUMBNAIL_HANDLER_CLSID", identity["thumbnailHandlerClsid"]),
+        ("RDOC_VULKAN_LAYER_NAME", identity["vulkanLayerName"]),
+        ("RDOC_VULKAN_ENABLE_VAR", identity["vulkanEnableVar"]),
+        ("RDOC_VULKAN_DISABLE_VAR", derived["vulkanDisableVar"]),
         ("RDOC_CORE_FILENAME", core + ".dll"),
         ("RDOC_UI_FILENAME", ui + ".exe"),
         ("RDOC_COMMAND_FILENAME", command + ".exe"),
@@ -231,6 +330,13 @@ def render_header(identity):
         "RDOC_SHIM_BASE_NAME",
         "RDOC_CONFIG_NAMESPACE",
         "RDOC_LOG_NAMESPACE",
+        "RDOC_CAPTURE_PROGID",
+        "RDOC_SETTINGS_PROGID",
+        "RDOC_GLOBAL_HOOK_DATA_BASE_NAME",
+        "RDOC_GLOBAL_HOOK_DATA32_NAME",
+        "RDOC_GLOBAL_HOOK_DATA64_NAME",
+        "RDOC_CRASH_HANDLER_READY_EVENT_FALLBACK",
+        "RDOC_THUMBNAIL_HANDLER_CLSID",
         "RDOC_CORE_FILENAME",
         "RDOC_UI_FILENAME",
         "RDOC_COMMAND_FILENAME",
@@ -246,7 +352,74 @@ def render_header(identity):
         lines.append("#define {} {}".format(name, c_string(value)))
         if name in wide_values:
             lines.append("#define {}_W L{}".format(name, c_string(value)))
+    lines.append(
+        "#define RDOC_THUMBNAIL_HANDLER_CLSID_INITIALIZER {}".format(
+            c_guid_initializer(identity["thumbnailHandlerClsid"])
+        )
+    )
     lines.extend(("", "#endif    // DCOMP_GENERATED_PRODUCT_IDENTITY_H", ""))
+    return "\n".join(lines)
+
+
+def render_cmake(identity):
+    derived = derived_identity(identity)
+    variables = (
+        ("RDOC_PRODUCT_DISPLAY_NAME", identity["productDisplayName"]),
+        ("RDOC_PRODUCT_CORE_BASE_NAME", identity["coreBaseName"]),
+        ("RDOC_PRODUCT_UI_BASE_NAME", identity["uiBaseName"]),
+        ("RDOC_PRODUCT_COMMAND_BASE_NAME", identity["commandBaseName"]),
+        ("RDOC_PRODUCT_UI_STUB_BASE_NAME", identity["uiStubBaseName"]),
+        ("RDOC_PRODUCT_SHIM_BASE_NAME", identity["shimBaseName"]),
+        ("RDOC_PRODUCT_VULKAN_LAYER_NAME", identity["vulkanLayerName"]),
+        ("RDOC_PRODUCT_VULKAN_ENABLE_VAR", identity["vulkanEnableVar"]),
+        ("RDOC_PRODUCT_VULKAN_DISABLE_VAR", derived["vulkanDisableVar"]),
+    )
+    lines = [
+        "# Generated by util/buildscripts/generate_product_identity.py.",
+        "# Edit build/product_identity.json, then regenerate this file.",
+        "",
+    ]
+    for name, value in variables:
+        lines.append('set({} "{}")'.format(name, cmake_string(value)))
+    lines.append("")
+    return "\n".join(lines)
+
+
+def render_wix_include(identity):
+    derived = derived_identity(identity)
+    definitions = (
+        ("RDocProductDisplayName", identity["productDisplayName"]),
+        ("RDocUIDisplayName", identity["uiDisplayName"]),
+        ("RDocCoreFilename", identity["coreBaseName"] + ".dll"),
+        ("RDocUIFilename", identity["uiBaseName"] + ".exe"),
+        ("RDocCommandFilename", identity["commandBaseName"] + ".exe"),
+        ("RDocUIStubFilename", identity["uiStubBaseName"] + ".exe"),
+        ("RDocShim32Filename", identity["shimBaseName"] + "32.dll"),
+        ("RDocShim64Filename", identity["shimBaseName"] + "64.dll"),
+        ("RDocVulkanJsonFilename", identity["coreBaseName"] + ".json"),
+        ("RDocCaptureProgId", derived["captureProgId"]),
+        ("RDocSettingsProgId", derived["settingsProgId"]),
+        ("RDocInstallerUpgradeCode", identity["installerUpgradeCode"]),
+        ("RDocThumbnailHandlerClsid", identity["thumbnailHandlerClsid"]),
+        (
+            "RDocFileAssociationRdcComponentGuid",
+            identity["fileAssociationRdcComponentGuid"],
+        ),
+        (
+            "RDocFileAssociationCapComponentGuid",
+            identity["fileAssociationCapComponentGuid"],
+        ),
+    )
+    lines = [
+        '<?xml version="1.0" encoding="utf-8"?>',
+        '<Include xmlns="http://schemas.microsoft.com/wix/2006/wi">',
+        "  <!-- Generated by util/buildscripts/generate_product_identity.py. -->",
+    ]
+    for name, value in definitions:
+        lines.append(
+            '  <?define {} = "{}" ?>'.format(name, xml_escape(value, {'"': '&quot;'}))
+        )
+    lines.extend(("</Include>", ""))
     return "\n".join(lines)
 
 
@@ -254,7 +427,9 @@ def expected_outputs(identity):
     return {
         PROPS_PATH: render_props(identity),
         PRI_PATH: render_pri(identity),
+        CMAKE_IDENTITY_PATH: render_cmake(identity),
         HEADER_PATH: render_header(identity),
+        WIX_INCLUDE_PATH: render_wix_include(identity),
     }
 
 

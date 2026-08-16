@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "productDisplayName": "DComp",
   "uiDisplayName": "DCompUI",
   "coreBaseName": "dgcore",
@@ -8,5 +8,11 @@
   "uiStubBaseName": "dgcorestub",
   "shimBaseName": "dgcoreshim",
   "configNamespace": "DComp",
-  "logNamespace": "DComp"
+  "logNamespace": "DComp",
+  "vulkanLayerName": "VK_LAYER_DCOMP_Capture",
+  "vulkanEnableVar": "ENABLE_VULKAN_DCOMP_CAPTURE",
+  "installerUpgradeCode": "E3F97EDC-4102-5A09-AFD9-6F6D5FEBF75A",
+  "thumbnailHandlerClsid": "1AF5EE79-1CFC-52E0-BC1A-E810DC1BD5F9",
+  "fileAssociationRdcComponentGuid": "FCD8B599-ED8C-576D-986C-1AF4407467FB",
+  "fileAssociationCapComponentGuid": "15308B42-483A-58CB-83DE-CB5EB31D359D"
 }

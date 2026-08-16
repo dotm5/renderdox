@@ -577,7 +577,7 @@ public:
     pipe = conv(parser.get<std::string>("pipe"));
     readyEvent = conv(parser.get<std::string>("ready-event"));
     if(readyEvent.empty())
-      readyEvent = L"RENDERDOC_CRASHHANDLE";
+      readyEvent = RDOC_CRASH_HANDLER_READY_EVENT_FALLBACK_W;
     return true;
   }
   virtual rdcarray<rdcstr> ReplayArgs() { return {"--crash"}; }

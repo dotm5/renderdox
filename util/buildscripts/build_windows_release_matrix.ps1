@@ -21,6 +21,14 @@ $ErrorActionPreference = 'Stop'
 
 $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
 $singleBuild = Join-Path $PSScriptRoot 'build_windows_release.ps1'
+$identityPath = Join-Path $repositoryRoot 'build\product_identity.json'
+$identity = Get-Content -LiteralPath $identityPath -Raw | ConvertFrom-Json
+$coreFilename = "$($identity.coreBaseName).dll"
+$uiFilename = "$($identity.uiBaseName).exe"
+$commandFilename = "$($identity.commandBaseName).exe"
+$uiStubFilename = "$($identity.uiStubBaseName).exe"
+$shim64Filename = "$($identity.shimBaseName)64.dll"
+$vulkanJsonFilename = "$($identity.coreBaseName).json"
 $vswherePath = Join-Path ${env:ProgramFiles(x86)} `
   'Microsoft Visual Studio\Installer\vswhere.exe'
 if(-not (Test-Path -LiteralPath $vswherePath -PathType Leaf))
@@ -77,7 +85,7 @@ if(-not $OutputDirectory)
   $artifactRoot = Join-Path (Split-Path -Parent $repositoryRoot) 'artifacts'
   $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
   $OutputDirectory = Join-Path $artifactRoot `
-    "dgcore-full-release-matrix-$stamp-$shortCommit"
+    "$($identity.coreBaseName)-full-release-matrix-$stamp-$shortCommit"
 }
 $OutputDirectory = [IO.Path]::GetFullPath($OutputDirectory)
 if(Test-Path -LiteralPath $OutputDirectory)
@@ -87,12 +95,12 @@ if(Test-Path -LiteralPath $OutputDirectory)
 New-Item -ItemType Directory -Path $OutputDirectory | Out-Null
 
 $runtimeFiles = @(
-  'dgcore.dll',
-  'dgcoreui.exe',
-  'dgcorecmd.exe',
-  'dgcorestub.exe',
-  'dgcoreshim64.dll',
-  'dgcore.json',
+  $coreFilename,
+  $uiFilename,
+  $commandFilename,
+  $uiStubFilename,
+  $shim64Filename,
+  $vulkanJsonFilename,
   'renderdoc_app.h',
   'd3dcompiler_47.dll',
   'dbghelp.dll',
@@ -211,7 +219,7 @@ $manifest | ConvertTo-Json -Depth 8 | Set-Content `
   -LiteralPath (Join-Path $OutputDirectory 'manifest.json') -Encoding utf8
 
 $readme = @'
-# DComp full Windows Release matrix
+# {PRODUCT_NAME} full Windows Release matrix
 
 This directory contains two complete, runnable x64 Release packages built from
 the same source commit:
@@ -225,6 +233,7 @@ modules, Qt runtime/plugins, Python runtime, and symbol helper runtime files.
 The capture DLL uses a static MSVC runtime and the selected child propagation
 policy. Qt and Python filenames remain upstream-compatible runtime contracts.
 '@
+$readme = $readme.Replace('{PRODUCT_NAME}', $identity.productDisplayName)
 $readme | Set-Content -LiteralPath (Join-Path $OutputDirectory 'README.md') -Encoding utf8
 if($IncludeBootstrap)
 {

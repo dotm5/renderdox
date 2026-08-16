@@ -1,6 +1,6 @@
 # Windows Analysis Suite user guide
 
-This guide covers the follow-up tools layered on the RenderTest v1.45 Windows
+This guide covers the follow-up tools layered on the DComp Windows
 port. They inspect existing captures and do not launch, inject into, or modify
 a target process. Visibility changes are replay-session state only; exported
 files never modify the source RDC.
@@ -71,7 +71,7 @@ Headless example:
 
 ```powershell
 python tools\draw-evidence-package\draw-evidence.py `
-  --qrenderdoc .\x64\Development\qrendertest.exe `
+  --qrenderdoc .\x64\Development\dgcoreui.exe `
   --capture D:\captures\frame.rdc `
   --event 211 `
   --output D:\evidence `
@@ -105,7 +105,7 @@ Analyse one RDC, a directory, or a JSON manifest:
 
 ```powershell
 python tools\rdx-analysis-service\rdx-health.py health `
-  --qrenderdoc .\x64\Development\qrendertest.exe `
+  --qrenderdoc .\x64\Development\dgcoreui.exe `
   --input D:\captures `
   --output D:\capture-health
 ```
@@ -122,7 +122,7 @@ Start the local newline-delimited JSON-RPC 2.0 stdio service:
 
 ```powershell
 python tools\rdx-analysis-service\rdx-service.py `
-  --qrenderdoc .\x64\Development\qrendertest.exe `
+  --qrenderdoc .\x64\Development\dgcoreui.exe `
   --output-root D:\rdx-service-data
 ```
 

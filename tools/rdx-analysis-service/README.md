@@ -15,7 +15,7 @@ only calls the public replay API on an existing capture.
 
 ```powershell
 python tools\rdx-analysis-service\rdx-health.py health `
-  --qrenderdoc D:\rdoc-port\wt-followup\x64\Development\qrendertest.exe `
+  --qrenderdoc D:\rdoc-port\dcomp-isolated\x64\Development\dgcoreui.exe `
   --input D:\captures `
   --output D:\reports\capture-health
 ```
@@ -36,7 +36,7 @@ The command returns non-zero when any input cannot be analysed. Use
 `--allow-partial` when a batch should return success while retaining per-capture
 errors.
 
-Every worker receives its script root through `RDX_ANALYSIS_ROOT`. QRenderTest's
+Every worker receives its script root through `RDX_ANALYSIS_ROOT`. DCompUI's
 embedded `executeFile()` environment does not define `__file__`, so scripts must
 not infer their import root from that name. `progress.log` records the last
 completed replay stage and is included in timeout diagnostics.
@@ -50,7 +50,9 @@ formats, action kind, and relative order. Marker text is intentionally excluded.
 Pure-data tests have no RenderDoc dependency:
 
 ```powershell
-python -m unittest discover -s tools/rdx-analysis-service/tests -v
+Push-Location tools\rdx-analysis-service
+python -m unittest discover -s tests -v
+Pop-Location
 ```
 
 Replay integration tests are performed by running the CLI against the frozen
@@ -63,7 +65,7 @@ queries over newline-delimited JSON-RPC 2.0 on stdin/stdout:
 
 ```powershell
 python tools\rdx-analysis-service\rdx-service.py `
-  --qrenderdoc D:\rdoc-port\wt-followup\x64\Development\qrendertest.exe `
+  --qrenderdoc D:\rdoc-port\dcomp-isolated\x64\Development\dgcoreui.exe `
   --output-root D:\rdx-service-data
 ```
 

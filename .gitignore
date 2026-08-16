@@ -14,6 +14,8 @@ build-*/
 !/build/product_identity.json
 !/build/product_identity.pri
 !/build/product_identity.props
+!/build/product_identity.wxi
+!/build/product_identity.cmake
 /compile_commands.json
 .cache/
 /dist/
@@ -56,6 +58,8 @@ plugins-*/
 __pycache__
 
 # Local-only analysis and validation evidence
+/artifacts/
+/design-qa.md
 /reports/
 /docs/dgcore-injection-success-route-*.md
 /docs/renderdoc-v145-full-release-conflict-audit-*.md

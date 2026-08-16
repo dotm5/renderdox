@@ -16,6 +16,17 @@ rm -rf "${REPO_ROOT}"/package
 
 pushd "${REPO_ROOT}"
 
+python3 util/buildscripts/generate_product_identity.py --check || exit 1
+
+identity_field() {
+	python3 -c 'import json, sys; print(json.load(open(sys.argv[1], encoding="utf-8"))[sys.argv[2]])' \
+		build/product_identity.json "$1"
+}
+
+CORE_BASE_NAME="$(identity_field coreBaseName)" || exit 1
+COMMAND_BASE_NAME="$(identity_field commandBaseName)" || exit 1
+SHIM_BASE_NAME="$(identity_field shimBaseName)" || exit 1
+
 # clean any old files lying around and make new structure
 rm -rf dist
 mkdir -p dist/Release{32,64}
@@ -119,9 +130,30 @@ rm -f dist/ReleasePDBs{32,64}/*.{exp,lib,metagen} dist/Release{32,64}/*.vshost.*
 
 # In the 64bit release folder, make an x86 subfolder and copy in renderdoc 32bit
 mkdir -p dist/Release64/x86
-cp -R dist/Release32/{d3dcompiler_47.dll,dgcore.dll,dgcore.json,dgcoreshim32.dll,dgcorecmd.exe,dbghelp.dll,symsrv.dll,symsrv.yes} dist/Release64/x86/
+cp -R \
+	dist/Release32/d3dcompiler_47.dll \
+	"dist/Release32/${CORE_BASE_NAME}.dll" \
+	"dist/Release32/${CORE_BASE_NAME}.json" \
+	"dist/Release32/${SHIM_BASE_NAME}32.dll" \
+	"dist/Release32/${COMMAND_BASE_NAME}.exe" \
+	dist/Release32/dbghelp.dll \
+	dist/Release32/symsrv.dll \
+	dist/Release32/symsrv.yes \
+	dist/Release64/x86/
 mkdir -p dist/ReleasePDBs64/x86
-cp -R dist/ReleasePDBs32/{d3dcompiler_47.dll,dgcore.dll,dgcore.json,dgcore.pdb,dgcoreshim32.dll,dgcoreshim32.pdb,dgcorecmd.exe,dgcorecmd.pdb,dbghelp.dll,symsrv.dll,symsrv.yes} dist/ReleasePDBs64/x86/
+cp -R \
+	dist/ReleasePDBs32/d3dcompiler_47.dll \
+	"dist/ReleasePDBs32/${CORE_BASE_NAME}.dll" \
+	"dist/ReleasePDBs32/${CORE_BASE_NAME}.json" \
+	"dist/ReleasePDBs32/${CORE_BASE_NAME}.pdb" \
+	"dist/ReleasePDBs32/${SHIM_BASE_NAME}32.dll" \
+	"dist/ReleasePDBs32/${SHIM_BASE_NAME}32.pdb" \
+	"dist/ReleasePDBs32/${COMMAND_BASE_NAME}.exe" \
+	"dist/ReleasePDBs32/${COMMAND_BASE_NAME}.pdb" \
+	dist/ReleasePDBs32/dbghelp.dll \
+	dist/ReleasePDBs32/symsrv.dll \
+	dist/ReleasePDBs32/symsrv.yes \
+	dist/ReleasePDBs64/x86/
 
 VERSION=`grep -E "#define RENDERDOC_VERSION_(MAJOR|MINOR)" renderdoc/api/replay/version.h | tr -dc '[0-9\n]' | tr '\n' '.' | grep -Eo '[0-9]+\.[0-9]+'`
 
@@ -130,7 +162,7 @@ export RENDERDOC_VERSION="${VERSION}"
 # Ensure this variable passes through to windows on WSL
 export WSLENV=$WSLENV:RENDERDOC_VERSION
 
-"$WIX/bin/candle.exe" -o dist/Installer32.wixobj util/installer/Installer32.wxs
+"$WIX/bin/candle.exe" -Ibuild -o dist/Installer32.wixobj util/installer/Installer32.wxs
 "$WIX/bin/light.exe" -ext WixUIExtension -sw1076 -loc util/installer/customtext.wxl -o dist/Installer32.msi dist/Installer32.wixobj
 
 if [[ "$STRICT" == "yes" ]]; then
@@ -140,7 +172,7 @@ if [[ "$STRICT" == "yes" ]]; then
 	fi
 fi
 
-"$WIX/bin/candle.exe" -o dist/Installer64.wixobj util/installer/Installer64.wxs
+"$WIX/bin/candle.exe" -Ibuild -o dist/Installer64.wixobj util/installer/Installer64.wxs
 "$WIX/bin/light.exe" -ext WixUIExtension -sw1076 -loc util/installer/customtext.wxl -o dist/Installer64.msi dist/Installer64.wixobj
 
 if [[ "$STRICT" == "yes" ]]; then

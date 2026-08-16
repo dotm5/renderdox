@@ -329,11 +329,7 @@ int main(int argc, char *argv[])
 #endif
 
   QCommandLineParser parser;
-#if defined(Q_OS_WIN32)
   parser.setApplicationDescription(tr("Qt UI for %1").arg(lit(RDOC_PRODUCT_DISPLAY_NAME)));
-#else
-  parser.setApplicationDescription(tr("Qt UI for RenderDoc"));
-#endif
   QCommandLineOption helpOption = parser.addHelpOption();
   QCommandLineOption versionOption = parser.addVersionOption();
 
