@@ -18,6 +18,7 @@ build-*/
 .cache/
 /dist/
 /package/
+/x64/
 util/buildscripts/support
 Resources/*.png
 qrenderdoc/Makefile*

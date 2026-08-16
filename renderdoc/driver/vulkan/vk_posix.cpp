@@ -423,7 +423,7 @@ bool VulkanReplay::CheckVulkanLayer(VulkanLayerFlags &flags, rdcarray<rdcstr> &m
   // extract of a tarball or a distribution that decided to put all the files in the same folder,
   // and whether or not the library is in ld's searchpath.
   //
-  // Instead we just make the requirement that dcomp.json will always contain an absolute path
+  // Instead we just make the requirement that dgcore.json will always contain an absolute path
   // to the matching libdcomp.so, so that we can check if it points to this build or another
   // build etc.
   //

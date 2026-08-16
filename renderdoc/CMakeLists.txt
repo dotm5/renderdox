@@ -481,7 +481,7 @@ set(data
     data/glsl/debug_sample.frag
     data/hlsl/quadswizzle.hlsl
     data/sourcecodepro.ttf
-    driver/vulkan/dcomp.json)
+    driver/vulkan/dgcore.json)
 
 set(data_objects)
 

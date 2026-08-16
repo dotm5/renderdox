@@ -46,7 +46,7 @@
         <Directory Id='INSTALLDIR' Name='RenderDoc'>
 
           <Component Id='QRenderDoc' Guid='0DB375D5-7712-4853-AA75-536DF863C827'>
-            <File Id='qrenderdocEXE' Name='dcompui.exe' DiskId='1' Source='dist/Release32/dcompui.exe' KeyPath='yes'>
+            <File Id='qrenderdocEXE' Name='dgcoreui.exe' DiskId='1' Source='dist/Release32/dgcoreui.exe' KeyPath='yes'>
               <Shortcut Id="startmenuRenderDoc" Directory="ProgramMenuDir" Name="RenderDoc" WorkingDirectory='INSTALLDIR' Icon="icon.ico" IconIndex="0" Advertise="yes" />
             </File>
 
@@ -83,10 +83,10 @@
           </Component>
 
           <Component Id='RenderDocCPP' Guid='2E6F718F-8BCC-4D41-9688-E99CF2F6B303'>
-            <File Id='RenderDocCPP' Name='dcomp.dll' DiskId='1' Source='dist/Release32/dcomp.dll' KeyPath='yes' />
-            <File Id='RenderDocJSON' Name='dcomp.json' DiskId='1' Source='dist/Release32/dcomp.json' />
+            <File Id='RenderDocCPP' Name='dgcore.dll' DiskId='1' Source='dist/Release32/dgcore.dll' KeyPath='yes' />
+            <File Id='RenderDocJSON' Name='dgcore.json' DiskId='1' Source='dist/Release32/dgcore.json' />
             <File Id='D3DCompiler47' Name='d3dcompiler_47.dll' DiskId='1' Source='dist/Release32/d3dcompiler_47.dll' />
-            <File Id='RenderDocSHIM' Name='dcompshim32.dll' DiskId='1' Source='dist/Release32/dcompshim32.dll' />
+            <File Id='RenderDocSHIM' Name='dgcoreshim32.dll' DiskId='1' Source='dist/Release32/dgcoreshim32.dll' />
             <File Id='dbghelpDLL' Name='dbghelp.dll' DiskId='1' Source='dist/Release32/dbghelp.dll' />
             <File Id='symsrvDLL' Name='symsrv.dll' DiskId='1' Source='dist/Release32/symsrv.dll' />
             <File Id='symsrvYES' Name='symsrv.yes' DiskId='1' Source='dist/Release32/symsrv.yes' />
@@ -115,7 +115,7 @@
           </Component>
 
           <Component Id='RenderDocCMD' Guid='97338A5D-8FDB-4DF5-AEC7-14B36F234F29'>
-            <File Id='RenderDocCMD' Name='dcompcmd.exe' DiskId='1' Source='dist/Release32/dcompcmd.exe' KeyPath='yes' />
+            <File Id='RenderDocCMD' Name='dgcorecmd.exe' DiskId='1' Source='dist/Release32/dgcorecmd.exe' KeyPath='yes' />
           </Component>
 
           <Component Id='Qt' Guid='63C1C176-5B7C-4D29-9382-8E0FA75C5B80'>
@@ -221,39 +221,39 @@
 
       <Component Id="ImageOpenWith" Guid="1F56AF06-3E83-4D7E-85A2-6A309A55FF4F">
         <RegistryValue Root="HKLM" Id="RDCOpenWithCommand" Action="write" KeyPath='yes'
-          Key="Software\Classes\Applications\dcompui.exe\shell\open\command"
+          Key="Software\Classes\Applications\dgcoreui.exe\shell\open\command"
           Value='"[#qrenderdocEXE]" "%1"'
           Type="string" />
 
         <RegistryValue Root="HKLM" Id="RDCOpenWithDDS" Action="write"
-          Key="Software\Classes\Applications\dcompui.exe\SupportedTypes"
+          Key="Software\Classes\Applications\dgcoreui.exe\SupportedTypes"
           Name='.dds'  Value='' Type="string" />
         <RegistryValue Root="HKLM" Id="RDCOpenWithHDR" Action="write"
-          Key="Software\Classes\Applications\dcompui.exe\SupportedTypes"
+          Key="Software\Classes\Applications\dgcoreui.exe\SupportedTypes"
           Name='.hdr'  Value='' Type="string" />
         <RegistryValue Root="HKLM" Id="RDCOpenWithJPG" Action="write"
-          Key="Software\Classes\Applications\dcompui.exe\SupportedTypes"
+          Key="Software\Classes\Applications\dgcoreui.exe\SupportedTypes"
           Name='.jpg'  Value='' Type="string" />
         <RegistryValue Root="HKLM" Id="RDCOpenWithJPEG" Action="write"
-          Key="Software\Classes\Applications\dcompui.exe\SupportedTypes"
+          Key="Software\Classes\Applications\dgcoreui.exe\SupportedTypes"
           Name='.jpeg'  Value='' Type="string" />
         <RegistryValue Root="HKLM" Id="RDCOpenWithPNG" Action="write"
-          Key="Software\Classes\Applications\dcompui.exe\SupportedTypes"
+          Key="Software\Classes\Applications\dgcoreui.exe\SupportedTypes"
           Name='.png'  Value='' Type="string" />
         <RegistryValue Root="HKLM" Id="RDCOpenWithEXR" Action="write"
-          Key="Software\Classes\Applications\dcompui.exe\SupportedTypes"
+          Key="Software\Classes\Applications\dgcoreui.exe\SupportedTypes"
           Name='.exr'  Value='' Type="string" />
         <RegistryValue Root="HKLM" Id="RDCOpenWithTGA" Action="write"
-          Key="Software\Classes\Applications\dcompui.exe\SupportedTypes"
+          Key="Software\Classes\Applications\dgcoreui.exe\SupportedTypes"
           Name='.tga'  Value='' Type="string" />
         <RegistryValue Root="HKLM" Id="RDCOpenWithBMP" Action="write"
-          Key="Software\Classes\Applications\dcompui.exe\SupportedTypes"
+          Key="Software\Classes\Applications\dgcoreui.exe\SupportedTypes"
           Name='.bmp'  Value='' Type="string" />
         <RegistryValue Root="HKLM" Id="RDCOpenWithGIF" Action="write"
-          Key="Software\Classes\Applications\dcompui.exe\SupportedTypes"
+          Key="Software\Classes\Applications\dgcoreui.exe\SupportedTypes"
           Name='.gif'  Value='' Type="string" />
         <RegistryValue Root="HKLM" Id="RDCOpenWithPSD" Action="write"
-          Key="Software\Classes\Applications\dcompui.exe\SupportedTypes"
+          Key="Software\Classes\Applications\dgcoreui.exe\SupportedTypes"
           Name='.psd'  Value='' Type="string" />
 
         <RegistryValue Root="HKLM" Id="RDCOpenWithProgidDDS" Action="write"

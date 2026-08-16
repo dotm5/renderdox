@@ -11,7 +11,7 @@ To begin using the API you need to fetch the ``DCOMP_GetAPI`` function. You shou
 
 The recommended way to access the RenderDoc API is to passively check if the module is loaded, and use the API if it is. This lets you continue to use RenderDoc entirely as normal, launching your program through the UI, but you can access additional functionality to e.g. trigger captures at custom times. When your program is launched independently it will see that the RenderDoc module is not present and safely fall back.
 
-To do this you'll use your platforms dynamic library functions to see if the library is open already - e.g. ``GetModuleHandle`` on Windows, or ``dlopen`` with the ``RTLD_NOW | RTLD_NOLOAD`` flags if available on \*nix systems. On most platforms you can just search for the module name - ``dcomp.dll`` on Windows, or ``libdcomp.so`` on Linux, or ``libVkLayer_GLES_RenderDoc.so`` on Android should be sufficient here, so you don't need to know the path to where DComp is running from. This will vary by platform however so consult your platform's OS documentation. Then you can use ``GetProcAddress`` or ``dlsym`` to fetch the ``DCOMP_GetAPI`` function using the typedef above.
+To do this you'll use your platforms dynamic library functions to see if the library is open already - e.g. ``GetModuleHandle`` on Windows, or ``dlopen`` with the ``RTLD_NOW | RTLD_NOLOAD`` flags if available on \*nix systems. On most platforms you can just search for the module name - ``dgcore.dll`` on Windows, or ``libdgcore.so`` on Linux, or ``libVkLayer_GLES_DComp.so`` on Android should be sufficient here, so you don't need to know the path to where DComp is running from. This will vary by platform however so consult your platform's OS documentation. Then you can use ``GetProcAddress`` or ``dlsym`` to fetch the ``DCOMP_GetAPI`` function using the typedef above.
 
 .. _renderdoc-api-example:
 
@@ -32,7 +32,7 @@ To do this you'll use your platforms dynamic library functions to see if the lib
        RENDERDOC_API_1_1_2 *rdoc_api = NULL;
 
        // At init, on windows
-       if(HMODULE mod = GetModuleHandleA("dcomp.dll"))
+       if(HMODULE mod = GetModuleHandleA("dgcore.dll"))
        {
            pDCOMP_GetAPI DCOMP_GetAPI =
                (pDCOMP_GetAPI)GetProcAddress(mod, "DCOMP_GetAPI");
@@ -41,8 +41,8 @@ To do this you'll use your platforms dynamic library functions to see if the lib
        }
 
        // At init, on linux/android.
-       // For android replace libdcomp.so with libVkLayer_GLES_RenderDoc.so
-       if(void *mod = dlopen("libdcomp.so", RTLD_NOW | RTLD_NOLOAD))
+       // For android replace libdgcore.so with libVkLayer_GLES_DComp.so
+       if(void *mod = dlopen("libdgcore.so", RTLD_NOW | RTLD_NOLOAD))
        {
            pDCOMP_GetAPI DCOMP_GetAPI = (pDCOMP_GetAPI)dlsym(mod, "DCOMP_GetAPI");
            int ret = DCOMP_GetAPI(eDCOMP_API_Version_1_1_2, (void **)&rdoc_api);

@@ -3,7 +3,7 @@
 // possible moment via SetThreadContext hijack.
 //
 // Usage: process_injector.exe <dll_path> [process_name]
-//   dll_path:     full path to dcomp.dll
+//   dll_path:     full path to dgcore.dll
 //   process_name: target exe name (default: NRC-Win64-Shipping.exe)
 
 #define WIN32_LEAN_AND_MEAN
@@ -256,8 +256,8 @@ int wmain(int argc, wchar_t *argv[])
 
     if(argc < 2)
     {
-        printf("Usage: process_injector.exe <dcomp.dll path> [process_name]\n");
-        printf("Example: process_injector.exe F:\\dcomp\\dcomp.dll\n");
+        printf("Usage: process_injector.exe <dgcore.dll path> [process_name]\n");
+        printf("Example: process_injector.exe F:\\dcomp\\dgcore.dll\n");
         return 1;
     }
 
@@ -284,8 +284,8 @@ int wmain(int argc, wchar_t *argv[])
 
     if(ok)
     {
-        printf("\n[+] SUCCESS! dcomp.dll injected.\n");
-        printf("[*] Open dcompui.exe to attach and capture frames (F12).\n");
+        printf("\n[+] SUCCESS! dgcore.dll injected.\n");
+        printf("[*] Open dgcoreui.exe to attach and capture frames (F12).\n");
     }
     else
     {

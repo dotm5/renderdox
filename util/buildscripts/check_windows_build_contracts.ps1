@@ -399,7 +399,7 @@ $vulkanFiltersText = Get-Content -LiteralPath `
   (Join-Path $repositoryRoot $vulkanFiltersPath) -Raw
 if(-not $vulkanFiltersText.Contains($vulkanDescriptorFileName) -or
    $vulkanFiltersText.Contains('renderdoc.json') -or
-   ($vulkanJsonBaseName -ne 'dcomp' -and $vulkanFiltersText.Contains('dcomp.json')))
+   ($vulkanJsonBaseName -ne 'dgcore' -and $vulkanFiltersText.Contains('dgcore.json')))
 {
   $errors.Add("$vulkanFiltersPath does not reference only $vulkanDescriptorFileName")
 }

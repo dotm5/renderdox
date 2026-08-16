@@ -118,7 +118,7 @@ elseif(UNIX)
     set(VULKAN_ENABLE_VAR "ENABLE_VULKAN_${RDOC_BASE_NAME_UPPER}_CAPTURE")
     set(VULKAN_LAYER_NAME "VK_LAYER_${RDOC_BASE_NAME_UPPER}_Capture")
 
-    set(json_in ${CMAKE_CURRENT_SOURCE_DIR}/dcomp.json)
+    set(json_in ${CMAKE_CURRENT_SOURCE_DIR}/dgcore.json)
     set(json_out ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${RDOC_BASE_NAME}_capture${VULKAN_JSON_SUFFIX}.json)
     
     configure_file(${json_in} ${json_out})

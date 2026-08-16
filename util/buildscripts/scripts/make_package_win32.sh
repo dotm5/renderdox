@@ -119,9 +119,9 @@ rm -f dist/ReleasePDBs{32,64}/*.{exp,lib,metagen} dist/Release{32,64}/*.vshost.*
 
 # In the 64bit release folder, make an x86 subfolder and copy in renderdoc 32bit
 mkdir -p dist/Release64/x86
-cp -R dist/Release32/{d3dcompiler_47.dll,dcomp.dll,dcomp.json,dcompshim32.dll,dcompcmd.exe,dbghelp.dll,symsrv.dll,symsrv.yes} dist/Release64/x86/
+cp -R dist/Release32/{d3dcompiler_47.dll,dgcore.dll,dgcore.json,dgcoreshim32.dll,dgcorecmd.exe,dbghelp.dll,symsrv.dll,symsrv.yes} dist/Release64/x86/
 mkdir -p dist/ReleasePDBs64/x86
-cp -R dist/ReleasePDBs32/{d3dcompiler_47.dll,dcomp.dll,dcomp.json,dcomp.pdb,dcompshim32.dll,dcompshim32.pdb,dcompcmd.exe,dcompcmd.pdb,dbghelp.dll,symsrv.dll,symsrv.yes} dist/ReleasePDBs64/x86/
+cp -R dist/ReleasePDBs32/{d3dcompiler_47.dll,dgcore.dll,dgcore.json,dgcore.pdb,dgcoreshim32.dll,dgcoreshim32.pdb,dgcorecmd.exe,dgcorecmd.pdb,dbghelp.dll,symsrv.dll,symsrv.yes} dist/ReleasePDBs64/x86/
 
 VERSION=`grep -E "#define RENDERDOC_VERSION_(MAJOR|MINOR)" renderdoc/api/replay/version.h | tr -dc '[0-9\n]' | tr '\n' '.' | grep -Eo '[0-9]+\.[0-9]+'`
 
