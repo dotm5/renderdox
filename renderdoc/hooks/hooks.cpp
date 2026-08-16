@@ -25,6 +25,7 @@
 
 #include "hooks.h"
 #include "common/common.h"
+#include "os/os_specific.h"
 
 static rdcarray<LibraryHook *> &LibList()
 {
@@ -39,6 +40,14 @@ LibraryHook::LibraryHook()
 
 void LibraryHooks::RegisterHooks()
 {
+#if defined(DCOMP_DIAGNOSTIC_DISABLE_ALL_HOOKS) && DCOMP_DIAGNOSTIC_DISABLE_ALL_HOOKS
+  if(Process::IsDCompDiagnosticTargetProcess())
+  {
+    RDCLOG("[DCOMP-AB] all library hooks disabled in diagnostic target");
+    return;
+  }
+#endif
+
   BeginHookRegistration();
 
   for(LibraryHook *lib : LibList())

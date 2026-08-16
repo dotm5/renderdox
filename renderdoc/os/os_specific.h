@@ -56,6 +56,11 @@ void ApplyEnvironmentModification();
 
 rdcstr GetEnvVariable(const rdcstr &name);
 
+inline bool IsDCompDiagnosticTargetProcess()
+{
+  return GetEnvVariable("DCOMP_DIAGNOSTIC_TARGET_PROCESS") == "1";
+}
+
 uint64_t GetMemoryUsage();
 
 bool CanGlobalHook();

@@ -619,7 +619,11 @@ RenderDoc::RenderDoc()
 
   m_ExHandler = NULL;
 
+#if defined(DCOMP_DIAGNOSTIC_DISABLE_OVERLAY) && DCOMP_DIAGNOSTIC_DISABLE_OVERLAY
+  m_Overlay = Process::IsDCompDiagnosticTargetProcess() ? 0 : eRENDERDOC_Overlay_Default;
+#else
   m_Overlay = eRENDERDOC_Overlay_Default;
+#endif
 
   m_VulkanCheck = NULL;
   m_VulkanInstall = NULL;
@@ -655,34 +659,39 @@ void RenderDoc::Initialise()
 
     Process::ApplyEnvironmentModification();
 
-    uint32_t port = RenderDoc_FirstTargetControlPort;
-
-    Network::Socket *sock = Network::CreateServerSocket("0.0.0.0", port & 0xffff, 4);
-
-    while(sock == NULL)
+#if defined(DCOMP_DIAGNOSTIC_DISABLE_TARGET_CONTROL) && DCOMP_DIAGNOSTIC_DISABLE_TARGET_CONTROL
+    if(!Process::IsDCompDiagnosticTargetProcess())
+#endif
     {
-      port++;
-      if(port > RenderDoc_LastTargetControlPort)
+      uint32_t port = RenderDoc_FirstTargetControlPort;
+
+      Network::Socket *sock = Network::CreateServerSocket("0.0.0.0", port & 0xffff, 4);
+
+      while(sock == NULL)
       {
-        m_RemoteIdent = 0;
-        break;
+        port++;
+        if(port > RenderDoc_LastTargetControlPort)
+        {
+          m_RemoteIdent = 0;
+          break;
+        }
+
+        sock = Network::CreateServerSocket("0.0.0.0", port & 0xffff, 4);
       }
 
-      sock = Network::CreateServerSocket("0.0.0.0", port & 0xffff, 4);
-    }
+      if(sock)
+      {
+        m_RemoteIdent = port;
 
-    if(sock)
-    {
-      m_RemoteIdent = port;
+        m_TargetControlThreadShutdown = false;
+        m_RemoteThread = Threading::CreateThread([sock]() { TargetControlServerThread(sock); });
 
-      m_TargetControlThreadShutdown = false;
-      m_RemoteThread = Threading::CreateThread([sock]() { TargetControlServerThread(sock); });
-
-      RDCLOG("Listening for target control on %u", port);
-    }
-    else
-    {
-      RDCWARN("Couldn't open socket for target control");
+        RDCLOG("Listening for target control on %u", port);
+      }
+      else
+      {
+        RDCWARN("Couldn't open socket for target control");
+      }
     }
   }
 
@@ -729,6 +738,19 @@ void RenderDoc::Initialise()
          ENABLED(RDOC_RELEASE) ? "Release" : "Development", GitVersionHash,
          IsReplayApp() ? "loaded in replay application" : "capturing application");
 
+#if defined(DCOMP_DIAGNOSTIC_VARIANT_ID) && DCOMP_DIAGNOSTIC_VARIANT_ID != 0
+  const bool diagnosticTarget = Process::IsDCompDiagnosticTargetProcess();
+  RDCLOG("[DCOMP-AB] variant=%u target_process=%u all_hooks=%u sys_hooks=%u target_control=%u "
+         "overlay=%u child_passthrough=%u wsa_hooks=%u",
+         (uint32_t)DCOMP_DIAGNOSTIC_VARIANT_ID, (uint32_t)diagnosticTarget,
+         (uint32_t)!DCOMP_DIAGNOSTIC_DISABLE_ALL_HOOKS,
+         (uint32_t)!DCOMP_DIAGNOSTIC_DISABLE_WIN32_SYSTEM_HOOKS,
+         (uint32_t)!DCOMP_DIAGNOSTIC_DISABLE_TARGET_CONTROL,
+         (uint32_t)!DCOMP_DIAGNOSTIC_DISABLE_OVERLAY,
+         (uint32_t)DCOMP_DIAGNOSTIC_PASSTHROUGH_NONINJECTED_CHILDREN,
+         (uint32_t)!DCOMP_DIAGNOSTIC_DISABLE_WSA_HOOKS);
+#endif
+
 #if defined(DISTRIBUTION_VERSION)
   RDCLOG("Packaged for %s (%s) - %s", DISTRIBUTION_NAME, DISTRIBUTION_VERSION, DISTRIBUTION_CONTACT);
 #endif
@@ -739,10 +761,17 @@ void RenderDoc::Initialise()
 
   if(!IsReplayApp())
   {
-    if(m_RemoteIdent == 0)
-      RDCWARN("Couldn't open socket for target control");
+#if defined(DCOMP_DIAGNOSTIC_DISABLE_TARGET_CONTROL) && DCOMP_DIAGNOSTIC_DISABLE_TARGET_CONTROL
+    if(Process::IsDCompDiagnosticTargetProcess())
+      RDCLOG("[DCOMP-AB] target control disabled in diagnostic target");
     else
-      RDCDEBUG("Listening for target control on %u", m_RemoteIdent);
+#endif
+    {
+      if(m_RemoteIdent == 0)
+        RDCWARN("Couldn't open socket for target control");
+      else
+        RDCDEBUG("Listening for target control on %u", m_RemoteIdent);
+    }
   }
 
   Keyboard::Init();

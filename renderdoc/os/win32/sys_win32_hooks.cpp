@@ -157,7 +157,21 @@ public:
 
   void RegisterHooks()
   {
+#if defined(DCOMP_DIAGNOSTIC_DISABLE_WIN32_SYSTEM_HOOKS) && \
+    DCOMP_DIAGNOSTIC_DISABLE_WIN32_SYSTEM_HOOKS
+    if(Process::IsDCompDiagnosticTargetProcess())
+    {
+      RDCLOG("[DCOMP-AB] Win32 system hooks disabled in diagnostic target");
+      return;
+    }
+#endif
+
     RDCLOG("Registering Win32 system hooks");
+
+    bool disableWSAHooks = false;
+#if defined(DCOMP_DIAGNOSTIC_DISABLE_WSA_HOOKS) && DCOMP_DIAGNOSTIC_DISABLE_WSA_HOOKS
+    disableWSAHooks = Process::IsDCompDiagnosticTargetProcess();
+#endif
 
     // register libraries that we care about. We don't need a callback when they are loaded
     LibraryHooks::RegisterLibraryHook("kernel32.dll", NULL);
@@ -165,7 +179,8 @@ public:
     LibraryHooks::RegisterLibraryHook("api-ms-win-core-processthreads-l1-1-0.dll", NULL);
     LibraryHooks::RegisterLibraryHook("api-ms-win-core-processthreads-l1-1-1.dll", NULL);
     LibraryHooks::RegisterLibraryHook("api-ms-win-core-processthreads-l1-1-2.dll", NULL);
-    LibraryHooks::RegisterLibraryHook("ws2_32.dll", NULL);
+    if(!disableWSAHooks)
+      LibraryHooks::RegisterLibraryHook("ws2_32.dll", NULL);
 
     // we want to hook CreateProcess purely so that we can recursively insert our hooks (if we so
     // wish)
@@ -201,8 +216,15 @@ public:
     API112CreateProcessAsUserW.Register("api-ms-win-core-processthreads-l1-1-0.dll",
                                         "CreateProcessAsUserW", API112CreateProcessAsUserW_hook);
 
-    WSAStartup.Register("ws2_32.dll", "WSAStartup", WSAStartup_hook);
-    WSACleanup.Register("ws2_32.dll", "WSACleanup", WSACleanup_hook);
+    if(!disableWSAHooks)
+    {
+      WSAStartup.Register("ws2_32.dll", "WSAStartup", WSAStartup_hook);
+      WSACleanup.Register("ws2_32.dll", "WSACleanup", WSACleanup_hook);
+    }
+    else
+    {
+      RDCLOG("[DCOMP-AB] Winsock hooks disabled in diagnostic target");
+    }
 
     m_RecurseSlot = Threading::AllocateTLSSlot();
     Threading::SetTLSValue(m_RecurseSlot, NULL);
@@ -281,6 +303,15 @@ private:
                        DWORD dwCreationFlags, bool inject, LPVOID pEnvironment,
                        LPPROCESS_INFORMATION lpProcessInformation)
   {
+#if defined(DCOMP_DIAGNOSTIC_PASSTHROUGH_NONINJECTED_CHILDREN) && \
+    DCOMP_DIAGNOSTIC_PASSTHROUGH_NONINJECTED_CHILDREN
+    if(!inject && Process::IsDCompDiagnosticTargetProcess())
+    {
+      RDCLOG("[DCOMP-AB] passing through %s flags=0x%08x", entryPoint, dwCreationFlags);
+      return realFunc(dwCreationFlags, pEnvironment, lpProcessInformation);
+    }
+#endif
+
     bool recursive = syshooks.CheckRecurse();
 
     if(recursive)
@@ -336,6 +367,14 @@ private:
         cur += wcslen(cur) + 1;
       }
 
+#if defined(DCOMP_DIAGNOSTIC_VARIANT_ID) && DCOMP_DIAGNOSTIC_VARIANT_ID != 0
+      if(inject && !Process::IsDCompDiagnosticTargetProcess())
+      {
+        envW += L"DCOMP_DIAGNOSTIC_TARGET_PROCESS=1";
+        envW.push_back(L'\0');
+      }
+#endif
+
       // append the extra \0 to terminate the block
       envW.push_back(L'\0');
 
@@ -358,6 +397,14 @@ private:
 
         cur += strlen(cur) + 1;
       }
+
+#if defined(DCOMP_DIAGNOSTIC_VARIANT_ID) && DCOMP_DIAGNOSTIC_VARIANT_ID != 0
+      if(inject && !Process::IsDCompDiagnosticTargetProcess())
+      {
+        envA += "DCOMP_DIAGNOSTIC_TARGET_PROCESS=1";
+        envA.push_back('\0');
+      }
+#endif
 
       // append the extra \0 to terminate the block
       envA.push_back('\0');
