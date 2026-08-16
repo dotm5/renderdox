@@ -1244,7 +1244,7 @@ void MainWindow::CloseCapture()
 
 void MainWindow::SetTitle(const QString &filename)
 {
-  QString text = lit(RDOC_PRODUCT_DISPLAY_NAME);
+  QString text = lit(RDOC_PRODUCT_DISPLAY_NAME " ").trimmed();
 
   if(m_Ctx.IsCaptureLoaded())
     text = QFileInfo(filename).fileName() + lit(" - ") + text;
