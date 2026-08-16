@@ -4,7 +4,7 @@
 
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
 [![Upstream](https://img.shields.io/badge/upstream-RenderDoc-blue.svg)](https://github.com/baldurk/renderdoc)
-[![CI](https://github.com/dotm5/renderdox/actions/workflows/ci.yml/badge.svg?branch=renderdox-main&event=push)](https://github.com/dotm5/renderdox/actions)
+[![CI](https://github.com/dotm5/renderdox/actions/workflows/ci.yml/badge.svg?branch=dgcore-main&event=push)](https://github.com/dotm5/renderdox/actions)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](docs/CODE_OF_CONDUCT.md) 
 
 RenderDox is a downstream branch of [RenderDoc](https://github.com/baldurk/renderdoc), the frame-capture based graphics debugger for Vulkan, D3D11, D3D12, OpenGL, and OpenGL ES. It preserves RenderDoc's capture and replay formats while maintaining an isolated Windows runtime identity, reproducible MSVC and ClangCL Release builds, and a focused set of capture and analysis extensions.
@@ -47,7 +47,7 @@ API Support
 Downloads
 --------------
 
-RenderDox portable builds are produced from the `renderdox-main` branch. Until signed binary releases are published, build from source and use the generated package directory under the configured artifacts root.
+RenderDox portable builds are produced from the `dgcore-main` branch. Until signed binary releases are published, build from source and use the generated package directory under the configured artifacts root.
 
 If you need the standard RenderDoc distribution, use an upstream [stable build](https://renderdoc.org/builds). RenderDox packages are intended for the additional runtime and build requirements documented in this repository.
 
