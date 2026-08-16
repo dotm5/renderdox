@@ -156,12 +156,7 @@ D3D11PipelineStateViewer::D3D11PipelineStateViewer(ICaptureContext &ctx,
     QObject::connect(b, &QToolButton::clicked, this, &D3D11PipelineStateViewer::shaderView_clicked);
 
   for(RDLabel *b : objectLabels)
-  {
-    b->setAutoFillBackground(true);
-    b->setBackgroundRole(QPalette::ToolTipBase);
-    b->setForegroundRole(QPalette::ToolTipText);
-    b->setMinimumSizeHint(QSize(250, 0));
-  }
+    m_Common.SetupSummaryLabel(b, QSize(250, 0));
 
   QObject::connect(m_ComputeDebugSelector, &ComputeDebugSelector::beginDebug, this,
                    &D3D11PipelineStateViewer::computeDebugSelector_beginDebug);
@@ -210,12 +205,7 @@ D3D11PipelineStateViewer::D3D11PipelineStateViewer(ICaptureContext &ctx,
   addGridLines(ui->depthStateGridLayout, palette().color(QPalette::WindowText));
 
   for(RDLabel *st : {ui->depthState, ui->blendState, ui->rastState, ui->predicate})
-  {
-    st->setAutoFillBackground(true);
-    st->setBackgroundRole(QPalette::ToolTipBase);
-    st->setForegroundRole(QPalette::ToolTipText);
-    st->setMinimumSizeHint(QSize(100, 0));
-  }
+    m_Common.SetupSummaryLabel(st, QSize(100, 0));
 
   {
     RDHeaderView *header = new RDHeaderView(Qt::Horizontal, this);

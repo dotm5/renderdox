@@ -236,19 +236,14 @@ VulkanPipelineStateViewer::VulkanPipelineStateViewer(ICaptureContext &ctx,
 
   for(RDLabel *b : shaderLabels)
   {
-    b->setAutoFillBackground(true);
-    b->setBackgroundRole(QPalette::ToolTipBase);
-    b->setForegroundRole(QPalette::ToolTipText);
-    b->setMinimumSizeHint(QSize(250, 0));
+    m_Common.SetupSummaryLabel(b, QSize(250, 0));
     b->setFont(Formatter::PreferredFont());
   }
 
   for(RDLabel *b : pipeLayoutLabels)
   {
-    b->setAutoFillBackground(true);
-    b->setBackgroundRole(QPalette::ToolTipBase);
-    b->setForegroundRole(QPalette::ToolTipText);
-    b->setMinimumSizeHint(QSize(250, ui->vsShaderViewButton->minimumSizeHint().height()));
+    m_Common.SetupSummaryLabel(
+        b, QSize(250, ui->vsShaderViewButton->minimumSizeHint().height()));
     b->setFont(Formatter::PreferredFont());
   }
 
@@ -456,12 +451,7 @@ VulkanPipelineStateViewer::VulkanPipelineStateViewer(ICaptureContext &ctx,
   }
 
   for(RDLabel *rp : {ui->renderpass, ui->framebuffer, ui->predicateBuffer, ui->csPredicateBuffer})
-  {
-    rp->setAutoFillBackground(true);
-    rp->setBackgroundRole(QPalette::ToolTipBase);
-    rp->setForegroundRole(QPalette::ToolTipText);
-    rp->setMinimumSizeHint(QSize(250, 0));
-  }
+    m_Common.SetupSummaryLabel(rp, QSize(250, 0));
 
   {
     RDHeaderView *header = new RDHeaderView(Qt::Horizontal, this);

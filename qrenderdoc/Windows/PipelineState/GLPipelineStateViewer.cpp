@@ -171,20 +171,10 @@ GLPipelineStateViewer::GLPipelineStateViewer(ICaptureContext &ctx, PipelineState
     QObject::connect(b, &QToolButton::clicked, this, &GLPipelineStateViewer::shaderView_clicked);
 
   for(RDLabel *b : shaderLabels)
-  {
-    b->setAutoFillBackground(true);
-    b->setBackgroundRole(QPalette::ToolTipBase);
-    b->setForegroundRole(QPalette::ToolTipText);
-    b->setMinimumSizeHint(QSize(150, 0));
-  }
+    m_Common.SetupSummaryLabel(b, QSize(150, 0));
 
   for(RDLabel *b : {ui->xfbObj, ui->readFBO, ui->drawFBO})
-  {
-    b->setAutoFillBackground(true);
-    b->setBackgroundRole(QPalette::ToolTipBase);
-    b->setForegroundRole(QPalette::ToolTipText);
-    b->setMinimumSizeHint(QSize(100, 0));
-  }
+    m_Common.SetupSummaryLabel(b, QSize(100, 0));
 
   for(QToolButton *b : editButtons)
     QObject::connect(b, &QToolButton::clicked, &m_Common, &PipelineStateViewer::shaderEdit_clicked);

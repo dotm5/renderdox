@@ -1244,34 +1244,10 @@ void MainWindow::CloseCapture()
 
 void MainWindow::SetTitle(const QString &filename)
 {
-  QString prefix;
+  QString text = lit(RDOC_PRODUCT_DISPLAY_NAME);
 
   if(m_Ctx.IsCaptureLoaded())
-  {
-    prefix = QFileInfo(filename).fileName();
-    if(m_Ctx.APIProps().degraded)
-      prefix += tr(" !DEGRADED PERFORMANCE!");
-    prefix += lit(" - ");
-  }
-
-  if(m_Ctx.Replay().CurrentRemote().IsValid())
-    prefix += tr("Remote: %1 - ").arg(m_Ctx.Replay().CurrentRemote().Name());
-
-  QString text = prefix + lit(RDOC_PRODUCT_DISPLAY_NAME " ");
-
-  if(RENDERDOC_STABLE_BUILD)
-    text += lit(FULL_VERSION_STRING);
-  else
-    text += tr("Unstable %1 Build (%2 - %3)")
-                .arg(DCOMP_IsReleaseBuild() ? lit("Release") : lit("Development"))
-                .arg(lit(FULL_VERSION_STRING))
-                .arg(QString::fromLatin1(DCOMP_GetCommitHash()));
-
-  if(IsRunningAsAdmin())
-    text += tr(" (Administrator)");
-
-  if(QString::fromLatin1(DCOMP_GetVersionString()) != lit(MAJOR_MINOR_VERSION_STRING))
-    text += tr(" - !! VERSION MISMATCH DETECTED !!");
+    text = QFileInfo(filename).fileName() + lit(" - ") + text;
 
   setWindowTitle(text);
 }

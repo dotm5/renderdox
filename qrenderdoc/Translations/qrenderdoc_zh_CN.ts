@@ -3675,43 +3675,43 @@ The buffer is %4 bytes in length (%5 elements).
     </message>
     <message>
       <source>Input IA</source>
-      <translation>输入装配IA</translation>
+      <translation>输入IA</translation>
     </message>
     <message>
       <source>Vertex VS</source>
-      <translation>顶点着色VS</translation>
+      <translation>顶点VS</translation>
     </message>
     <message>
       <source>Hull HS</source>
-      <translation>外壳着色HS</translation>
+      <translation>外壳HS</translation>
     </message>
     <message>
       <source>Domain DS</source>
-      <translation>域着色器DS</translation>
+      <translation>域着DS</translation>
     </message>
     <message>
       <source>Geometry GS</source>
-      <translation>几何着色GS</translation>
+      <translation>几何GS</translation>
     </message>
     <message>
       <source>Raster RS</source>
-      <translation>光栅处理RS</translation>
+      <translation>光栅RS</translation>
     </message>
     <message>
       <source>Pixel PS</source>
-      <translation>像素着色PS</translation>
+      <translation>像素PS</translation>
     </message>
     <message>
       <source>Merge OM</source>
-      <translation>输出合并OM</translation>
+      <translation>合并OM</translation>
     </message>
     <message>
       <source>Compute CS</source>
-      <translation>计算着色CS</translation>
+      <translation>计算CS</translation>
     </message>
     <message>
       <source>Stream SO</source>
-      <translation>流式输出SO</translation>
+      <translation>流出SO</translation>
     </message>
   </context>
   <context>
@@ -4734,51 +4734,51 @@ The buffer is %4 bytes in length (%5 elements).
     </message>
     <message>
       <source>Input IA</source>
-      <translation>输入装配IA</translation>
+      <translation>输入IA</translation>
     </message>
     <message>
       <source>Vertex VS</source>
-      <translation>顶点着色VS</translation>
+      <translation>顶点VS</translation>
     </message>
     <message>
       <source>Hull HS</source>
-      <translation>外壳着色HS</translation>
+      <translation>外壳HS</translation>
     </message>
     <message>
       <source>Domain DS</source>
-      <translation>域着色器DS</translation>
+      <translation>域着DS</translation>
     </message>
     <message>
       <source>Geometry GS</source>
-      <translation>几何着色GS</translation>
+      <translation>几何GS</translation>
     </message>
     <message>
       <source>Raster RS</source>
-      <translation>光栅处理RS</translation>
+      <translation>光栅RS</translation>
     </message>
     <message>
       <source>Pixel PS</source>
-      <translation>像素着色PS</translation>
+      <translation>像素PS</translation>
     </message>
     <message>
       <source>Merge OM</source>
-      <translation>输出合并OM</translation>
+      <translation>合并OM</translation>
     </message>
     <message>
       <source>Compute CS</source>
-      <translation>计算着色CS</translation>
+      <translation>计算CS</translation>
     </message>
     <message>
       <source>Amplify AS</source>
-      <translation>放大着色AS</translation>
+      <translation>放大AS</translation>
     </message>
     <message>
       <source>Mesh MS</source>
-      <translation>网格着色MS</translation>
+      <translation>网格MS</translation>
     </message>
     <message>
       <source>Stream SO</source>
-      <translation>流式输出SO</translation>
+      <translation>流出SO</translation>
     </message>
   </context>
   <context>
@@ -7403,43 +7403,43 @@ but this is inverted by the upper-left clip origin.</source>
     </message>
     <message>
       <source>Vertex VTX</source>
-      <translation>顶点输入VTX</translation>
+      <translation>顶点VTX</translation>
     </message>
     <message>
       <source>Vertex VS</source>
-      <translation>顶点着色VS</translation>
+      <translation>顶点VS</translation>
     </message>
     <message>
       <source>Tess Ctrl TCS</source>
-      <translation>细分控制TCS</translation>
+      <translation>细控TCS</translation>
     </message>
     <message>
       <source>Tess Eval TES</source>
-      <translation>细分求值TES</translation>
+      <translation>细评TES</translation>
     </message>
     <message>
       <source>Geometry GS</source>
-      <translation>几何着色GS</translation>
+      <translation>几何GS</translation>
     </message>
     <message>
       <source>Raster RS</source>
-      <translation>光栅处理RS</translation>
+      <translation>光栅RS</translation>
     </message>
     <message>
       <source>Fragment FS</source>
-      <translation>片元着色FS</translation>
+      <translation>片元FS</translation>
     </message>
     <message>
       <source>Framebuffer FB</source>
-      <translation>帧缓输出FB</translation>
+      <translation>帧缓FB</translation>
     </message>
     <message>
       <source>Compute CS</source>
-      <translation>计算着色CS</translation>
+      <translation>计算CS</translation>
     </message>
     <message>
       <source>Transform XFB</source>
-      <translation>变换反馈XFB</translation>
+      <translation>变换XFB</translation>
     </message>
   </context>
   <context>
@@ -14844,51 +14844,51 @@ The buffer is %3 bytes in length.
     </message>
     <message>
       <source>Vertex VTX</source>
-      <translation>顶点输入VTX</translation>
+      <translation>顶点VTX</translation>
     </message>
     <message>
       <source>Vertex VS</source>
-      <translation>顶点着色VS</translation>
+      <translation>顶点VS</translation>
     </message>
     <message>
       <source>Tess Ctrl TCS</source>
-      <translation>细分控制TCS</translation>
+      <translation>细控TCS</translation>
     </message>
     <message>
       <source>Tess Eval TES</source>
-      <translation>细分求值TES</translation>
+      <translation>细评TES</translation>
     </message>
     <message>
       <source>Geometry GS</source>
-      <translation>几何着色GS</translation>
+      <translation>几何GS</translation>
     </message>
     <message>
       <source>Raster RS</source>
-      <translation>光栅处理RS</translation>
+      <translation>光栅RS</translation>
     </message>
     <message>
       <source>Fragment FS</source>
-      <translation>片元着色FS</translation>
+      <translation>片元FS</translation>
     </message>
     <message>
       <source>Framebuffer FB</source>
-      <translation>帧缓输出FB</translation>
+      <translation>帧缓FB</translation>
     </message>
     <message>
       <source>Compute CS</source>
-      <translation>计算着色CS</translation>
+      <translation>计算CS</translation>
     </message>
     <message>
       <source>Task TS</source>
-      <translation>任务着色TS</translation>
+      <translation>任务TS</translation>
     </message>
     <message>
       <source>Mesh MS</source>
-      <translation>网格着色MS</translation>
+      <translation>网格MS</translation>
     </message>
     <message>
       <source>Transform XFB</source>
-      <translation>变换反馈XFB</translation>
+      <translation>变换XFB</translation>
     </message>
   </context>
   <context>

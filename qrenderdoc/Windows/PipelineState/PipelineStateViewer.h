@@ -114,6 +114,7 @@ public:
                              const ShaderReflection *shaderDetails);
 
   void SetupResourceView(RDTreeWidget *view);
+  void SetupSummaryLabel(RDLabel *label, const QSize &minimumSize);
 
   QString GetVBufferFormatString(uint32_t slot);
 

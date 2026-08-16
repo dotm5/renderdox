@@ -1277,6 +1277,17 @@ bool PipelineStateViewer::hasThumbnail(QWidget *widget, QModelIndex idx)
   return false;
 }
 
+void PipelineStateViewer::SetupSummaryLabel(RDLabel *label, const QSize &minimumSize)
+{
+  // These labels are persistent object summaries, not tooltip windows. Tooltip colours are
+  // intentionally inverted in the modern light theme, so using those roles here produced dark
+  // blocks inside an otherwise light panel.
+  label->setAutoFillBackground(true);
+  label->setBackgroundRole(QPalette::Base);
+  label->setForegroundRole(QPalette::Text);
+  label->setMinimumSizeHint(minimumSize);
+}
+
 void PipelineStateViewer::SetupResourceView(RDTreeWidget *widget)
 {
   auto handler = [this, widget](const QPoint &pos) {

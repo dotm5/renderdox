@@ -195,27 +195,12 @@ D3D12PipelineStateViewer::D3D12PipelineStateViewer(ICaptureContext &ctx,
                    &D3D12PipelineStateViewer::predicateView_clicked);
 
   for(RDLabel *b : shaderLabels)
-  {
-    b->setAutoFillBackground(true);
-    b->setBackgroundRole(QPalette::ToolTipBase);
-    b->setForegroundRole(QPalette::ToolTipText);
-    b->setMinimumSizeHint(QSize(250, 0));
-  }
+    m_Common.SetupSummaryLabel(b, QSize(250, 0));
 
   for(RDLabel *b : rootsigLabels)
-  {
-    b->setAutoFillBackground(true);
-    b->setBackgroundRole(QPalette::ToolTipBase);
-    b->setForegroundRole(QPalette::ToolTipText);
-    b->setMinimumSizeHint(QSize(100, 0));
-  }
+    m_Common.SetupSummaryLabel(b, QSize(100, 0));
 
-  {
-    ui->predicate->setAutoFillBackground(true);
-    ui->predicate->setBackgroundRole(QPalette::ToolTipBase);
-    ui->predicate->setForegroundRole(QPalette::ToolTipText);
-    ui->predicate->setMinimumSizeHint(QSize(250, 0));
-  }
+  m_Common.SetupSummaryLabel(ui->predicate, QSize(250, 0));
 
   QObject::connect(m_ComputeDebugSelector, &ComputeDebugSelector::beginDebug, this,
                    &D3D12PipelineStateViewer::computeDebugSelector_beginDebug);
