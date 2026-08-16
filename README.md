@@ -1,23 +1,26 @@
-<p align="center"><img src="https://user-images.githubusercontent.com/661798/36482670-f81601c0-170b-11e8-8adb-2365b346ac27.png" /></p>
+<h1 align="center">RenderDox</h1>
+
+<p align="center">A downstream RenderDoc branch for reproducible Windows capture builds.</p>
 
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
-[![CI](https://github.com/baldurk/renderdoc/actions/workflows/ci.yml/badge.svg?branch=v1.x&event=push)](https://github.com/baldurk/renderdoc/actions)
+[![Upstream](https://img.shields.io/badge/upstream-RenderDoc-blue.svg)](https://github.com/baldurk/renderdoc)
+[![CI](https://github.com/dotm5/renderdox/actions/workflows/ci.yml/badge.svg?branch=renderdox-main&event=push)](https://github.com/dotm5/renderdox/actions)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](docs/CODE_OF_CONDUCT.md) 
 
-RenderDoc is a frame-capture based graphics debugger, currently available for Vulkan, D3D11, D3D12, OpenGL, and OpenGL ES development on Windows, Linux, Android, and Nintendo Switch&trade;. It is completely open-source under the MIT license.
+RenderDox is a downstream branch of [RenderDoc](https://github.com/baldurk/renderdoc), the frame-capture based graphics debugger for Vulkan, D3D11, D3D12, OpenGL, and OpenGL ES. It preserves RenderDoc's capture and replay formats while maintaining an isolated Windows runtime identity, reproducible MSVC and ClangCL Release builds, and a focused set of capture and analysis extensions.
 
-RenderDoc is intended for debugging your own programs only. Any discussion of capturing programs that you did not create will not be allowed in any official public RenderDoc setting, including the issue tracker, discord, or via email. For example this includes capturing commercial games that you did not create, or capturing Google Maps or Google Earth. Note: Capturing projects you created that use a third party engine like Unreal or Unity, or open source and free projects is completely fine and supported.
+RenderDox follows RenderDoc's intended-use boundary and is intended for debugging programs you own or are authorised to analyse. Projects created with third-party engines such as Unreal Engine or Unity are supported. This fork is independently maintained and is not supported by the upstream RenderDoc maintainers.
 
-If you have any questions, suggestions or problems or you can [create an issue](https://github.com/baldurk/renderdoc/issues/new/choose) here on github, [email me directly](mailto:baldurk@baldurk.org) or come into [IRC](https://webchat.oftc.net/?channels=renderdoc) or [Discord](https://discord.gg/ahq6yRB) to discuss it.
+For RenderDox-specific questions, suggestions, or problems, [create an issue](https://github.com/dotm5/renderdox/issues). For upstream RenderDoc documentation and community support, see the links below.
 
-To install on windows run the appropriate installer for your OS ([64-bit](https://renderdoc.org/stable/latest/RenderDoc_latest_64.msi) | [32-bit](https://renderdoc.org/stable/latest/RenderDoc_latest_32.msi)) or download the portable zip from the [builds page](https://renderdoc.org/builds). The 64-bit windows build fully supports capturing from 32-bit programs. On linux only 64-bit x86 is supported - there is a precompiled [binary tarball](https://renderdoc.org/stable/latest/renderdoc_latest.tar.gz) available, or your distribution may package it. If not you can [build from source](docs/CONTRIBUTING/Compiling.md).
+RenderDox currently ships as a portable x64 Windows build rather than an MSI. The full Release matrix includes the GUI, command-line tools, capture runtime, Qt and Python runtimes, and is produced from the repository build scripts. Official RenderDoc installers and packages remain available from the upstream [builds page](https://renderdoc.org/builds).
 
-* **Downloads**: Stable and nightly builds: https://renderdoc.org/builds ( [Symbol server](https://renderdoc.org/symbols) )
-* **Documentation**: [HTML online](https://renderdoc.org/docs), [CHM in builds](https://renderdoc.org/docs/renderdoc.chm), [Videos](https://www.youtube.com/user/baldurkarlsson)
-* **Contact**: [baldurk@baldurk.org](mailto:baldurk@baldurk.org), [#renderdoc on OFTC IRC](https://webchat.oftc.net/?channels=renderdoc), [Discord server](https://discord.gg/ahq6yRB)
+* **Upstream**: [RenderDoc repository](https://github.com/baldurk/renderdoc), [stable and nightly builds](https://renderdoc.org/builds)
+* **Documentation**: [RenderDoc HTML documentation](https://renderdoc.org/docs), [Videos](https://www.youtube.com/user/baldurkarlsson)
+* **RenderDox issues**: [Issue tracker](https://github.com/dotm5/renderdox/issues)
 * **Code of Conduct**: [Contributor Covenant](docs/CODE_OF_CONDUCT.md)
 * **Information for contributors**: [All contribution information](docs/CONTRIBUTING.md), [Compilation instructions](docs/CONTRIBUTING/Compiling.md)
-* **Community extensions**: [Extensions repository](https://github.com/baldurk/renderdoc-contrib)
+* **Upstream extensions**: [RenderDoc extensions repository](https://github.com/baldurk/renderdoc-contrib)
 
 Screenshots
 --------------
@@ -44,9 +47,9 @@ API Support
 Downloads
 --------------
 
-There are [binary releases](https://renderdoc.org/builds) available, built from the release targets. If you just want to use the program and you ended up here, this is what you want :).
+RenderDox portable builds are produced from the `renderdox-main` branch. Until signed binary releases are published, build from source and use the generated package directory under the configured artifacts root.
 
-It's recommended that if you're new you start with the stable builds. Nightly builds are available every day from the [v1.x branch here](https://renderdoc.org/builds#nightly) if you need it, but correspondingly may be less stable.
+If you need the standard RenderDoc distribution, use an upstream [stable build](https://renderdoc.org/builds). RenderDox packages are intended for the additional runtime and build requirements documented in this repository.
 
 Documentation
 --------------
@@ -60,12 +63,20 @@ There is also a great presentation by [@Icetigris](https://twitter.com/Icetigris
 License
 --------------
 
-RenderDoc is released under the MIT license, see [LICENSE.md](LICENSE.md) for full text as well as 3rd party library acknowledgements.
+RenderDox is derived from RenderDoc and remains under the MIT license. See [LICENSE.md](LICENSE.md) for the full text and third-party library acknowledgements.
 
 Compiling
 ---------
 
-Building RenderDoc is fairly straight forward on most platforms. See [Compiling.md](docs/CONTRIBUTING/Compiling.md) for more details.
+The upstream compilation instructions remain applicable. For the complete Windows x64 MSVC and ClangCL portable Release matrix, run:
+
+```powershell
+pwsh -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass `
+  -File .\util\buildscripts\build_windows_release_matrix.ps1 `
+  -Target Rebuild -ChildPropagation OneGeneration
+```
+
+See [Compiling.md](docs/CONTRIBUTING/Compiling.md) for the upstream platform requirements and [the RenderDox release audit](docs/renderdoc-v145-full-release-conflict-audit-20260816.md) for the downstream Windows build boundary.
 
 Contributing & Development
 --------------
