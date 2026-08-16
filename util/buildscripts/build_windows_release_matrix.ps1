@@ -59,9 +59,12 @@ $runtimeFiles = @(
   'Qt5Widgets.dll',
   'python36.dll',
   'python36.zip',
-  '_ctypes.pyd'
+  '_ctypes.pyd',
+  'pymodules\d3dcompiler_47.dll',
+  'pymodules\renderdoc.pyd',
+  'pymodules\qrenderdoc.pyd'
 )
-$runtimeDirectories = @('pymodules', 'qtplugins')
+$runtimeDirectories = @('qtplugins')
 $matrix = @()
 
 foreach($toolchain in @('MSVC', 'ClangCL'))
@@ -87,7 +90,13 @@ foreach($toolchain in @('MSVC', 'ClangCL'))
     {
       throw "$toolchain runtime file is missing: $source"
     }
-    Copy-Item -LiteralPath $source -Destination (Join-Path $packageRoot $relativeFile)
+    $destination = Join-Path $packageRoot $relativeFile
+    $destinationDirectory = Split-Path -Parent $destination
+    if(-not (Test-Path -LiteralPath $destinationDirectory -PathType Container))
+    {
+      New-Item -ItemType Directory -Path $destinationDirectory -Force | Out-Null
+    }
+    Copy-Item -LiteralPath $source -Destination $destination
   }
   foreach($relativeDirectory in $runtimeDirectories)
   {

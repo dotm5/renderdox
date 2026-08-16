@@ -54,26 +54,28 @@
     <DCompDiagnosticTargetInitStage Condition="'$(DCompDiagnosticTargetInitStage)'==''">0</DCompDiagnosticTargetInitStage>
   </PropertyGroup>
 
-  <ItemGroup Condition="'$(MSBuildProjectName)'=='renderdoc'">
-    <ClCompile Update="replay\capture_options.cpp">
-      <PreprocessorDefinitions>DCOMP_DEFAULT_HOOK_INTO_CHILDREN=$(DCompHookIntoChildrenDefault);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+  <!--
+    Keep capture and diagnostic feature macros identical for the Core PCH and
+    every translation unit. The macros are consumed only in implementation
+    files, but Clang correctly warns if a /Yu compile changes command-line
+    definitions after the PCH was created.
+  -->
+  <ItemDefinitionGroup Condition="'$(MSBuildProjectName)'=='renderdoc'">
+    <ClCompile>
+      <PreprocessorDefinitions>DCOMP_DEFAULT_HOOK_INTO_CHILDREN=$(DCompHookIntoChildrenDefault);DCOMP_INLINE_GRAPHICS_HOOKS=$(DCompInlineGraphicsHooks);DCOMP_SINGLE_GENERATION_CHILD_HOOK=$(DCompSingleGenerationChildHook);DCOMP_DIAGNOSTIC_VARIANT_ID=$(DCompDiagnosticVariantId);DCOMP_DIAGNOSTIC_TARGET_INIT_STAGE=$(DCompDiagnosticTargetInitStage);DCOMP_DIAGNOSTIC_DISABLE_ALL_HOOKS=$(DCompDisableAllHooks);DCOMP_DIAGNOSTIC_DISABLE_WIN32_SYSTEM_HOOKS=$(DCompDisableWin32SystemHooks);DCOMP_DIAGNOSTIC_DISABLE_TARGET_CONTROL=$(DCompDisableTargetControl);DCOMP_DIAGNOSTIC_DISABLE_OVERLAY=$(DCompDisableOverlay);DCOMP_DIAGNOSTIC_PASSTHROUGH_NONINJECTED_CHILDREN=$(DCompPassthroughNonInjectedChildren);DCOMP_DIAGNOSTIC_PASSTHROUGH_ALL_NONINJECTED_CHILDREN=$(DCompPassthroughAllNonInjectedChildren);DCOMP_DIAGNOSTIC_DISABLE_WSA_HOOKS=$(DCompDisableWSAHooks);%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Update="os\win32\win32_hook.cpp">
-      <PreprocessorDefinitions>DCOMP_INLINE_GRAPHICS_HOOKS=$(DCompInlineGraphicsHooks);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+  </ItemDefinitionGroup>
+
+  <!--
+    version.obj contains only the Git hash constant and is linked into both the
+    /MT capture DLL and the /MD Qt GUI. It has no CRT calls, so omit its default
+    runtime directive and let each final binary select its own CRT contract.
+  -->
+  <ItemDefinitionGroup Condition="'$(MSBuildProjectName)'=='renderdoc_version'">
+    <ClCompile>
+      <OmitDefaultLibName>true</OmitDefaultLibName>
     </ClCompile>
-    <ClCompile Update="os\win32\sys_win32_hooks.cpp">
-      <PreprocessorDefinitions>DCOMP_SINGLE_GENERATION_CHILD_HOOK=$(DCompSingleGenerationChildHook);DCOMP_DIAGNOSTIC_VARIANT_ID=$(DCompDiagnosticVariantId);DCOMP_DIAGNOSTIC_DISABLE_WIN32_SYSTEM_HOOKS=$(DCompDisableWin32SystemHooks);DCOMP_DIAGNOSTIC_PASSTHROUGH_NONINJECTED_CHILDREN=$(DCompPassthroughNonInjectedChildren);DCOMP_DIAGNOSTIC_PASSTHROUGH_ALL_NONINJECTED_CHILDREN=$(DCompPassthroughAllNonInjectedChildren);DCOMP_DIAGNOSTIC_DISABLE_WSA_HOOKS=$(DCompDisableWSAHooks);%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-    <ClCompile Update="hooks\hooks.cpp">
-      <PreprocessorDefinitions>DCOMP_DIAGNOSTIC_VARIANT_ID=$(DCompDiagnosticVariantId);DCOMP_DIAGNOSTIC_DISABLE_ALL_HOOKS=$(DCompDisableAllHooks);%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-    <ClCompile Update="core\core.cpp">
-      <PreprocessorDefinitions>DCOMP_DIAGNOSTIC_VARIANT_ID=$(DCompDiagnosticVariantId);DCOMP_DIAGNOSTIC_TARGET_INIT_STAGE=$(DCompDiagnosticTargetInitStage);DCOMP_DIAGNOSTIC_DISABLE_ALL_HOOKS=$(DCompDisableAllHooks);DCOMP_DIAGNOSTIC_DISABLE_WIN32_SYSTEM_HOOKS=$(DCompDisableWin32SystemHooks);DCOMP_DIAGNOSTIC_DISABLE_TARGET_CONTROL=$(DCompDisableTargetControl);DCOMP_DIAGNOSTIC_DISABLE_OVERLAY=$(DCompDisableOverlay);DCOMP_DIAGNOSTIC_PASSTHROUGH_NONINJECTED_CHILDREN=$(DCompPassthroughNonInjectedChildren);DCOMP_DIAGNOSTIC_DISABLE_WSA_HOOKS=$(DCompDisableWSAHooks);%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-    <ClCompile Update="os\win32\win32_libentry.cpp">
-      <PreprocessorDefinitions>DCOMP_DIAGNOSTIC_VARIANT_ID=$(DCompDiagnosticVariantId);DCOMP_DIAGNOSTIC_TARGET_INIT_STAGE=$(DCompDiagnosticTargetInitStage);%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-  </ItemGroup>
+  </ItemDefinitionGroup>
 
   <!--
     Keep the override scoped to the injected Core's complete link graph. This
