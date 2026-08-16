@@ -636,6 +636,15 @@ RenderDoc::RenderDoc()
 
 void RenderDoc::Initialise()
 {
+#if defined(DCOMP_DIAGNOSTIC_TARGET_INIT_STAGE) && DCOMP_DIAGNOSTIC_TARGET_INIT_STAGE == 2
+  if(Process::IsDCompDiagnosticTargetProcess())
+  {
+    RDCLOG("[DCOMP-AB] variant=%u target_process=1 checkpoint=core-entry-return",
+           (uint32_t)DCOMP_DIAGNOSTIC_VARIANT_ID);
+    return;
+  }
+#endif
+
   Callstack::Init();
 
   Network::Init();

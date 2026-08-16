@@ -75,6 +75,19 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
 {
   if(ul_reason_for_call == DLL_PROCESS_ATTACH)
   {
+#if defined(DCOMP_DIAGNOSTIC_TARGET_INIT_STAGE) && DCOMP_DIAGNOSTIC_TARGET_INIT_STAGE == 1
+    wchar_t diagnosticTarget[2] = {};
+    if(GetEnvironmentVariableW(L"DCOMP_DIAGNOSTIC_TARGET_PROCESS", diagnosticTarget,
+                               ARRAY_COUNT(diagnosticTarget)) == 1 &&
+       diagnosticTarget[0] == L'1')
+    {
+      OutputDebugStringA("[DCOMP-AB] variant=" STRINGIZE(DCOMP_DIAGNOSTIC_VARIANT_ID)
+                         " target_process=1 checkpoint=dllmain-return\n");
+      SetLastError(0);
+      return TRUE;
+    }
+#endif
+
     BOOL ret = add_hooks();
     SetLastError(0);
     return ret;

@@ -49,7 +49,9 @@
     <DCompDisableTargetControl Condition="'$(DCompDisableTargetControl)'==''">0</DCompDisableTargetControl>
     <DCompDisableOverlay Condition="'$(DCompDisableOverlay)'==''">0</DCompDisableOverlay>
     <DCompPassthroughNonInjectedChildren Condition="'$(DCompPassthroughNonInjectedChildren)'==''">0</DCompPassthroughNonInjectedChildren>
+    <DCompPassthroughAllNonInjectedChildren Condition="'$(DCompPassthroughAllNonInjectedChildren)'==''">0</DCompPassthroughAllNonInjectedChildren>
     <DCompDisableWSAHooks Condition="'$(DCompDisableWSAHooks)'==''">0</DCompDisableWSAHooks>
+    <DCompDiagnosticTargetInitStage Condition="'$(DCompDiagnosticTargetInitStage)'==''">0</DCompDiagnosticTargetInitStage>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(MSBuildProjectName)'=='renderdoc'">
@@ -60,13 +62,16 @@
       <PreprocessorDefinitions>DCOMP_INLINE_GRAPHICS_HOOKS=$(DCompInlineGraphicsHooks);%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <ClCompile Update="os\win32\sys_win32_hooks.cpp">
-      <PreprocessorDefinitions>DCOMP_SINGLE_GENERATION_CHILD_HOOK=$(DCompSingleGenerationChildHook);DCOMP_DIAGNOSTIC_VARIANT_ID=$(DCompDiagnosticVariantId);DCOMP_DIAGNOSTIC_DISABLE_WIN32_SYSTEM_HOOKS=$(DCompDisableWin32SystemHooks);DCOMP_DIAGNOSTIC_PASSTHROUGH_NONINJECTED_CHILDREN=$(DCompPassthroughNonInjectedChildren);DCOMP_DIAGNOSTIC_DISABLE_WSA_HOOKS=$(DCompDisableWSAHooks);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DCOMP_SINGLE_GENERATION_CHILD_HOOK=$(DCompSingleGenerationChildHook);DCOMP_DIAGNOSTIC_VARIANT_ID=$(DCompDiagnosticVariantId);DCOMP_DIAGNOSTIC_DISABLE_WIN32_SYSTEM_HOOKS=$(DCompDisableWin32SystemHooks);DCOMP_DIAGNOSTIC_PASSTHROUGH_NONINJECTED_CHILDREN=$(DCompPassthroughNonInjectedChildren);DCOMP_DIAGNOSTIC_PASSTHROUGH_ALL_NONINJECTED_CHILDREN=$(DCompPassthroughAllNonInjectedChildren);DCOMP_DIAGNOSTIC_DISABLE_WSA_HOOKS=$(DCompDisableWSAHooks);%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <ClCompile Update="hooks\hooks.cpp">
       <PreprocessorDefinitions>DCOMP_DIAGNOSTIC_VARIANT_ID=$(DCompDiagnosticVariantId);DCOMP_DIAGNOSTIC_DISABLE_ALL_HOOKS=$(DCompDisableAllHooks);%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <ClCompile Update="core\core.cpp">
-      <PreprocessorDefinitions>DCOMP_DIAGNOSTIC_VARIANT_ID=$(DCompDiagnosticVariantId);DCOMP_DIAGNOSTIC_DISABLE_ALL_HOOKS=$(DCompDisableAllHooks);DCOMP_DIAGNOSTIC_DISABLE_WIN32_SYSTEM_HOOKS=$(DCompDisableWin32SystemHooks);DCOMP_DIAGNOSTIC_DISABLE_TARGET_CONTROL=$(DCompDisableTargetControl);DCOMP_DIAGNOSTIC_DISABLE_OVERLAY=$(DCompDisableOverlay);DCOMP_DIAGNOSTIC_PASSTHROUGH_NONINJECTED_CHILDREN=$(DCompPassthroughNonInjectedChildren);DCOMP_DIAGNOSTIC_DISABLE_WSA_HOOKS=$(DCompDisableWSAHooks);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DCOMP_DIAGNOSTIC_VARIANT_ID=$(DCompDiagnosticVariantId);DCOMP_DIAGNOSTIC_TARGET_INIT_STAGE=$(DCompDiagnosticTargetInitStage);DCOMP_DIAGNOSTIC_DISABLE_ALL_HOOKS=$(DCompDisableAllHooks);DCOMP_DIAGNOSTIC_DISABLE_WIN32_SYSTEM_HOOKS=$(DCompDisableWin32SystemHooks);DCOMP_DIAGNOSTIC_DISABLE_TARGET_CONTROL=$(DCompDisableTargetControl);DCOMP_DIAGNOSTIC_DISABLE_OVERLAY=$(DCompDisableOverlay);DCOMP_DIAGNOSTIC_PASSTHROUGH_NONINJECTED_CHILDREN=$(DCompPassthroughNonInjectedChildren);DCOMP_DIAGNOSTIC_DISABLE_WSA_HOOKS=$(DCompDisableWSAHooks);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Update="os\win32\win32_libentry.cpp">
+      <PreprocessorDefinitions>DCOMP_DIAGNOSTIC_VARIANT_ID=$(DCompDiagnosticVariantId);DCOMP_DIAGNOSTIC_TARGET_INIT_STAGE=$(DCompDiagnosticTargetInitStage);%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemGroup>
 

@@ -303,9 +303,18 @@ private:
                        DWORD dwCreationFlags, bool inject, LPVOID pEnvironment,
                        LPPROCESS_INFORMATION lpProcessInformation)
   {
-#if defined(DCOMP_DIAGNOSTIC_PASSTHROUGH_NONINJECTED_CHILDREN) && \
-    DCOMP_DIAGNOSTIC_PASSTHROUGH_NONINJECTED_CHILDREN
-    if(!inject && Process::IsDCompDiagnosticTargetProcess())
+#if (defined(DCOMP_DIAGNOSTIC_PASSTHROUGH_NONINJECTED_CHILDREN) && \
+     DCOMP_DIAGNOSTIC_PASSTHROUGH_NONINJECTED_CHILDREN) ||               \
+    (defined(DCOMP_DIAGNOSTIC_PASSTHROUGH_ALL_NONINJECTED_CHILDREN) &&   \
+     DCOMP_DIAGNOSTIC_PASSTHROUGH_ALL_NONINJECTED_CHILDREN)
+    const bool passThroughAll =
+#if defined(DCOMP_DIAGNOSTIC_PASSTHROUGH_ALL_NONINJECTED_CHILDREN) && \
+    DCOMP_DIAGNOSTIC_PASSTHROUGH_ALL_NONINJECTED_CHILDREN
+        true;
+#else
+        false;
+#endif
+    if(!inject && (passThroughAll || Process::IsDCompDiagnosticTargetProcess()))
     {
       RDCLOG("[DCOMP-AB] passing through %s flags=0x%08x", entryPoint, dwCreationFlags);
       return realFunc(dwCreationFlags, pEnvironment, lpProcessInformation);
