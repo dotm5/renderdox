@@ -133,7 +133,7 @@ static bool IsExcludedChildTool(LPCWSTR lpApplicationName, LPCWSTR lpCommandLine
 TEST_CASE("Win32 child-tool exclusion parses only the executable token", "[win32][process]")
 {
   CHECK(IsExcludedChildTool(L"C:\\Tools\\dgcoreui.exe", NULL));
-  CHECK(IsExcludedChildTool(L"C:\\TOOLS\\DCOMPCMD.EXE", L"ignored.exe"));
+  CHECK(IsExcludedChildTool(L"C:\\TOOLS\\DGCORECMD.EXE", L"ignored.exe"));
   CHECK(IsExcludedChildTool(NULL, L"  \"C:\\Program Files\\DComp\\dgcorestub.exe\" --foo"));
   CHECK(IsExcludedChildTool(NULL, L"C:\\Tools\\dgcoreui.exe --foo"));
 
