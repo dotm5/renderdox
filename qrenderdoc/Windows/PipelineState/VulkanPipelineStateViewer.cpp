@@ -914,15 +914,15 @@ void VulkanPipelineStateViewer::setOldMeshPipeFlow()
 
   ui->pipeFlow->setStages(
       {
-          lit("VTX"),
-          lit("VS"),
-          lit("TCS"),
-          lit("TES"),
-          lit("GS"),
-          lit("RS"),
-          lit("FS"),
-          lit("FB"),
-          lit("CS"),
+          tr("Vertex VTX"),
+          tr("Vertex VS"),
+          tr("Tess Ctrl TCS"),
+          tr("Tess Eval TES"),
+          tr("Geometry GS"),
+          tr("Raster RS"),
+          tr("Fragment FS"),
+          tr("Framebuffer FB"),
+          tr("Compute CS"),
       },
       {
           tr("Vertex Input"),
@@ -945,12 +945,12 @@ void VulkanPipelineStateViewer::setNewMeshPipeFlow()
 
   ui->pipeFlow->setStages(
       {
-          lit("TS"),
-          lit("MS"),
-          lit("RS"),
-          lit("FS"),
-          lit("FB"),
-          lit("CS"),
+          tr("Task TS"),
+          tr("Mesh MS"),
+          tr("Raster RS"),
+          tr("Fragment FS"),
+          tr("Framebuffer FB"),
+          tr("Compute CS"),
       },
       {
           tr("Task Shader"),
@@ -1971,11 +1971,11 @@ void VulkanPipelineStateViewer::setState()
 
     if(state.geometryShader.resourceId == ResourceId() && xfbActive)
     {
-      ui->pipeFlow->setStageName(4, lit("XFB"), tr("Transform Feedback"));
+      ui->pipeFlow->setStageName(4, tr("Transform XFB"), tr("Transform Feedback"));
     }
     else
     {
-      ui->pipeFlow->setStageName(4, lit("GS"), tr("Geometry Shader"));
+      ui->pipeFlow->setStageName(4, tr("Geometry GS"), tr("Geometry Shader"));
     }
 
     ui->pipeFlow->setStagesEnabled(

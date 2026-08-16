@@ -13,19 +13,19 @@
     </message>
     <message>
       <source>Callstack</source>
-      <translation type="unfinished" />
+      <translation>调用堆栈</translation>
     </message>
     <message>
       <source>Symbols not loaded. Tools -&gt; Resolve Symbols.</source>
-      <translation type="unfinished" />
+      <translation>尚未加载符号。请使用“工具 -&gt; 解析符号”。</translation>
     </message>
     <message>
       <source>Callstack resolution not available.</source>
-      <translation type="unfinished" />
+      <translation>调用堆栈解析不可用。</translation>
     </message>
     <message>
       <source>No Callstack available.</source>
-      <translation type="unfinished" />
+      <translation>没有可用的调用堆栈。</translation>
     </message>
     <message>
       <source>Invalid chunk index %1</source>
@@ -100,15 +100,15 @@
     </message>
     <message>
       <source>Gather anonymous low-detail statistics and submit automatically.</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">收集匿名低精度统计信息，并自动提交。</translation>
     </message>
     <message>
       <source>Gather anonymous low-detail statistics, but manually verify before submitting.</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">收集匿名低精度统计信息，但在提交前手动确认。</translation>
     </message>
     <message>
       <source>Do not gather or submit any statistics.</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">不收集或提交任何统计信息。</translation>
     </message>
   </context>
   <context>
@@ -123,7 +123,7 @@
     </message>
     <message>
       <source>Go</source>
-      <translation type="unfinished" />
+      <translation>转到</translation>
     </message>
     <message>
       <source>&amp;Highlight in Event Browser</source>
@@ -906,7 +906,7 @@ Consider wrapping all the globals in a single struct, or removing the unbounded 
     </message>
     <message>
       <source>No draw call selected</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">未选择绘制调用</translation>
     </message>
     <message>
       <source>No mesh shader bound</source>
@@ -1318,7 +1318,7 @@ Matrix stored </source>
     </message>
     <message>
       <source>Secondary</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">辅助属性</translation>
     </message>
     <message>
       <source>Right:</source>
@@ -1639,7 +1639,7 @@ This error is not recoverable and the analysis cannot continue. The UI will be n
     </message>
     <message>
       <source>Error opening capture</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">打开捕获文件失败</translation>
     </message>
     <message>
       <source>Failed to open '%1' for replay
@@ -1668,7 +1668,7 @@ This warning will not appear every time this happens, check debug errors/warning
     </message>
     <message>
       <source>Unsaved capture</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">未保存的捕获文件</translation>
     </message>
     <message>
       <source>To recompress a capture you must save it first. Save this capture?</source>
@@ -1724,7 +1724,7 @@ This warning will not appear every time this happens, check debug errors/warning
     </message>
     <message>
       <source>File not found</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">找不到文件</translation>
     </message>
     <message>
       <source>File couldn't be transferred from remote host</source>
@@ -1827,7 +1827,7 @@ Open settings window to configure path?</source>
     </message>
     <message>
       <source>Error loading config</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">加载配置失败</translation>
     </message>
     <message>
       <source>Error loading config file
@@ -1900,7 +1900,7 @@ A default config is loaded and will be saved out.</source>
     </message>
     <message>
       <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;table&gt;&lt;tr&gt;&lt;td valign="middle"&gt;&lt;img width="16" src=":/information.png"/&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;Warning: Vulkan capture is not configured.&lt;br/&gt;Click here to set up Vulkan capture.&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished" />
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;table&gt;&lt;tr&gt;&lt;td valign="middle"&gt;&lt;img width="16" src=":/information.png"/&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;警告：Vulkan 捕获尚未配置。&lt;br/&gt;点击此处配置 Vulkan 捕获。&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;table&gt;&lt;tr&gt;&lt;td valign="middle"&gt;&lt;img width="16" src=":/information.png"/&gt;&lt;/td&gt;&lt;td valign="middle"&gt;&lt;p&gt;Scanning Android application for RenderDoc support...&lt;br/&gt;&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/body&gt;&lt;/html&gt;</source>
@@ -2266,7 +2266,7 @@ On UE4 you must disable &lt;em&gt;for distribution&lt;/em&gt;, on Unity enable &
     </message>
     <message>
       <source>Global hook active</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">全局 Hook 已启用</translation>
     </message>
     <message>
       <source>Cannot close this window while global hook is active.</source>
@@ -2394,6 +2394,14 @@ This path does not exist</source>
       <source>Invalid intent arguments: %1
 The intent arguments must include the full parameters e.g. --es args "my arguments"</source>
       <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Inject</source>
+      <translation>注入</translation>
+    </message>
+    <message>
+      <source>Inject into Process</source>
+      <translation>注入进程</translation>
     </message>
   </context>
   <context>
@@ -2593,7 +2601,7 @@ The intent arguments must include the full parameters e.g. --es args "my argumen
     </message>
     <message>
       <source>Are you sure?</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">是否确定？</translation>
     </message>
     <message>
       <source>Uploading your capture file will send it privately to the RenderDoc server where I can use it to reproduce your problem.
@@ -2676,43 +2684,43 @@ Calculating time remaining</source>
     </message>
     <message>
       <source>Show items that are bound but not currently used by the pipeline.</source>
-      <translation type="unfinished" />
+      <translation>显示已绑定但当前未被管线使用的项目。</translation>
     </message>
     <message>
       <source>Show Unused Items</source>
-      <translation type="unfinished" />
+      <translation>显示未使用项</translation>
     </message>
     <message>
       <source>Show pipeline bindings which are completely empty and have nothing bound</source>
-      <translation type="unfinished" />
+      <translation>显示完全为空、没有任何绑定内容的管线绑定。</translation>
     </message>
     <message>
       <source>Show Empty Items</source>
-      <translation type="unfinished" />
+      <translation>显示空项</translation>
     </message>
     <message>
       <source>Export the current pipeline state to an HTML file</source>
-      <translation type="unfinished" />
+      <translation>将当前管线状态导出为 HTML 文件。</translation>
     </message>
     <message>
       <source>Export</source>
-      <translation type="unfinished" />
+      <translation>导出</translation>
     </message>
     <message>
       <source>Extensions</source>
-      <translation type="unfinished" />
+      <translation>扩展</translation>
     </message>
     <message>
       <source>Input Assembly</source>
-      <translation type="unfinished" />
+      <translation>输入装配 IA</translation>
     </message>
     <message>
       <source>Input Layouts</source>
-      <translation type="unfinished" />
+      <translation>输入布局</translation>
     </message>
     <message>
       <source>Input Layout Bytecode</source>
-      <translation type="unfinished" />
+      <translation>输入布局字节码</translation>
     </message>
     <message>
       <source>Open Shader Source</source>
@@ -2728,11 +2736,11 @@ Calculating time remaining</source>
     </message>
     <message>
       <source>Buffers</source>
-      <translation type="unfinished" />
+      <translation>缓冲区</translation>
     </message>
     <message>
       <source>Mesh View</source>
-      <translation type="unfinished" />
+      <translation>网格视图</translation>
     </message>
     <message>
       <source>View the mesh input data</source>
@@ -2740,7 +2748,7 @@ Calculating time remaining</source>
     </message>
     <message>
       <source>Primitive Topology</source>
-      <translation type="unfinished" />
+      <translation>图元拓扑</translation>
     </message>
     <message>
       <source>Triangle List</source>
@@ -2748,15 +2756,15 @@ Calculating time remaining</source>
     </message>
     <message>
       <source>Vertex Shader</source>
-      <translation type="unfinished" />
+      <translation>顶点着色器 VS</translation>
     </message>
     <message>
       <source>Shader</source>
-      <translation type="unfinished" />
+      <translation>着色器</translation>
     </message>
     <message>
       <source>Edit Shader</source>
-      <translation type="unfinished" />
+      <translation>编辑着色器</translation>
     </message>
     <message>
       <source>Edit</source>
@@ -2776,35 +2784,35 @@ Calculating time remaining</source>
     </message>
     <message>
       <source>Samplers</source>
-      <translation type="unfinished" />
+      <translation>采样器</translation>
     </message>
     <message>
       <source>Constant Buffers</source>
-      <translation type="unfinished" />
+      <translation>常量缓冲区</translation>
     </message>
     <message>
       <source>Class Instances</source>
-      <translation type="unfinished" />
+      <translation>类实例</translation>
     </message>
     <message>
       <source>Hull Shader</source>
-      <translation type="unfinished" />
+      <translation>外壳着色器 HS</translation>
     </message>
     <message>
       <source>Domain Shader</source>
-      <translation type="unfinished" />
+      <translation>域着色器 DS</translation>
     </message>
     <message>
       <source>Geometry Shader</source>
-      <translation type="unfinished" />
+      <translation>几何着色器 GS</translation>
     </message>
     <message>
       <source>Stream Out</source>
-      <translation type="unfinished" />
+      <translation>流输出</translation>
     </message>
     <message>
       <source>Rasterizer</source>
-      <translation type="unfinished" />
+      <translation>光栅化</translation>
     </message>
     <message>
       <source>Rasterizer State</source>
@@ -2900,11 +2908,11 @@ Calculating time remaining</source>
     </message>
     <message>
       <source>Pixel Shader</source>
-      <translation type="unfinished" />
+      <translation>像素着色器 PS</translation>
     </message>
     <message>
       <source>Output Merger</source>
-      <translation type="unfinished" />
+      <translation>输出合并 OM</translation>
     </message>
     <message>
       <source>Render Targets &amp;&amp; UAVs</source>
@@ -2984,7 +2992,7 @@ Calculating time remaining</source>
     </message>
     <message>
       <source>Compute Shader</source>
-      <translation type="unfinished" />
+      <translation>计算着色器 CS</translation>
     </message>
     <message>
       <source>Debug</source>
@@ -2996,15 +3004,15 @@ Calculating time remaining</source>
     </message>
     <message>
       <source>Slot</source>
-      <translation type="unfinished" />
+      <translation>槽位</translation>
     </message>
     <message>
       <source>Semantic</source>
-      <translation type="unfinished" />
+      <translation>语义</translation>
     </message>
     <message>
       <source>Index</source>
-      <translation type="unfinished" />
+      <translation>索引</translation>
     </message>
     <message>
       <source>Format</source>
@@ -3012,23 +3020,23 @@ Calculating time remaining</source>
     </message>
     <message>
       <source>Input Slot</source>
-      <translation type="unfinished" />
+      <translation>输入槽位</translation>
     </message>
     <message>
       <source>Offset</source>
-      <translation type="unfinished" />
+      <translation>偏移</translation>
     </message>
     <message>
       <source>Class</source>
-      <translation type="unfinished" />
+      <translation>分类</translation>
     </message>
     <message>
       <source>Step Rate</source>
-      <translation type="unfinished" />
+      <translation>步进率</translation>
     </message>
     <message>
       <source>Go</source>
-      <translation type="unfinished" />
+      <translation>转到</translation>
     </message>
     <message>
       <source>Buffer</source>
@@ -3036,11 +3044,11 @@ Calculating time remaining</source>
     </message>
     <message>
       <source>Stride</source>
-      <translation type="unfinished" />
+      <translation>步长</translation>
     </message>
     <message>
       <source>Byte Length</source>
-      <translation type="unfinished" />
+      <translation>字节长度</translation>
     </message>
     <message>
       <source>Resource</source>
@@ -3180,7 +3188,7 @@ Calculating time remaining</source>
     </message>
     <message>
       <source>Input Assembler</source>
-      <translation type="unfinished" />
+      <translation>输入装配器 IA</translation>
     </message>
     <message>
       <source>The texture is format %1, the view treats it as %2.
@@ -3659,11 +3667,51 @@ The buffer is %4 bytes in length (%5 elements).
     </message>
     <message>
       <source>Error debugging</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">调试失败</translation>
     </message>
     <message>
       <source>Error debugging thread - make sure a valid group and thread is selected</source>
       <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Input IA</source>
+      <translation>输入装配IA</translation>
+    </message>
+    <message>
+      <source>Vertex VS</source>
+      <translation>顶点着色VS</translation>
+    </message>
+    <message>
+      <source>Hull HS</source>
+      <translation>外壳着色HS</translation>
+    </message>
+    <message>
+      <source>Domain DS</source>
+      <translation>域着色器DS</translation>
+    </message>
+    <message>
+      <source>Geometry GS</source>
+      <translation>几何着色GS</translation>
+    </message>
+    <message>
+      <source>Raster RS</source>
+      <translation>光栅处理RS</translation>
+    </message>
+    <message>
+      <source>Pixel PS</source>
+      <translation>像素着色PS</translation>
+    </message>
+    <message>
+      <source>Merge OM</source>
+      <translation>输出合并OM</translation>
+    </message>
+    <message>
+      <source>Compute CS</source>
+      <translation>计算着色CS</translation>
+    </message>
+    <message>
+      <source>Stream SO</source>
+      <translation>流式输出SO</translation>
     </message>
   </context>
   <context>
@@ -3674,47 +3722,47 @@ The buffer is %4 bytes in length (%5 elements).
     </message>
     <message>
       <source>Show items that are bound but not currently used by the pipeline.</source>
-      <translation type="unfinished" />
+      <translation>显示已绑定但当前未被管线使用的项目。</translation>
     </message>
     <message>
       <source>Show Unused Items</source>
-      <translation type="unfinished" />
+      <translation>显示未使用项</translation>
     </message>
     <message>
       <source>Show pipeline bindings which are completely empty and have nothing bound</source>
-      <translation type="unfinished" />
+      <translation>显示完全为空、没有任何绑定内容的管线绑定。</translation>
     </message>
     <message>
       <source>Show Empty Items</source>
-      <translation type="unfinished" />
+      <translation>显示空项</translation>
     </message>
     <message>
       <source>Export the current pipeline state to an HTML file</source>
-      <translation type="unfinished" />
+      <translation>将当前管线状态导出为 HTML 文件。</translation>
     </message>
     <message>
       <source>Export</source>
-      <translation type="unfinished" />
+      <translation>导出</translation>
     </message>
     <message>
       <source>Extensions</source>
-      <translation type="unfinished" />
+      <translation>扩展</translation>
     </message>
     <message>
       <source>Input Assembly</source>
-      <translation type="unfinished" />
+      <translation>输入装配 IA</translation>
     </message>
     <message>
       <source>Input Layouts</source>
-      <translation type="unfinished" />
+      <translation>输入布局</translation>
     </message>
     <message>
       <source>Buffers</source>
-      <translation type="unfinished" />
+      <translation>缓冲区</translation>
     </message>
     <message>
       <source>Mesh View</source>
-      <translation type="unfinished" />
+      <translation>网格视图</translation>
     </message>
     <message>
       <source>View the mesh input data</source>
@@ -3722,7 +3770,7 @@ The buffer is %4 bytes in length (%5 elements).
     </message>
     <message>
       <source>Primitive Topology</source>
-      <translation type="unfinished" />
+      <translation>图元拓扑</translation>
     </message>
     <message>
       <source>Triangle List</source>
@@ -3734,7 +3782,7 @@ The buffer is %4 bytes in length (%5 elements).
     </message>
     <message>
       <source>Vertex Shader</source>
-      <translation type="unfinished" />
+      <translation>顶点着色器 VS</translation>
     </message>
     <message>
       <source>Root Signature &amp;&amp; Shader</source>
@@ -3754,7 +3802,7 @@ The buffer is %4 bytes in length (%5 elements).
     </message>
     <message>
       <source>Edit Shader</source>
-      <translation type="unfinished" />
+      <translation>编辑着色器</translation>
     </message>
     <message>
       <source>Edit</source>
@@ -3778,31 +3826,31 @@ The buffer is %4 bytes in length (%5 elements).
     </message>
     <message>
       <source>Samplers</source>
-      <translation type="unfinished" />
+      <translation>采样器</translation>
     </message>
     <message>
       <source>Constant Buffers</source>
-      <translation type="unfinished" />
+      <translation>常量缓冲区</translation>
     </message>
     <message>
       <source>Hull Shader</source>
-      <translation type="unfinished" />
+      <translation>外壳着色器 HS</translation>
     </message>
     <message>
       <source>Domain Shader</source>
-      <translation type="unfinished" />
+      <translation>域着色器 DS</translation>
     </message>
     <message>
       <source>Geometry Shader</source>
-      <translation type="unfinished" />
+      <translation>几何着色器 GS</translation>
     </message>
     <message>
       <source>Stream Out</source>
-      <translation type="unfinished" />
+      <translation>流输出</translation>
     </message>
     <message>
       <source>Rasterizer</source>
-      <translation type="unfinished" />
+      <translation>光栅化</translation>
     </message>
     <message>
       <source>Rasterizer State</source>
@@ -3922,11 +3970,11 @@ The buffer is %4 bytes in length (%5 elements).
     </message>
     <message>
       <source>Pixel Shader</source>
-      <translation type="unfinished" />
+      <translation>像素着色器 PS</translation>
     </message>
     <message>
       <source>Output Merger</source>
-      <translation type="unfinished" />
+      <translation>输出合并 OM</translation>
     </message>
     <message>
       <source>Render Targets</source>
@@ -3986,7 +4034,7 @@ The buffer is %4 bytes in length (%5 elements).
     </message>
     <message>
       <source>Compute Shader</source>
-      <translation type="unfinished" />
+      <translation>计算着色器 CS</translation>
     </message>
     <message>
       <source>Debug</source>
@@ -3998,7 +4046,7 @@ The buffer is %4 bytes in length (%5 elements).
     </message>
     <message>
       <source>Mesh Shader</source>
-      <translation type="unfinished" />
+      <translation>网格着色器 MS</translation>
     </message>
     <message>
       <source>View Mesh</source>
@@ -4010,15 +4058,15 @@ The buffer is %4 bytes in length (%5 elements).
     </message>
     <message>
       <source>Slot</source>
-      <translation type="unfinished" />
+      <translation>槽位</translation>
     </message>
     <message>
       <source>Semantic</source>
-      <translation type="unfinished" />
+      <translation>语义</translation>
     </message>
     <message>
       <source>Index</source>
-      <translation type="unfinished" />
+      <translation>索引</translation>
     </message>
     <message>
       <source>Format</source>
@@ -4026,23 +4074,23 @@ The buffer is %4 bytes in length (%5 elements).
     </message>
     <message>
       <source>Input Slot</source>
-      <translation type="unfinished" />
+      <translation>输入槽位</translation>
     </message>
     <message>
       <source>Offset</source>
-      <translation type="unfinished" />
+      <translation>偏移</translation>
     </message>
     <message>
       <source>Class</source>
-      <translation type="unfinished" />
+      <translation>分类</translation>
     </message>
     <message>
       <source>Step Rate</source>
-      <translation type="unfinished" />
+      <translation>步进率</translation>
     </message>
     <message>
       <source>Go</source>
-      <translation type="unfinished" />
+      <translation>转到</translation>
     </message>
     <message>
       <source>Buffer</source>
@@ -4050,11 +4098,11 @@ The buffer is %4 bytes in length (%5 elements).
     </message>
     <message>
       <source>Stride</source>
-      <translation type="unfinished" />
+      <translation>步长</translation>
     </message>
     <message>
       <source>Byte Length</source>
-      <translation type="unfinished" />
+      <translation>字节长度</translation>
     </message>
     <message>
       <source>Binding</source>
@@ -4280,11 +4328,11 @@ The buffer is %4 bytes in length (%5 elements).
     </message>
     <message>
       <source>Input Assembler</source>
-      <translation type="unfinished" />
+      <translation>输入装配器 IA</translation>
     </message>
     <message>
       <source>Amp. Shader</source>
-      <translation type="unfinished" />
+      <translation>放大着色器 AS</translation>
     </message>
     <message>
       <source>Solid</source>
@@ -4438,7 +4486,7 @@ The buffer is %4 bytes in length (%5 elements).
     </message>
     <message>
       <source>Shader</source>
-      <translation type="unfinished" />
+      <translation>着色器</translation>
     </message>
     <message>
       <source>Unbound</source>
@@ -4678,11 +4726,59 @@ The buffer is %4 bytes in length (%5 elements).
     </message>
     <message>
       <source>Error debugging</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">调试失败</translation>
     </message>
     <message>
       <source>Error debugging thread - make sure a valid group and thread is selected</source>
       <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Input IA</source>
+      <translation>输入装配IA</translation>
+    </message>
+    <message>
+      <source>Vertex VS</source>
+      <translation>顶点着色VS</translation>
+    </message>
+    <message>
+      <source>Hull HS</source>
+      <translation>外壳着色HS</translation>
+    </message>
+    <message>
+      <source>Domain DS</source>
+      <translation>域着色器DS</translation>
+    </message>
+    <message>
+      <source>Geometry GS</source>
+      <translation>几何着色GS</translation>
+    </message>
+    <message>
+      <source>Raster RS</source>
+      <translation>光栅处理RS</translation>
+    </message>
+    <message>
+      <source>Pixel PS</source>
+      <translation>像素着色PS</translation>
+    </message>
+    <message>
+      <source>Merge OM</source>
+      <translation>输出合并OM</translation>
+    </message>
+    <message>
+      <source>Compute CS</source>
+      <translation>计算着色CS</translation>
+    </message>
+    <message>
+      <source>Amplify AS</source>
+      <translation>放大着色AS</translation>
+    </message>
+    <message>
+      <source>Mesh MS</source>
+      <translation>网格着色MS</translation>
+    </message>
+    <message>
+      <source>Stream SO</source>
+      <translation>流式输出SO</translation>
     </message>
   </context>
   <context>
@@ -4713,7 +4809,7 @@ The buffer is %4 bytes in length (%5 elements).
     </message>
     <message>
       <source>Show</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">显示</translation>
     </message>
     <message>
       <source>%1 Source: %2</source>
@@ -4752,7 +4848,7 @@ The buffer is %4 bytes in length (%5 elements).
     <name>DescriptorItemModel</name>
     <message>
       <source>Index</source>
-      <translation type="unfinished" />
+      <translation>索引</translation>
     </message>
     <message>
       <source>Contents</source>
@@ -5945,7 +6041,7 @@ If this is not a filter function, surround with quotes.</source>
     </message>
     <message>
       <source>Name:</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">名称：</translation>
     </message>
     <message>
       <source>Version:</source>
@@ -6084,35 +6180,35 @@ If this is not a filter function, surround with quotes.</source>
     </message>
     <message>
       <source>Show items that are bound but not currently used by the pipeline.</source>
-      <translation type="unfinished" />
+      <translation>显示已绑定但当前未被管线使用的项目。</translation>
     </message>
     <message>
       <source>Show Unused Items</source>
-      <translation type="unfinished" />
+      <translation>显示未使用项</translation>
     </message>
     <message>
       <source>Show pipeline bindings which are completely empty and have nothing bound</source>
-      <translation type="unfinished" />
+      <translation>显示完全为空、没有任何绑定内容的管线绑定。</translation>
     </message>
     <message>
       <source>Show Empty Items</source>
-      <translation type="unfinished" />
+      <translation>显示空项</translation>
     </message>
     <message>
       <source>Export the current pipeline state to an HTML file</source>
-      <translation type="unfinished" />
+      <translation>将当前管线状态导出为 HTML 文件。</translation>
     </message>
     <message>
       <source>Export</source>
-      <translation type="unfinished" />
+      <translation>导出</translation>
     </message>
     <message>
       <source>Extensions</source>
-      <translation type="unfinished" />
+      <translation>扩展</translation>
     </message>
     <message>
       <source>Vertex Input</source>
-      <translation type="unfinished" />
+      <translation>顶点输入</translation>
     </message>
     <message>
       <source>Vertex Attribute Formats</source>
@@ -6124,11 +6220,11 @@ If this is not a filter function, surround with quotes.</source>
     </message>
     <message>
       <source>Buffers</source>
-      <translation type="unfinished" />
+      <translation>缓冲区</translation>
     </message>
     <message>
       <source>Mesh View</source>
-      <translation type="unfinished" />
+      <translation>网格视图</translation>
     </message>
     <message>
       <source>View the mesh input data</source>
@@ -6136,7 +6232,7 @@ If this is not a filter function, surround with quotes.</source>
     </message>
     <message>
       <source>Primitive Topology</source>
-      <translation type="unfinished" />
+      <translation>图元拓扑</translation>
     </message>
     <message>
       <source>Triangle List</source>
@@ -6148,11 +6244,11 @@ If this is not a filter function, surround with quotes.</source>
     </message>
     <message>
       <source>Vertex Shader</source>
-      <translation type="unfinished" />
+      <translation>顶点着色器 VS</translation>
     </message>
     <message>
       <source>Shader</source>
-      <translation type="unfinished" />
+      <translation>着色器</translation>
     </message>
     <message>
       <source>Open Shader Source</source>
@@ -6164,7 +6260,7 @@ If this is not a filter function, surround with quotes.</source>
     </message>
     <message>
       <source>Edit Shader</source>
-      <translation type="unfinished" />
+      <translation>编辑着色器</translation>
     </message>
     <message>
       <source>Edit</source>
@@ -6184,7 +6280,7 @@ If this is not a filter function, surround with quotes.</source>
     </message>
     <message>
       <source>Samplers</source>
-      <translation type="unfinished" />
+      <translation>采样器</translation>
     </message>
     <message>
       <source>Uniforms and UBOs</source>
@@ -6208,11 +6304,11 @@ If this is not a filter function, surround with quotes.</source>
     </message>
     <message>
       <source>Geometry Shader</source>
-      <translation type="unfinished" />
+      <translation>几何着色器 GS</translation>
     </message>
     <message>
       <source>Transform Feedback</source>
-      <translation type="unfinished" />
+      <translation>变换反馈</translation>
     </message>
     <message>
       <source>Paused:</source>
@@ -6220,7 +6316,7 @@ If this is not a filter function, surround with quotes.</source>
     </message>
     <message>
       <source>Rasterizer</source>
-      <translation type="unfinished" />
+      <translation>光栅化</translation>
     </message>
     <message>
       <source>Rasterizer State</source>
@@ -6360,11 +6456,11 @@ If this is not a filter function, surround with quotes.</source>
     </message>
     <message>
       <source>Fragment Shader</source>
-      <translation type="unfinished" />
+      <translation>片元着色器 FS</translation>
     </message>
     <message>
       <source>Framebuffer Output</source>
-      <translation type="unfinished" />
+      <translation>帧缓冲输出</translation>
     </message>
     <message>
       <source>Framebuffer</source>
@@ -6416,7 +6512,7 @@ If this is not a filter function, surround with quotes.</source>
     </message>
     <message>
       <source>Compute Shader</source>
-      <translation type="unfinished" />
+      <translation>计算着色器 CS</translation>
     </message>
     <message>
       <source>Debug</source>
@@ -6424,7 +6520,7 @@ If this is not a filter function, surround with quotes.</source>
     </message>
     <message>
       <source>Index</source>
-      <translation type="unfinished" />
+      <translation>索引</translation>
     </message>
     <message>
       <source>Enabled</source>
@@ -6448,11 +6544,11 @@ If this is not a filter function, surround with quotes.</source>
     </message>
     <message>
       <source>Go</source>
-      <translation type="unfinished" />
+      <translation>转到</translation>
     </message>
     <message>
       <source>Slot</source>
-      <translation type="unfinished" />
+      <translation>槽位</translation>
     </message>
     <message>
       <source>Buffer</source>
@@ -6460,11 +6556,11 @@ If this is not a filter function, surround with quotes.</source>
     </message>
     <message>
       <source>Stride</source>
-      <translation type="unfinished" />
+      <translation>步长</translation>
     </message>
     <message>
       <source>Offset</source>
-      <translation type="unfinished" />
+      <translation>偏移</translation>
     </message>
     <message>
       <source>Divisor</source>
@@ -6472,7 +6568,7 @@ If this is not a filter function, surround with quotes.</source>
     </message>
     <message>
       <source>Byte Length</source>
-      <translation type="unfinished" />
+      <translation>字节长度</translation>
     </message>
     <message>
       <source>Resource</source>
@@ -6624,11 +6720,11 @@ If this is not a filter function, surround with quotes.</source>
     </message>
     <message>
       <source>Tess. Control Shader</source>
-      <translation type="unfinished" />
+      <translation>细分控制着色器 TCS</translation>
     </message>
     <message>
       <source>Tess. Eval. Shader</source>
-      <translation type="unfinished" />
+      <translation>细分求值着色器 TES</translation>
     </message>
     <message>
       <source>The texture is incomplete:
@@ -7299,11 +7395,51 @@ but this is inverted by the upper-left clip origin.</source>
     </message>
     <message>
       <source>Error debugging</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">调试失败</translation>
     </message>
     <message>
       <source>Error debugging thread - make sure a valid group and thread is selected</source>
       <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Vertex VTX</source>
+      <translation>顶点输入VTX</translation>
+    </message>
+    <message>
+      <source>Vertex VS</source>
+      <translation>顶点着色VS</translation>
+    </message>
+    <message>
+      <source>Tess Ctrl TCS</source>
+      <translation>细分控制TCS</translation>
+    </message>
+    <message>
+      <source>Tess Eval TES</source>
+      <translation>细分求值TES</translation>
+    </message>
+    <message>
+      <source>Geometry GS</source>
+      <translation>几何着色GS</translation>
+    </message>
+    <message>
+      <source>Raster RS</source>
+      <translation>光栅处理RS</translation>
+    </message>
+    <message>
+      <source>Fragment FS</source>
+      <translation>片元着色FS</translation>
+    </message>
+    <message>
+      <source>Framebuffer FB</source>
+      <translation>帧缓输出FB</translation>
+    </message>
+    <message>
+      <source>Compute CS</source>
+      <translation>计算着色CS</translation>
+    </message>
+    <message>
+      <source>Transform XFB</source>
+      <translation>变换反馈XFB</translation>
     </message>
   </context>
   <context>
@@ -7380,7 +7516,7 @@ but this is inverted by the upper-left clip origin.</source>
     </message>
     <message>
       <source>Frame </source>
-      <translation type="unfinished" />
+      <translation type="unfinished">帧 </translation>
     </message>
     <message>
       <source>Cycle Active Window</source>
@@ -7404,7 +7540,7 @@ but this is inverted by the upper-left clip origin.</source>
     </message>
     <message>
       <source>This instance</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">当前实例</translation>
     </message>
     <message>
       <source>New instance</source>
@@ -7520,7 +7656,7 @@ Frame #%1</source>
     </message>
     <message>
       <source>Unsaved capture</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">未保存的捕获文件</translation>
     </message>
     <message>
       <source>Save this capture '%1 %2' at %3?</source>
@@ -7650,7 +7786,7 @@ Close the capture or save to another location.</source>
     </message>
     <message>
       <source>PID</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">PID</translation>
     </message>
     <message>
       <source>Export log to disk</source>
@@ -7670,7 +7806,7 @@ Close the capture or save to another location.</source>
     </message>
     <message>
       <source>Android</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">Android</translation>
     </message>
     <message>
       <source>UI</source>
@@ -7909,11 +8045,11 @@ Close the capture or save to another location.</source>
     </message>
     <message>
       <source>Embed external files into Capture</source>
-      <translation type="unfinished" />
+      <translation>将外部文件嵌入捕获文件</translation>
     </message>
     <message>
       <source>Remove external files from Capture</source>
-      <translation type="unfinished" />
+      <translation>从捕获文件中移除外部文件</translation>
     </message>
     <message>
       <source>&amp;Clear Reported Bugs</source>
@@ -7925,11 +8061,11 @@ Close the capture or save to another location.</source>
     </message>
     <message>
       <source>Create new RGP Profile</source>
-      <translation type="unfinished" />
+      <translation>新建 RGP 配置文件</translation>
     </message>
     <message>
       <source>Open RGP Profile</source>
-      <translation type="unfinished" />
+      <translation>打开 RGP 配置文件</translation>
     </message>
     <message>
       <source>Manage Extensions</source>
@@ -8372,7 +8508,9 @@ Would you like to try to reinstall the version %2?</source>
       <source>Callstack resolution is not available.
 
 Check remote server connection.</source>
-      <translation type="unfinished" />
+      <translation>调用堆栈解析不可用。
+
+请检查远程服务器连接。</translation>
     </message>
     <message>
       <source>Error loading symbols</source>
@@ -8679,7 +8817,7 @@ Please check your installation is not corrupted. Or if this is a custom build ch
     </message>
     <message>
       <source>Error saving config</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">保存配置失败</translation>
     </message>
     <message>
       <source>Couldn't open path %1 for write.</source>
@@ -8691,7 +8829,7 @@ Please check your installation is not corrupted. Or if this is a custom build ch
     </message>
     <message>
       <source>Error loading config</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">加载配置失败</translation>
     </message>
     <message>
       <source>Couldn't interpret settings in %1.</source>
@@ -8747,7 +8885,7 @@ Please check your installation is not corrupted. Or if this is a custom build ch
     </message>
     <message>
       <source>Invalid directory</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">目录无效</translation>
     </message>
     <message>
       <source>Cannot find target directory to save to</source>
@@ -8758,11 +8896,11 @@ Please check your installation is not corrupted. Or if this is a custom build ch
     <name>PipelineFlowChart</name>
     <message>
       <source>Vertex Shader</source>
-      <translation type="unfinished" />
+      <translation>顶点着色器 VS</translation>
     </message>
     <message>
       <source>Mesh Shader</source>
-      <translation type="unfinished" />
+      <translation>网格着色器 MS</translation>
     </message>
   </context>
   <context>
@@ -8806,7 +8944,7 @@ Please check your installation is not corrupted. Or if this is a custom build ch
     </message>
     <message>
       <source>Invalid directory</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">目录无效</translation>
     </message>
     <message>
       <source>Cannot find target directory to save to</source>
@@ -9114,11 +9252,11 @@ Right click to debug an event, hide failed events, or jump to the modification's
     </message>
     <message>
       <source>Debug Error</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">调试错误</translation>
     </message>
     <message>
       <source>Error debugging pixel.</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">像素调试失败。</translation>
     </message>
     <message>
       <source>&amp;Show failed events</source>
@@ -9384,7 +9522,7 @@ Right click to debug an event, hide failed events, or jump to the modification's
     </message>
     <message>
       <source>Invalid directory</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">目录无效</translation>
     </message>
     <message>
       <source>Cannot find target directory to save to</source>
@@ -9490,6 +9628,41 @@ Documentation is available: https://renderdoc.org/docs/python_api/index.html</so
     <message>
       <source>Cancel</source>
       <translation>取消</translation>
+    </message>
+  </context>
+  <context>
+    <name>RDStyle</name>
+    <message>
+      <source>Modern Light</source>
+      <translation>现代浅色</translation>
+    </message>
+    <message>
+      <source>Modern Light: compact light theme with green identity and blue interactions.</source>
+      <translation>现代浅色：紧凑的浅色主题，使用绿色品牌重点色与蓝色交互色。</translation>
+    </message>
+    <message>
+      <source>Classic Light</source>
+      <translation>经典浅色</translation>
+    </message>
+    <message>
+      <source>Classic Light: original cross-platform RenderDoc light theme.</source>
+      <translation>经典浅色：原始的跨平台 RenderDoc 浅色主题。</translation>
+    </message>
+    <message>
+      <source>Dark</source>
+      <translation>深色</translation>
+    </message>
+    <message>
+      <source>Dark: Cross-platform custom RenderDoc dark theme (white-on-black).</source>
+      <translation>深色：跨平台 RenderDoc 深色主题（黑底白字）。</translation>
+    </message>
+    <message>
+      <source>Native</source>
+      <translation>系统原生</translation>
+    </message>
+    <message>
+      <source>Native: uses the built-in Qt native widgets for your platform.</source>
+      <translation>系统原生：使用当前平台内置的 Qt 原生控件。</translation>
     </message>
   </context>
   <context>
@@ -9688,15 +9861,15 @@ Documentation is available: https://renderdoc.org/docs/python_api/index.html</so
     </message>
     <message>
       <source>Use API Validation on replay:</source>
-      <translation type="unfinished" />
+      <translation>回放时启用 API 验证：</translation>
     </message>
     <message>
       <source>GPU Selection Override:</source>
-      <translation type="unfinished" />
+      <translation>GPU 选择覆盖：</translation>
     </message>
     <message>
       <source>Replay optimisation level:</source>
-      <translation type="unfinished" />
+      <translation>回放优化级别：</translation>
     </message>
     <message>
       <source>Save Defaults</source>
@@ -9712,7 +9885,7 @@ Documentation is available: https://renderdoc.org/docs/python_api/index.html</so
     </message>
     <message>
       <source>Default GPU selection</source>
-      <translation type="unfinished" />
+      <translation>默认 GPU 选择</translation>
     </message>
     <message>
       <source>Select capture to open</source>
@@ -9721,6 +9894,22 @@ Documentation is available: https://renderdoc.org/docs/python_api/index.html</so
     <message>
       <source>Capture Files (*.rdc);;All Files (*)</source>
       <translation type="unfinished" />
+    </message>
+    <message>
+      <source>No optimisation</source>
+      <translation>不优化</translation>
+    </message>
+    <message>
+      <source>Conservative</source>
+      <translation>保守</translation>
+    </message>
+    <message>
+      <source>Balanced</source>
+      <translation>平衡</translation>
+    </message>
+    <message>
+      <source>Fastest</source>
+      <translation>最快</translation>
     </message>
   </context>
   <context>
@@ -10569,7 +10758,7 @@ Only happens if the capture is not in the recent files list.</source>
     </message>
     <message>
       <source>Export</source>
-      <translation type="unfinished" />
+      <translation>导出</translation>
     </message>
     <message>
       <source>These are messages from @1234 - DrawIndexed(6, 1)</source>
@@ -10685,11 +10874,11 @@ Only happens if the capture is not in the recent files list.</source>
     </message>
     <message>
       <source>Debug Error</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">调试错误</translation>
     </message>
     <message>
       <source>Error debugging pixel.</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">像素调试失败。</translation>
     </message>
     <message>
       <source>Shader can't be debugged</source>
@@ -10726,7 +10915,7 @@ Select the event @%2 to refresh.</source>
     </message>
     <message>
       <source>Export buffer to CSV</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">将缓冲区导出为 CSV</translation>
     </message>
     <message>
       <source>Text Files (*.txt)</source>
@@ -10742,7 +10931,7 @@ Select the event @%2 to refresh.</source>
     </message>
     <message>
       <source>Error exporting file</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">导出文件失败</translation>
     </message>
     <message>
       <source>Couldn't open file '%1' for writing</source>
@@ -11033,7 +11222,7 @@ Output file is %5 bytes</source>
     </message>
     <message>
       <source>Callstack</source>
-      <translation type="unfinished" />
+      <translation>调用堆栈</translation>
     </message>
     <message>
       <source>High-level Variables</source>
@@ -11157,7 +11346,7 @@ Output file is %5 bytes</source>
     </message>
     <message>
       <source>Index</source>
-      <translation type="unfinished" />
+      <translation>索引</translation>
     </message>
     <message>
       <source>Reg</source>
@@ -11189,7 +11378,7 @@ Output file is %5 bytes</source>
     </message>
     <message>
       <source>Toggle Bookmark</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">切换书签</translation>
     </message>
     <message>
       <source>Toggle bookmark on current line</source>
@@ -11428,13 +11617,8 @@ Something went wrong applying changes.</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <source>Invalid #include directive found:<byte value="xd" />
-      </source>
-      <translation type="unfinished" />
-    </message>
-    <message>
       <source>Are you sure?</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">是否确定？</translation>
     </message>
     <message>
       <source>Are you sure you want to reset all edits and restore the shader source back to the original?</source>
@@ -11480,6 +11664,11 @@ Something went wrong applying changes.</source>
     </message>
     <message>
       <source>%1 replacements made in %2 files</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Invalid #include directive found:<byte value="xd" />
+      </source>
       <translation type="unfinished" />
     </message>
   </context>
@@ -11998,7 +12187,7 @@ always replay locally.</source>
     </message>
     <message>
       <source>Choose background colour</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">选择背景颜色</translation>
     </message>
     <message>
       <source>%1 Files</source>
@@ -12244,7 +12433,7 @@ See FAQ on "Gamma display of linear data"</source>
     </message>
     <message>
       <source>Select visible columns</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">选择可见列</translation>
     </message>
     <message>
       <source>No draw call selected</source>
@@ -12677,15 +12866,15 @@ Select a custom shader from the drop-down</source>
     <name>TimelineBar</name>
     <message>
       <source>Timeline</source>
-      <translation type="unfinished" />
+      <translation>时间线</translation>
     </message>
     <message>
       <source>Timeline - Frame #%1</source>
-      <translation type="unfinished" />
+      <translation>时间线 - 帧 #%1</translation>
     </message>
     <message>
       <source>Timeline - Capture</source>
-      <translation type="unfinished" />
+      <translation>时间线 - 捕获</translation>
     </message>
     <message>
       <source>Pixel history for %1</source>
@@ -13164,7 +13353,7 @@ Continue?</source>
     </message>
     <message>
       <source>File not found</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">找不到文件</translation>
     </message>
     <message>
       <source>%1
@@ -13191,19 +13380,19 @@ Access is denied.</source>
     </message>
     <message>
       <source>Show items that are bound but not currently used by the pipeline.</source>
-      <translation type="unfinished" />
+      <translation>显示已绑定但当前未被管线使用的项目。</translation>
     </message>
     <message>
       <source>Show Unused Items</source>
-      <translation type="unfinished" />
+      <translation>显示未使用项</translation>
     </message>
     <message>
       <source>Show pipeline bindings which are completely empty and have nothing bound</source>
-      <translation type="unfinished" />
+      <translation>显示完全为空、没有任何绑定内容的管线绑定。</translation>
     </message>
     <message>
       <source>Show Empty Items</source>
-      <translation type="unfinished" />
+      <translation>显示空项</translation>
     </message>
     <message>
       <source>Export the current pipeline state to an HTML file or Fossilize database</source>
@@ -13211,15 +13400,15 @@ Access is denied.</source>
     </message>
     <message>
       <source>Export</source>
-      <translation type="unfinished" />
+      <translation>导出</translation>
     </message>
     <message>
       <source>Extensions</source>
-      <translation type="unfinished" />
+      <translation>扩展</translation>
     </message>
     <message>
       <source>Vertex Input</source>
-      <translation type="unfinished" />
+      <translation>顶点输入</translation>
     </message>
     <message>
       <source>Attributes</source>
@@ -13227,11 +13416,11 @@ Access is denied.</source>
     </message>
     <message>
       <source>Buffers</source>
-      <translation type="unfinished" />
+      <translation>缓冲区</translation>
     </message>
     <message>
       <source>Mesh View</source>
-      <translation type="unfinished" />
+      <translation>网格视图</translation>
     </message>
     <message>
       <source>View the mesh input data</source>
@@ -13239,7 +13428,7 @@ Access is denied.</source>
     </message>
     <message>
       <source>Primitive Topology</source>
-      <translation type="unfinished" />
+      <translation>图元拓扑</translation>
     </message>
     <message>
       <source>Triangle List</source>
@@ -13251,11 +13440,11 @@ Access is denied.</source>
     </message>
     <message>
       <source>Vertex Shader</source>
-      <translation type="unfinished" />
+      <translation>顶点着色器 VS</translation>
     </message>
     <message>
       <source>Shader</source>
-      <translation type="unfinished" />
+      <translation>着色器</translation>
     </message>
     <message>
       <source>Open Shader Source</source>
@@ -13267,7 +13456,7 @@ Access is denied.</source>
     </message>
     <message>
       <source>Edit Shader</source>
-      <translation type="unfinished" />
+      <translation>编辑着色器</translation>
     </message>
     <message>
       <source>Edit</source>
@@ -13311,15 +13500,15 @@ Access is denied.</source>
     </message>
     <message>
       <source>Geometry Shader</source>
-      <translation type="unfinished" />
+      <translation>几何着色器 GS</translation>
     </message>
     <message>
       <source>Transform Feedback</source>
-      <translation type="unfinished" />
+      <translation>变换反馈</translation>
     </message>
     <message>
       <source>Rasterizer</source>
-      <translation type="unfinished" />
+      <translation>光栅化</translation>
     </message>
     <message>
       <source>Rasterizer State</source>
@@ -13495,7 +13684,7 @@ Access is denied.</source>
     </message>
     <message>
       <source>Fragment Shader</source>
-      <translation type="unfinished" />
+      <translation>片元着色器 FS</translation>
     </message>
     <message>
       <source>Framebuffer</source>
@@ -13559,7 +13748,7 @@ Access is denied.</source>
     </message>
     <message>
       <source>Compute Shader</source>
-      <translation type="unfinished" />
+      <translation>计算着色器 CS</translation>
     </message>
     <message>
       <source>Debug</source>
@@ -13567,11 +13756,11 @@ Access is denied.</source>
     </message>
     <message>
       <source>Task Shader</source>
-      <translation type="unfinished" />
+      <translation>任务着色器 TS</translation>
     </message>
     <message>
       <source>Mesh Shader</source>
-      <translation type="unfinished" />
+      <translation>网格着色器 MS</translation>
     </message>
     <message>
       <source>View Mesh</source>
@@ -13583,7 +13772,7 @@ Access is denied.</source>
     </message>
     <message>
       <source>Index</source>
-      <translation type="unfinished" />
+      <translation>索引</translation>
     </message>
     <message>
       <source>Name</source>
@@ -13603,15 +13792,15 @@ Access is denied.</source>
     </message>
     <message>
       <source>Offset</source>
-      <translation type="unfinished" />
+      <translation>偏移</translation>
     </message>
     <message>
       <source>Go</source>
-      <translation type="unfinished" />
+      <translation>转到</translation>
     </message>
     <message>
       <source>Slot</source>
-      <translation type="unfinished" />
+      <translation>槽位</translation>
     </message>
     <message>
       <source>Buffer</source>
@@ -13627,11 +13816,11 @@ Access is denied.</source>
     </message>
     <message>
       <source>Stride</source>
-      <translation type="unfinished" />
+      <translation>步长</translation>
     </message>
     <message>
       <source>Byte Length</source>
-      <translation type="unfinished" />
+      <translation>字节长度</translation>
     </message>
     <message>
       <source>Type</source>
@@ -13868,15 +14057,15 @@ The buffer is %3 bytes in length.
     </message>
     <message>
       <source>Tess. Control Shader</source>
-      <translation type="unfinished" />
+      <translation>细分控制着色器 TCS</translation>
     </message>
     <message>
       <source>Tess. Eval. Shader</source>
-      <translation type="unfinished" />
+      <translation>细分求值着色器 TES</translation>
     </message>
     <message>
       <source>Framebuffer Output</source>
-      <translation type="unfinished" />
+      <translation>帧缓冲输出</translation>
     </message>
     <message>
       <source>Pipeline Layout</source>
@@ -14011,7 +14200,7 @@ The buffer is %3 bytes in length.
     </message>
     <message>
       <source>Samplers</source>
-      <translation type="unfinished" />
+      <translation>采样器</translation>
     </message>
     <message>
       <source>Attribute %1</source>
@@ -14107,7 +14296,7 @@ The buffer is %3 bytes in length.
     </message>
     <message>
       <source>Unused</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">未使用</translation>
     </message>
     <message>
       <source>True</source>
@@ -14163,7 +14352,7 @@ The buffer is %3 bytes in length.
     </message>
     <message>
       <source>Step Rate</source>
-      <translation type="unfinished" />
+      <translation>步进率</translation>
     </message>
     <message>
       <source>Vertex Buffers</source>
@@ -14639,7 +14828,7 @@ The buffer is %3 bytes in length.
     </message>
     <message>
       <source>Input Assembly</source>
-      <translation type="unfinished" />
+      <translation>输入装配 IA</translation>
     </message>
     <message>
       <source>Debugging %1</source>
@@ -14647,11 +14836,59 @@ The buffer is %3 bytes in length.
     </message>
     <message>
       <source>Error debugging</source>
-      <translation type="unfinished" />
+      <translation type="unfinished">调试失败</translation>
     </message>
     <message>
       <source>Error debugging thread - make sure a valid group and thread is selected</source>
       <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Vertex VTX</source>
+      <translation>顶点输入VTX</translation>
+    </message>
+    <message>
+      <source>Vertex VS</source>
+      <translation>顶点着色VS</translation>
+    </message>
+    <message>
+      <source>Tess Ctrl TCS</source>
+      <translation>细分控制TCS</translation>
+    </message>
+    <message>
+      <source>Tess Eval TES</source>
+      <translation>细分求值TES</translation>
+    </message>
+    <message>
+      <source>Geometry GS</source>
+      <translation>几何着色GS</translation>
+    </message>
+    <message>
+      <source>Raster RS</source>
+      <translation>光栅处理RS</translation>
+    </message>
+    <message>
+      <source>Fragment FS</source>
+      <translation>片元着色FS</translation>
+    </message>
+    <message>
+      <source>Framebuffer FB</source>
+      <translation>帧缓输出FB</translation>
+    </message>
+    <message>
+      <source>Compute CS</source>
+      <translation>计算着色CS</translation>
+    </message>
+    <message>
+      <source>Task TS</source>
+      <translation>任务着色TS</translation>
+    </message>
+    <message>
+      <source>Mesh MS</source>
+      <translation>网格着色MS</translation>
+    </message>
+    <message>
+      <source>Transform XFB</source>
+      <translation>变换反馈XFB</translation>
     </message>
   </context>
   <context>

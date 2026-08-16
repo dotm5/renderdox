@@ -23,9 +23,28 @@
  ******************************************************************************/
 
 #include "ReplayOptionsSelector.h"
+#include <QCoreApplication>
 #include <QKeyEvent>
 #include "Code/QRDUtils.h"
 #include "ui_ReplayOptionsSelector.h"
+
+static QString LocalisedReplayOptimisationLevel(ReplayOptimisationLevel level)
+{
+  switch(level)
+  {
+    case ReplayOptimisationLevel::NoOptimisation:
+      return QCoreApplication::translate("ReplayOptionsSelector", "No optimisation");
+    case ReplayOptimisationLevel::Conservative:
+      return QCoreApplication::translate("ReplayOptionsSelector", "Conservative");
+    case ReplayOptimisationLevel::Balanced:
+      return QCoreApplication::translate("ReplayOptionsSelector", "Balanced");
+    case ReplayOptimisationLevel::Fastest:
+      return QCoreApplication::translate("ReplayOptionsSelector", "Fastest");
+    default: break;
+  }
+
+  return ToQStr(level);
+}
 
 ReplayOptionsSelector::ReplayOptionsSelector(ICaptureContext &ctx, bool actions, QWidget *parent)
     : m_Ctx(ctx), QWidget(parent), ui(new Ui::ReplayOptionsSelector)
@@ -78,7 +97,7 @@ ReplayOptionsSelector::ReplayOptionsSelector(ICaptureContext &ctx, bool actions,
   }
 
   for(ReplayOptimisationLevel level : values<ReplayOptimisationLevel>())
-    ui->replayOptimisation->addItem(ToQStr(level));
+    ui->replayOptimisation->addItem(LocalisedReplayOptimisationLevel(level));
 
   // set default options
   {

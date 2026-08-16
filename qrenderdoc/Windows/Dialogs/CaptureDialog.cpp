@@ -23,6 +23,7 @@
  ******************************************************************************/
 
 #include "CaptureDialog.h"
+#include <QApplication>
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QSortFilterProxyModel>
@@ -70,10 +71,23 @@ void CaptureDialog::initWarning(RDLabel *warning)
     QPalette pal = warning->palette();
 
     QColor base = pal.color(QPalette::ToolTipBase);
+    QColor hover = base.darker(120);
+    QColor foreground = pal.color(QPalette::ToolTipText);
 
-    pal.setColor(QPalette::Foreground, pal.color(QPalette::ToolTipText));
+    // The modern light theme uses a quiet semantic-warning surface. The legacy tooltip palette is
+    // intentionally near-black and is too dominant when used as a full-width inline notice.
+    if(qApp->property("RDModernLight").toBool())
+    {
+      base = QColor(0xFF, 0xF7, 0xE6);
+      hover = QColor(0xF8, 0xEB, 0xCC);
+      foreground = QColor(0x6B, 0x4A, 0x0B);
+    }
+
+    pal.setColor(QPalette::Foreground, foreground);
+    pal.setColor(QPalette::WindowText, foreground);
+    pal.setColor(QPalette::Text, foreground);
     pal.setColor(QPalette::Window, base);
-    pal.setColor(QPalette::Base, base.darker(120));
+    pal.setColor(QPalette::Base, hover);
 
     warning->setPalette(pal);
   };
@@ -254,8 +268,8 @@ void CaptureDialog::SetInjectMode(bool inject)
 
     fillProcessList();
 
-    ui->launch->setText(lit("Inject"));
-    this->setWindowTitle(lit("Inject into Process"));
+    ui->launch->setText(tr("Inject"));
+    this->setWindowTitle(tr("Inject into Process"));
   }
   else
   {
@@ -267,8 +281,8 @@ void CaptureDialog::SetInjectMode(bool inject)
 
     ui->globalGroup->setVisible(m_Ctx.Config().AllowGlobalHook);
 
-    ui->launch->setText(lit("Launch"));
-    this->setWindowTitle(lit("Launch Application"));
+    ui->launch->setText(tr("Launch"));
+    this->setWindowTitle(tr("Launch Application"));
   }
 }
 

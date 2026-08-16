@@ -408,15 +408,15 @@ D3D11PipelineStateViewer::D3D11PipelineStateViewer(ICaptureContext &ctx,
 
   ui->pipeFlow->setStages(
       {
-          lit("IA"),
-          lit("VS"),
-          lit("HS"),
-          lit("DS"),
-          lit("GS"),
-          lit("RS"),
-          lit("PS"),
-          lit("OM"),
-          lit("CS"),
+          tr("Input IA"),
+          tr("Vertex VS"),
+          tr("Hull HS"),
+          tr("Domain DS"),
+          tr("Geometry GS"),
+          tr("Raster RS"),
+          tr("Pixel PS"),
+          tr("Merge OM"),
+          tr("Compute CS"),
       },
       {
           tr("Input Assembler"),
@@ -2156,11 +2156,11 @@ void D3D11PipelineStateViewer::setState()
 
     if(state.geometryShader.resourceId == ResourceId() && streamOutActive)
     {
-      ui->pipeFlow->setStageName(4, lit("SO"), tr("Stream Out"));
+      ui->pipeFlow->setStageName(4, tr("Stream SO"), tr("Stream Out"));
     }
     else
     {
-      ui->pipeFlow->setStageName(4, lit("GS"), tr("Geometry Shader"));
+      ui->pipeFlow->setStageName(4, tr("Geometry GS"), tr("Geometry Shader"));
     }
 
     ui->pipeFlow->setStagesEnabled(

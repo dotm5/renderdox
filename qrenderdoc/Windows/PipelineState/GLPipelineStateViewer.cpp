@@ -420,15 +420,15 @@ GLPipelineStateViewer::GLPipelineStateViewer(ICaptureContext &ctx, PipelineState
 
   ui->pipeFlow->setStages(
       {
-          lit("VTX"),
-          lit("VS"),
-          lit("TCS"),
-          lit("TES"),
-          lit("GS"),
-          lit("RS"),
-          lit("FS"),
-          lit("FB"),
-          lit("CS"),
+          tr("Vertex VTX"),
+          tr("Vertex VS"),
+          tr("Tess Ctrl TCS"),
+          tr("Tess Eval TES"),
+          tr("Geometry GS"),
+          tr("Raster RS"),
+          tr("Fragment FS"),
+          tr("Framebuffer FB"),
+          tr("Compute CS"),
       },
       {
           tr("Vertex Input"),
@@ -2670,11 +2670,11 @@ void GLPipelineStateViewer::setState()
 
     if(state.geometryShader.shaderResourceId == ResourceId() && state.transformFeedback.active)
     {
-      ui->pipeFlow->setStageName(4, lit("XFB"), tr("Transform Feedback"));
+      ui->pipeFlow->setStageName(4, tr("Transform XFB"), tr("Transform Feedback"));
     }
     else
     {
-      ui->pipeFlow->setStageName(4, lit("GS"), tr("Geometry Shader"));
+      ui->pipeFlow->setStageName(4, tr("Geometry GS"), tr("Geometry Shader"));
     }
 
     ui->pipeFlow->setStagesEnabled(
