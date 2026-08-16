@@ -1877,7 +1877,9 @@ void RDStyle::drawPrimitive(PrimitiveElement element, const QStyleOption *opt, Q
         if(m_Scheme == LightModern)
           fill = selected ? ModernLight::GreenSurface : ModernLight::HoverSurface;
 
-        QRectF itemRect = QRectF(viewitem->rect).adjusted(10.0, 2.0, -10.0, -2.0);
+        // Keep the selection surface behind the label only. Extending it under the 18 DIP icon
+        // reduces the icon to a low-contrast silhouette on the green selected surface.
+        QRectF itemRect = QRectF(viewitem->rect).adjusted(28.0, 2.0, -10.0, -2.0);
         p->save();
         p->setRenderHint(QPainter::Antialiasing);
         QPainterPath itemBackground;
@@ -2576,23 +2578,18 @@ void RDStyle::drawControl(ControlElement control, const QStyleOption *opt, QPain
     {
       const QIcon sourceIcon =
           m_Scheme == LightModern ? Resources::ModerniseIcon(tab->icon) : tab->icon;
-      QPixmap icon = sourceIcon.pixmap(widgetWindow(widget), tab->iconSize,
-                                       tab->state & State_Enabled ? QIcon::Normal : QIcon::Disabled);
+      QIcon::Mode iconMode = QIcon::Normal;
+      if(!(tab->state & State_Enabled))
+        iconMode = QIcon::Disabled;
+      else if(tab->state & State_Selected)
+        iconMode = QIcon::Selected;
+      else if(tab->state & State_MouseOver)
+        iconMode = QIcon::Active;
 
-      if(m_Scheme == LightModern && !icon.isNull())
-      {
-        QColor tint = ModernLight::TextSecondary;
-        if(!(tab->state & State_Enabled))
-          tint = ModernLight::TextTertiary;
-        else if(tab->state & State_Selected)
-          tint = ModernLight::RenderDocGreen;
-        else if(tab->state & State_MouseOver)
-          tint = ModernLight::InteractionBlue;
-
-        QPainter iconPainter(&icon);
-        iconPainter.setCompositionMode(QPainter::CompositionMode_SourceIn);
-        iconPainter.fillRect(icon.rect(), tint);
-      }
+      // Modern resources already provide Normal/Active/Selected variants. Applying a blanket
+      // SourceIn tint here also recolours opaque icon backgrounds (notably logo.svg), turning the
+      // whole tab icon into a featureless square and hiding its glyph.
+      QPixmap icon = sourceIcon.pixmap(widgetWindow(widget), tab->iconSize, iconMode, QIcon::Off);
 
       proxy()->drawItemPixmap(p, rect, Qt::AlignLeft | Qt::AlignVCenter, icon);
 
