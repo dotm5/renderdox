@@ -19,6 +19,50 @@ $ErrorActionPreference = 'Stop'
 
 $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
 $singleBuild = Join-Path $PSScriptRoot 'build_windows_release.ps1'
+$vswherePath = Join-Path ${env:ProgramFiles(x86)} `
+  'Microsoft Visual Studio\Installer\vswhere.exe'
+if(-not (Test-Path -LiteralPath $vswherePath -PathType Leaf))
+{
+  throw "vswhere.exe was not found: $vswherePath"
+}
+$visualStudioPath = & $vswherePath -latest -products * -requires Microsoft.Component.MSBuild `
+  -property installationPath
+if(-not $visualStudioPath)
+{
+  throw 'An MSBuild-capable Visual Studio installation was not found'
+}
+$v143VersionFile = Join-Path $visualStudioPath `
+  'VC\Auxiliary\Build\Microsoft.VCToolsVersion.v143.default.txt'
+if(-not (Test-Path -LiteralPath $v143VersionFile -PathType Leaf))
+{
+  throw "The v143 toolset version file was not found: $v143VersionFile"
+}
+$v143Version = (Get-Content -LiteralPath $v143VersionFile -Raw).Trim()
+$v143VersionPrefix = ([version]$v143Version).ToString(2)
+$redistRoot = Join-Path $visualStudioPath 'VC\Redist\MSVC'
+$redistVersionDirectory = Get-ChildItem -LiteralPath $redistRoot -Directory |
+  Where-Object { $_.Name -match '^\d+\.\d+\.\d+$' -and $_.Name.StartsWith("$v143VersionPrefix.") } |
+  Sort-Object { [version]$_.Name } -Descending |
+  Select-Object -First 1
+if(-not $redistVersionDirectory)
+{
+  throw "A matching v143 redistributable directory was not found below $redistRoot"
+}
+$crtDirectory = Get-ChildItem -LiteralPath (Join-Path $redistVersionDirectory.FullName 'x64') `
+  -Directory -Filter 'Microsoft.VC*.CRT' | Select-Object -First 1
+if(-not $crtDirectory)
+{
+  throw "The x64 v143 CRT directory was not found below $($redistVersionDirectory.FullName)"
+}
+$crtFileNames = @('msvcp140.dll', 'msvcp140_1.dll', 'vcruntime140.dll', 'vcruntime140_1.dll')
+foreach($crtFileName in $crtFileNames)
+{
+  $crtFile = Join-Path $crtDirectory.FullName $crtFileName
+  if(-not (Test-Path -LiteralPath $crtFile -PathType Leaf))
+  {
+    throw "The required v143 CRT file is missing: $crtFile"
+  }
+}
 $commit = (& git -C $repositoryRoot rev-parse HEAD).Trim()
 if($LASTEXITCODE -ne 0 -or -not $commit)
 {
@@ -107,6 +151,11 @@ foreach($toolchain in @('MSVC', 'ClangCL'))
     }
     Copy-Item -Recurse -LiteralPath $source -Destination $packageRoot
   }
+  foreach($crtFileName in $crtFileNames)
+  {
+    Copy-Item -LiteralPath (Join-Path $crtDirectory.FullName $crtFileName) `
+      -Destination (Join-Path $packageRoot $crtFileName)
+  }
 
   $files = @(Get-ChildItem -Recurse -File -LiteralPath $packageRoot | Sort-Object FullName |
     ForEach-Object {
@@ -119,6 +168,7 @@ foreach($toolchain in @('MSVC', 'ClangCL'))
   $toolchainManifest = [ordered]@{
     toolchain = $toolchain
     platform_toolset = if($toolchain -eq 'ClangCL') { 'ClangCL' } else { 'v143' }
+    vc_runtime = $crtDirectory.FullName
     source_output = $sourceRoot
     package = $packageName
     files = $files
