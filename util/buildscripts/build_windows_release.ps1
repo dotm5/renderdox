@@ -17,7 +17,9 @@ param(
 
   [string]$WindowsSDKVersion = '10.0.26100.0',
 
-  [switch]$EnableLTCG
+  [switch]$EnableLTCG,
+
+  [switch]$IncludeBootstrap
 )
 
 Set-StrictMode -Version Latest
@@ -26,6 +28,7 @@ $ErrorActionPreference = 'Stop'
 $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
 $solutionPath = Join-Path $repositoryRoot 'renderdoc.sln'
 $contractCheck = Join-Path $PSScriptRoot 'check_windows_build_contracts.ps1'
+$bootstrapExportCheck = Join-Path $PSScriptRoot 'check_windows_bootstrap_exports.ps1'
 $vswherePath = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
 $solutionPlatform = if($Platform -eq 'Win32') { 'x86' } else { $Platform }
 $platformToolset = if($Toolchain -eq 'ClangCL') { 'ClangCL' } else { 'v143' }
@@ -159,6 +162,58 @@ try
     throw "MSBuild failed with exit code $buildExitCode; inspect $logBase.log"
   }
 
+  $bootstrapOutputs = @(
+    'bootstrap\dxgi_proxy\dxgi.dll',
+    'bootstrap\d3d11_proxy\d3d11.dll',
+    'bootstrap\d3d12_proxy\d3d12.dll'
+  )
+  if($IncludeBootstrap)
+  {
+    $bootstrapProjects = @(
+      'bootstrap\dxgi_proxy\dxgi_proxy.vcxproj',
+      'bootstrap\d3d11_proxy\d3d11_proxy.vcxproj',
+      'bootstrap\d3d12_proxy\d3d12_proxy.vcxproj'
+    )
+
+    foreach($relativeProject in $bootstrapProjects)
+    {
+      $projectPath = Join-Path $repositoryRoot $relativeProject
+      $projectTag = [IO.Path]::GetFileNameWithoutExtension($projectPath)
+      $bootstrapLogBase = Join-Path $logDirectory `
+        "release-$Platform-$toolchainTag-$profile-$projectTag-$stamp"
+      $bootstrapArguments = @(
+        $projectPath
+        '-nologo'
+        "-t:$Target"
+        '-m:1'
+        '-nr:false'
+        '-v:minimal'
+        '-p:Configuration=Release'
+        "-p:Platform=$Platform"
+        "-p:PlatformToolset=$platformToolset"
+        "-p:WindowsTargetPlatformVersion=$WindowsSDKVersion"
+        "-p:SolutionDir=$repositoryRoot\"
+        "-p:RDocEnableLTCG=$ltcgValue"
+        "-bl:$bootstrapLogBase.binlog"
+        '-fl'
+        "-flp:logfile=$bootstrapLogBase.log;verbosity=normal;encoding=UTF-8"
+      )
+
+      Write-Host "Building optional bootstrap project $relativeProject"
+      & $msbuildPath @bootstrapArguments
+      if($LASTEXITCODE -ne 0)
+      {
+        throw "Bootstrap build failed for $relativeProject; inspect $bootstrapLogBase.log"
+      }
+    }
+
+    & $bootstrapExportCheck -Toolchain $Toolchain -Platform $Platform
+    if($LASTEXITCODE -ne 0)
+    {
+      throw 'Bootstrap export validation failed'
+    }
+  }
+
   [xml]$identityProps =
       Get-Content -LiteralPath (Join-Path $repositoryRoot 'build\product_identity.props') -Raw
   $readIdentity = {
@@ -187,6 +242,10 @@ try
     'python36.zip',
     'qtplugins\platforms\qwindows.dll'
   )
+  if($IncludeBootstrap)
+  {
+    $requiredOutputs += $bootstrapOutputs
+  }
   foreach($relativeOutput in $requiredOutputs)
   {
     $requiredOutput = Join-Path $outputRoot $relativeOutput
@@ -211,6 +270,25 @@ try
   if($dependents -match '(?im)^\s+(MSVCP\d+|VCRUNTIME\d*|ucrtbase)\.dll\s*$')
   {
     throw "Core DLL contains a forbidden dynamic MSVC runtime import: $coreDll"
+  }
+
+  if($IncludeBootstrap)
+  {
+    foreach($relativeBootstrap in $bootstrapOutputs)
+    {
+      $bootstrapDll = Join-Path $outputRoot $relativeBootstrap
+      $bootstrapDependents = (& $dumpbinPath /dependents $bootstrapDll) -join `
+        [Environment]::NewLine
+      if($LASTEXITCODE -ne 0)
+      {
+        throw "dumpbin /dependents failed for $bootstrapDll"
+      }
+      if($bootstrapDependents -match `
+          '(?im)^\s+(MSVCP\d+|VCRUNTIME\d*|ucrtbase)\.dll\s*$')
+      {
+        throw "Bootstrap DLL contains a forbidden dynamic MSVC runtime import: $bootstrapDll"
+      }
+    }
   }
 
   Write-Host "Full $Toolchain Release build complete: $outputRoot"

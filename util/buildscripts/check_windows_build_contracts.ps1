@@ -49,16 +49,17 @@ if($LASTEXITCODE -ne 0)
 $errors = [System.Collections.Generic.List[string]]::new()
 $warnings = [System.Collections.Generic.List[string]]::new()
 $standaloneMissingSources = @{}
-$forbiddenProxyDirectories = @(
-  'bootstrap\d3d11_proxy',
-  'bootstrap\dxgi_proxy',
-  'bootstrap\d3d12_proxy'
+$requiredBootstrapProjects = @(
+  'bootstrap\dxgi_proxy\dxgi_proxy.vcxproj',
+  'bootstrap\d3d11_proxy\d3d11_proxy.vcxproj',
+  'bootstrap\d3d12_proxy\d3d12_proxy.vcxproj'
 )
-foreach($relativeProxyDirectory in $forbiddenProxyDirectories)
+foreach($relativeBootstrapProject in $requiredBootstrapProjects)
 {
-  if(Test-Path -LiteralPath (Join-Path $repositoryRoot $relativeProxyDirectory))
+  if(-not (Test-Path -LiteralPath `
+      (Join-Path $repositoryRoot $relativeBootstrapProject) -PathType Leaf))
   {
-    $errors.Add("Forbidden proxy directory exists: $relativeProxyDirectory")
+    $errors.Add("Required bootstrap project is missing: $relativeBootstrapProject")
   }
 }
 $productIdentityPropsPath = Join-Path $repositoryRoot 'build\product_identity.props'
@@ -109,8 +110,7 @@ if($LASTEXITCODE -ne 0)
 
 $projectPaths = @(
   $projectPaths |
-    ForEach-Object { $_ -replace '/', '\' } |
-    Where-Object { $_ -notmatch '^bootstrap\\(?:d3d11_proxy|dxgi_proxy|d3d12_proxy)\\' }
+    ForEach-Object { $_ -replace '/', '\' }
   $solutionProjectPaths
 ) | Sort-Object -Unique
 
@@ -142,6 +142,21 @@ $projectRecords = foreach($relativeProjectPath in $projectPaths)
     $errors.Add("$relativeProjectPath still references removed MinHook sources")
   }
 
+  $isBootstrapProject =
+      $relativeProjectPath -match '^bootstrap\\(?:d3d11_proxy|dxgi_proxy|d3d12_proxy)\\'
+  if($isBootstrapProject -and $isSolutionProject)
+  {
+    $errors.Add("Bootstrap project must remain outside renderdoc.sln: $relativeProjectPath")
+  }
+  if($isBootstrapProject -and
+     ($projectText -notmatch `
+        '<RuntimeLibrary\s+Condition="''\$\(Configuration\)''==''Release''">MultiThreaded</RuntimeLibrary>' -or
+      $projectText -notmatch `
+        '<RuntimeLibrary\s+Condition="''\$\(Configuration\)''==''Development''">MultiThreadedDebug</RuntimeLibrary>'))
+  {
+    $errors.Add("Bootstrap project does not enforce the static MSVC runtime: $relativeProjectPath")
+  }
+
   $namespace = [Xml.XmlNamespaceManager]::new($projectXml.NameTable)
   $namespace.AddNamespace('m', 'http://schemas.microsoft.com/developer/msbuild/2003')
 
@@ -168,7 +183,7 @@ $projectRecords = foreach($relativeProjectPath in $projectPaths)
       if(-not (Test-Path -LiteralPath $resolved -PathType Leaf))
       {
         $message = "$relativeProjectPath compiles missing source $($source.Include)"
-        if($isSolutionProject)
+        if($isSolutionProject -or $isBootstrapProject)
         {
           $errors.Add($message)
         }
@@ -212,6 +227,7 @@ $projectRecords = foreach($relativeProjectPath in $projectPaths)
         (Join-Path (Split-Path -Parent $projectPath) $assembler.Include))
       if(-not (Test-Path -LiteralPath $assemblerPath -PathType Leaf))
       {
+        $errors.Add("$relativeProjectPath assembles missing source $($assembler.Include)")
         continue
       }
 
@@ -232,7 +248,14 @@ $projectRecords = foreach($relativeProjectPath in $projectPaths)
       {
         $message =
           "$relativeProjectPath assembler expects $resolver but its C/C++ source has no implementation"
-        if($isSolutionProject) { $errors.Add($message) } else { $warnings.Add($message) }
+        if($isSolutionProject -or $isBootstrapProject)
+        {
+          $errors.Add($message)
+        }
+        else
+        {
+          $warnings.Add($message)
+        }
       }
     }
   }

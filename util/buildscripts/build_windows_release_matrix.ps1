@@ -11,7 +11,9 @@ param(
 
   [string]$WindowsSDKVersion = '10.0.26100.0',
 
-  [string]$OutputDirectory
+  [string]$OutputDirectory,
+
+  [switch]$IncludeBootstrap
 )
 
 Set-StrictMode -Version Latest
@@ -109,13 +111,22 @@ $runtimeFiles = @(
   'pymodules\qrenderdoc.pyd'
 )
 $runtimeDirectories = @('qtplugins')
+if($IncludeBootstrap)
+{
+  $runtimeFiles += @(
+    'bootstrap\dxgi_proxy\dxgi.dll',
+    'bootstrap\d3d11_proxy\d3d11.dll',
+    'bootstrap\d3d12_proxy\d3d12.dll'
+  )
+}
 $matrix = @()
 
 foreach($toolchain in @('MSVC', 'ClangCL'))
 {
   & $singleBuild -Target $Target -Toolchain $toolchain -Platform x64 `
     -ChildPropagation $ChildPropagation -MaxCpuCount $MaxCpuCount `
-    -WindowsSDKVersion $WindowsSDKVersion
+    -WindowsSDKVersion $WindowsSDKVersion `
+    -IncludeBootstrap:$IncludeBootstrap.IsPresent
   if($LASTEXITCODE -ne 0)
   {
     throw "$toolchain full Release build failed with exit code $LASTEXITCODE"
@@ -126,6 +137,13 @@ foreach($toolchain in @('MSVC', 'ClangCL'))
   $packageName = if($toolchain -eq 'ClangCL') { 'clangcl-release' } else { 'msvc-release' }
   $packageRoot = Join-Path $OutputDirectory $packageName
   New-Item -ItemType Directory -Path $packageRoot | Out-Null
+  if($IncludeBootstrap)
+  {
+    $bootstrapPackageRoot = Join-Path $packageRoot 'bootstrap'
+    New-Item -ItemType Directory -Path $bootstrapPackageRoot | Out-Null
+    Copy-Item -LiteralPath (Join-Path $repositoryRoot 'bootstrap\README.md') `
+      -Destination (Join-Path $bootstrapPackageRoot 'README.md')
+  }
 
   foreach($relativeFile in $runtimeFiles)
   {
@@ -186,6 +204,7 @@ $manifest = [ordered]@{
   platform = 'x64'
   child_propagation = $ChildPropagation
   windows_sdk = $WindowsSDKVersion
+  bootstrap = $IncludeBootstrap.IsPresent
   toolchains = $matrix
 }
 $manifest | ConvertTo-Json -Depth 8 | Set-Content `
@@ -207,5 +226,14 @@ The capture DLL uses a static MSVC runtime and the selected child propagation
 policy. Qt and Python filenames remain upstream-compatible runtime contracts.
 '@
 $readme | Set-Content -LiteralPath (Join-Path $OutputDirectory 'README.md') -Encoding utf8
+if($IncludeBootstrap)
+{
+  @'
+
+The optional loader-safe DXGI, D3D11, and D3D12 bootstrap DLLs are included
+below each package's `bootstrap` directory. They are not installed or enabled
+automatically; see the included `bootstrap\README.md`.
+'@ | Add-Content -LiteralPath (Join-Path $OutputDirectory 'README.md') -Encoding utf8
+}
 
 Write-Host "Full Release matrix complete: $OutputDirectory"

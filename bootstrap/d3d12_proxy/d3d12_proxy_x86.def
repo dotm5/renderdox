@@ -1,0 +1,20 @@
+LIBRARY "d3d12"
+EXPORTS
+    SetAppCompatStringPointer=ProxyExport0 @100
+    D3D12CreateDevice=ProxyExport1 @101
+    D3D12GetDebugInterface=ProxyExport2 @102
+    D3D12CoreCreateLayeredDevice=ProxyExport3 @103
+    D3D12CoreGetLayeredDeviceSize=ProxyExport4 @104
+    D3D12CoreRegisterLayers=ProxyExport5 @105
+    D3D12CreateRootSignatureDeserializer=ProxyExport6 @106
+    D3D12CreateVersionedRootSignatureDeserializer=ProxyExport7 @107
+    D3D12DeviceRemovedExtendedData=ProxyExport8 @108
+    D3D12EnableExperimentalFeatures=ProxyExport9 @109
+    D3D12GetInterface=ProxyExport10 @110
+    D3D12PIXEventsReplaceBlock=ProxyExport11 @111
+    D3D12PIXGetThreadInfo=ProxyExport12 @112
+    D3D12PIXNotifyWakeFromFenceSignal=ProxyExport13 @113
+    D3D12PIXReportCounter=ProxyExport14 @114
+    D3D12SerializeRootSignature=ProxyExport15 @115
+    D3D12SerializeVersionedRootSignature=ProxyExport16 @116
+    GetBehaviorValue=ProxyExport17 @117
