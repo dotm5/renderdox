@@ -37,7 +37,6 @@
 #include "Windows/MainWindow.h"
 #include "flowlayout/FlowLayout.h"
 #include "toolwindowmanager/ToolWindowManager.h"
-#include "LiveCapture.h"
 #include "ui_CaptureDialog.h"
 
 #define JSON_ID "rdocCaptureSettings"
@@ -643,7 +642,7 @@ void CaptureDialog::lineEdit_keyPress(QKeyEvent *ev)
   if((ev->key() == Qt::Key_Return || ev->key() == Qt::Key_Enter) &&
      ev->modifiers() & Qt::ControlModifier)
   {
-    TriggerCapture();
+    Launch();
   }
 }
 
@@ -915,12 +914,12 @@ void CaptureDialog::on_loadLastCapture_clicked()
 
 void CaptureDialog::on_launch_clicked()
 {
-  TriggerCapture();
+  Launch();
 }
 
 void CaptureDialog::on_processList_activated(const QModelIndex &index)
 {
-  TriggerCapture();
+  Launch();
 }
 
 void CaptureDialog::SetSettings(CaptureSettings settings)
@@ -964,7 +963,7 @@ void CaptureDialog::SetSettings(CaptureSettings settings)
 
   if(settings.autoStart)
   {
-    TriggerCapture();
+    Launch();
   }
 }
 
@@ -1184,8 +1183,9 @@ void CaptureDialog::SetEnvironmentModifications(const rdcarray<EnvironmentModifi
   ui->envVar->setText(envModText);
 }
 
-void CaptureDialog::TriggerCapture()
+ICaptureConnection *CaptureDialog::Launch()
 {
+  ICaptureConnection *ret = NULL;
   if(IsInjectMode())
   {
     QModelIndexList sel = ui->processList->selectionModel()->selectedRows();
@@ -1200,11 +1200,13 @@ void CaptureDialog::TriggerCapture()
       QString name = m_ProcessModel->data(m_ProcessModel->index(item.row(), 0)).toString();
       uint32_t PID = m_ProcessModel->data(m_ProcessModel->index(item.row(), 1)).toUInt();
 
-      m_InjectCallback(
-          PID, Settings().environment, name, Settings().options, [this](LiveCapture *live) {
-            if(ui->queueFrameCap->isChecked())
-              live->QueueCapture((int)ui->queuedFrame->value(), (int)ui->numFrames->value());
-          });
+      m_InjectCallback(PID, Settings().environment, name, Settings().options,
+                       [this, &ret](ICaptureConnection *live) {
+                         if(ui->queueFrameCap->isChecked())
+                           live->QueueCapture((int)ui->queuedFrame->value(),
+                                              (int)ui->numFrames->value());
+                         ret = live;
+                       });
     }
     else
     {
@@ -1221,7 +1223,7 @@ void CaptureDialog::TriggerCapture()
       RDDialog::critical(this, tr("No executable selected"),
                          tr("No program selected to launch, click browse next to 'Executable Path' "
                             "above to select the program to launch."));
-      return;
+      return NULL;
     }
 
     // for non-remote captures, check the executable locally
@@ -1233,7 +1235,7 @@ void CaptureDialog::TriggerCapture()
             this, tr("Invalid executable"),
             tr("Invalid executable: %1\nCan't locate this path or a matching executable in PATH")
                 .arg(exe));
-        return;
+        return NULL;
       }
     }
 
@@ -1247,7 +1249,7 @@ void CaptureDialog::TriggerCapture()
         RDDialog::critical(
             this, tr("Invalid working directory"),
             tr("Invalid working directory: %1\nThis path does not exist").arg(workingDir));
-        return;
+        return NULL;
       }
     }
 
@@ -1269,15 +1271,18 @@ void CaptureDialog::TriggerCapture()
                               "The intent arguments must include the full parameters e.g. "
                               "--es args \"my arguments\"")
                                .arg(cmdLine));
-        return;
+        return NULL;
       }
     }
 
     m_CaptureCallback(exe, workingDir, cmdLine, Settings().environment, Settings().options,
-                      [this](LiveCapture *live) {
+                      [this, &ret](ICaptureConnection *live) {
                         if(ui->queueFrameCap->isChecked())
                           live->QueueCapture((int)ui->queuedFrame->value(),
                                              (int)ui->numFrames->value());
+                        ret = live;
                       });
   }
+
+  return ret;
 }

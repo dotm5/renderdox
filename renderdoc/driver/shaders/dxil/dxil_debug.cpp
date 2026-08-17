@@ -539,7 +539,41 @@ static bool OperationFlushing(const Operation op, DXOp dxOpCode)
       case DXOp::NodeOutputIsValid:
       case DXOp::GetRemainingRecursionLevels:
       case DXOp::StartVertexLocation:
-      case DXOp::StartInstanceLocation: return false;
+      case DXOp::StartInstanceLocation:
+      case DXOp::AllocateRayQuery2:
+      case DXOp::HitObject_TraceRay:
+      case DXOp::HitObject_FromRayQuery:
+      case DXOp::HitObject_FromRayQueryWithAttrs:
+      case DXOp::HitObject_MakeMiss:
+      case DXOp::HitObject_MakeNop:
+      case DXOp::HitObject_Invoke:
+      case DXOp::MaybeReorderThread:
+      case DXOp::HitObject_IsMiss:
+      case DXOp::HitObject_IsHit:
+      case DXOp::HitObject_IsNop:
+      case DXOp::HitObject_RayFlags:
+      case DXOp::HitObject_RayTMin:
+      case DXOp::HitObject_RayTCurrent:
+      case DXOp::HitObject_WorldRayOrigin:
+      case DXOp::HitObject_WorldRayDirection:
+      case DXOp::HitObject_ObjectRayOrigin:
+      case DXOp::HitObject_ObjectRayDirection:
+      case DXOp::HitObject_ObjectToWorld3x4:
+      case DXOp::HitObject_WorldToObject3x4:
+      case DXOp::HitObject_GeometryIndex:
+      case DXOp::HitObject_InstanceIndex:
+      case DXOp::HitObject_InstanceID:
+      case DXOp::HitObject_PrimitiveIndex:
+      case DXOp::HitObject_HitKind:
+      case DXOp::HitObject_ShaderTableIndex:
+      case DXOp::HitObject_SetShaderTableIndex:
+      case DXOp::HitObject_LoadLocalRootTableConstant:
+      case DXOp::HitObject_Attributes:
+      case DXOp::RawBufferVectorLoad:
+      case DXOp::RawBufferVectorStore:
+      case DXOp::VectorReduceAnd:
+      case DXOp::VectorReduceOr:
+      case DXOp::FDot: return false;
       case DXOp::NumOpCodes:
         RDCERR("Unhandled DXOpCode %s in DXIL shader debugger", ToStr(dxOpCode).c_str());
         break;
@@ -4971,7 +5005,7 @@ bool ThreadState::ExecuteInstruction(const rdcarray<ThreadState> &workgroup)
           case DXOp::TextureGatherRaw:
             // Gather raw elements from 4 texels with no type conversions (SRV type is constrained)
 
-          // SM 6.8 : when SM6.8 is supporting by RenderDoc
+          // SM 6.8
           case DXOp::StartVertexLocation:
             // SV_BaseVertexLocation
             // BaseVertexLocation from DrawIndexedInstanced or StartVertexLocation from DrawInstanced
@@ -4980,6 +5014,10 @@ bool ThreadState::ExecuteInstruction(const rdcarray<ThreadState> &workgroup)
             // StartInstanceLocation from Draw*Instanced
           case DXOp::BarrierByMemoryType:
           case DXOp::BarrierByMemoryHandle:
+
+          // SM 6.9 - could be used with normal vectors
+          case DXOp::RawBufferVectorLoad:
+          case DXOp::RawBufferVectorStore:
 
           // No plans to implement
 
@@ -5007,6 +5045,11 @@ bool ThreadState::ExecuteInstruction(const rdcarray<ThreadState> &workgroup)
           case DXOp::TempRegStore:
           case DXOp::MinPrecXRegLoad:
           case DXOp::MinPrecXRegStore:
+
+          // long vectors
+          case DXOp::VectorReduceAnd:
+          case DXOp::VectorReduceOr:
+          case DXOp::FDot:
 
           // Mesh Shaders
           case DXOp::SetMeshOutputCounts:
@@ -5101,6 +5144,35 @@ bool ThreadState::ExecuteInstruction(const rdcarray<ThreadState> &workgroup)
           case DXOp::RayQuery_CandidateInstanceContributionToHitGroupIndex:
           case DXOp::RayQuery_CommittedInstanceContributionToHitGroupIndex:
           case DXOp::GeometryIndex:
+          case DXOp::AllocateRayQuery2:
+          case DXOp::HitObject_TraceRay:
+          case DXOp::HitObject_FromRayQuery:
+          case DXOp::HitObject_FromRayQueryWithAttrs:
+          case DXOp::HitObject_MakeMiss:
+          case DXOp::HitObject_MakeNop:
+          case DXOp::HitObject_Invoke:
+          case DXOp::MaybeReorderThread:
+          case DXOp::HitObject_IsMiss:
+          case DXOp::HitObject_IsHit:
+          case DXOp::HitObject_IsNop:
+          case DXOp::HitObject_RayFlags:
+          case DXOp::HitObject_RayTMin:
+          case DXOp::HitObject_RayTCurrent:
+          case DXOp::HitObject_WorldRayOrigin:
+          case DXOp::HitObject_WorldRayDirection:
+          case DXOp::HitObject_ObjectRayOrigin:
+          case DXOp::HitObject_ObjectRayDirection:
+          case DXOp::HitObject_ObjectToWorld3x4:
+          case DXOp::HitObject_WorldToObject3x4:
+          case DXOp::HitObject_GeometryIndex:
+          case DXOp::HitObject_InstanceIndex:
+          case DXOp::HitObject_InstanceID:
+          case DXOp::HitObject_PrimitiveIndex:
+          case DXOp::HitObject_HitKind:
+          case DXOp::HitObject_ShaderTableIndex:
+          case DXOp::HitObject_SetShaderTableIndex:
+          case DXOp::HitObject_LoadLocalRootTableConstant:
+          case DXOp::HitObject_Attributes:
 
           // Workgraphs
           case DXOp::AllocateNodeOutputRecords:
@@ -9302,6 +9374,8 @@ ShaderDebugTrace *Debugger::BeginDebug(DebugAPIWrapper *apiWrapper, uint32_t eve
     ref.type = DebugVariableType::Sampler;
     ref.name = shaderVar.name;
     sourceVar.variables.push_back(ref);
+
+    ret->sourceVars.push_back(sourceVar);
   }
 
   m_LiveGlobals.resize(maxSSAId);
@@ -10528,7 +10602,7 @@ DeviceOpResult Debugger::GetResourceInfo(DXIL::ResourceClass resClass,
                                          const DXDebug::BindingSlot &slot, uint32_t mipLevel,
                                          ShaderVariable &result) const
 {
-  if(!IsDeviceThread() && !m_ApiWrapper->IsResourceInfoCached(slot, mipLevel))
+  if(!IsDeviceThread() && !m_ApiWrapper->IsResourceInfoCached(resClass, slot, mipLevel))
     return DeviceOpResult::NeedsDevice;
 
   result = m_ApiWrapper->GetResourceInfo(resClass, slot, mipLevel);

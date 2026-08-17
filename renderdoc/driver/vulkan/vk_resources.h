@@ -949,7 +949,7 @@ struct ImageInfo
     }
     aspects = FormatImageAspects(format);
 
-    if(ci.usage & VK_IMAGE_USAGE_STORAGE_BIT)
+    if(GetImageUsageFlags(&ci) & VK_IMAGE_USAGE_STORAGE_BIT)
     {
       storage = true;
     }
@@ -2627,6 +2627,9 @@ struct BlockShape
 
   // the number of bytes used to encode the block
   uint32_t bytes;
+
+  // the depth, for 3D ASTC only
+  uint32_t depth;
 };
 
 BlockShape GetBlockShape(VkFormat Format, uint32_t plane);

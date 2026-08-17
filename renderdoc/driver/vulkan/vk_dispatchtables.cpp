@@ -125,6 +125,7 @@ void InitInstanceExtensionTables(VkInstance instance, InstanceDeviceInfo *info)
   DeclExts();
 
   CheckInstanceExts();
+  CheckDeviceExts();
 
   InstanceGPA(EnumerateDeviceExtensionProperties);
   InstanceGPA(EnumerateDeviceLayerProperties);

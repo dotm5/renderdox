@@ -16,8 +16,10 @@ CORE_BASE_NAME="$(identity_field coreBaseName)" || exit 1
 UI_BASE_NAME="$(identity_field uiBaseName)" || exit 1
 COMMAND_BASE_NAME="$(identity_field commandBaseName)" || exit 1
 
+echo Using ${PYTHON_ROOT} and ${QT_ROOT} for build
+
 # Build 32-bit Release
-MSYS2_ARG_CONV_EXCL="*" msbuild.exe /nologo /m /fl4 /flp4':Verbosity=minimal;Encoding=ASCII;logfile=dist/build32.log' renderdoc.sln /t:Rebuild /p:'Configuration=Release;Platform=x86'
+MSYS2_ARG_CONV_EXCL="*" msbuild.exe /p:VSPythonOverridePath="$(native_path "${PYTHON_ROOT}")" /p:QtOverridePath="$(native_path "${QT_ROOT}")" /nologo /m /fl4 /flp4':Verbosity=minimal;Encoding=ASCII;logfile=dist/build32.log' renderdoc.sln /t:Rebuild /p:'Configuration=Release;Platform=x86'
 
 if [ ! -f "./Win32/Release/${CORE_BASE_NAME}.dll" ] || \
    [ ! -f "./Win32/Release/${UI_BASE_NAME}.exe" ] || \
@@ -27,7 +29,7 @@ if [ ! -f "./Win32/Release/${CORE_BASE_NAME}.dll" ] || \
 fi
 
 # Build 64-bit Release
-MSYS2_ARG_CONV_EXCL="*" msbuild.exe /nologo /m /fl4 /flp4':Verbosity=minimal;Encoding=ASCII;logfile=dist/build64.log' renderdoc.sln /t:Rebuild /p:'Configuration=Release;Platform=x64'
+MSYS2_ARG_CONV_EXCL="*" msbuild.exe /p:VSPythonOverridePath="$(native_path "${PYTHON_ROOT}")" /p:QtOverridePath="$(native_path "${QT_ROOT}")" /nologo /m /fl4 /flp4':Verbosity=minimal;Encoding=ASCII;logfile=dist/build64.log' renderdoc.sln /t:Rebuild /p:'Configuration=Release;Platform=x64'
 
 if [ ! -f "./x64/Release/${CORE_BASE_NAME}.dll" ] || \
    [ ! -f "./x64/Release/${UI_BASE_NAME}.exe" ] || \

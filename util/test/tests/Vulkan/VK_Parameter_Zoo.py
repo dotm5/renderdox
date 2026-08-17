@@ -13,7 +13,7 @@ class VK_Parameter_Zoo(rdtest.TestCase):
 
         self.check(action is not None)
 
-        action = action.next
+        action = action.nextAction
 
         self.controller.SetFrameEvent(action.eventId, False)
 
@@ -28,7 +28,7 @@ class VK_Parameter_Zoo(rdtest.TestCase):
         # Find the action that contains resource references
         action = self.find_action("References")
         self.check(action is not None)
-        action = action.next
+        action = action.nextAction
         self.controller.SetFrameEvent(action.eventId, False)
 
         vkpipe: rd.VKState = self.controller.GetVulkanPipelineState()
@@ -119,7 +119,7 @@ class VK_Parameter_Zoo(rdtest.TestCase):
         if descriptor_update_template and push_descriptor:
             action = self.find_action("PushTemplReferences")
             self.check(action is not None)
-            action = action.next
+            action = action.nextAction
             self.controller.SetFrameEvent(action.eventId, False)
 
             vkpipe: rd.VKState = self.controller.GetVulkanPipelineState()
@@ -174,7 +174,7 @@ class VK_Parameter_Zoo(rdtest.TestCase):
 
             self.check(action is not None)
 
-            action = action.next
+            action = action.nextAction
 
             self.controller.SetFrameEvent(action.eventId, False)
 
@@ -234,7 +234,7 @@ class VK_Parameter_Zoo(rdtest.TestCase):
 
             rdtest.log.print(f"Checking {action.customName}")
 
-            self.controller.SetFrameEvent(action.next.eventId, False)
+            self.controller.SetFrameEvent(action.nextAction.eventId, False)
 
             self.check_triangle(fore=[1.0, 0.0, 1.0, 1.0])
 
@@ -275,7 +275,7 @@ class VK_Parameter_Zoo(rdtest.TestCase):
 
         self.check(action is not None)
 
-        action = action.next
+        action = action.nextAction
 
         self.controller.SetFrameEvent(action.eventId, False)
 
@@ -329,7 +329,7 @@ class VK_Parameter_Zoo(rdtest.TestCase):
 
         action = self.find_action("Dynamic Array Draw")
 
-        action = action.next
+        action = action.nextAction
 
         self.controller.SetFrameEvent(action.eventId, False)
 

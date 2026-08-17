@@ -1694,7 +1694,6 @@ int renderdoccmd(GlobalEnvironment &env, std::vector<std::string> &argv)
     cmd.parse_check(argv, true);
 
     CaptureOptions opts;
-    DCOMP_GetDefaultCaptureOptions(&opts);
 
     if(it->second->IsCaptureCommand())
     {

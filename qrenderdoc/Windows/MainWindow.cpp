@@ -51,9 +51,11 @@
 #include <QUuid>
 #include "Code/QRDUtils.h"
 #include "Code/Resources.h"
+#include "Code/pyrenderdoc/PythonContext.h"
 #include "Widgets/Extended/RDLabel.h"
 #include "Widgets/Extended/RDMenu.h"
 #include "Widgets/Extended/StructuredTableExport.h"
+#include "Widgets/Extended/RDToolButton.h"
 #include "Widgets/ReplayOptionsSelector.h"
 #include "Windows/Dialogs/AboutDialog.h"
 #include "Windows/Dialogs/CaptureDialog.h"
@@ -268,6 +270,41 @@ MainWindow::MainWindow(ICaptureContext &ctx) : QMainWindow(NULL), ui(new Ui::Mai
 
   QObject::connect(statusIcon, &RDLabel::doubleClicked, this, &MainWindow::statusDoubleClicked);
   QObject::connect(statusText, &RDLabel::doubleClicked, this, &MainWindow::statusDoubleClicked);
+
+  extensionStatus = new RDToolButton(this);
+  extensionStatus->setAutoRaise(true);
+  extensionStatus->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+  ui->statusBar->addWidget(extensionStatus);
+
+  extensionStatus->setIcon(Icons::plugin());
+  extensionStatus->setVisible(false);
+
+  extensionReload = new RDToolButton(this);
+  extensionReload->setAutoRaise(true);
+  extensionReload->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+  ui->statusBar->addWidget(extensionReload);
+
+  extensionReload->setIcon(Icons::update());
+  extensionReload->setText(tr("Reload changed extensions"));
+  extensionReload->setVisible(false);
+
+  QObject::connect(extensionStatus, &RDToolButton::clicked, this,
+                   &MainWindow::on_action_Manage_Extensions_triggered);
+  QObject::connect(extensionReload, &RDToolButton::clicked, [this]() {
+    rdcarray<ExtensionMetadata> exts = m_Ctx.Extensions().GetInstalledExtensions();
+    for(const ExtensionMetadata &m : exts)
+      if(m.hasChanges)
+        m_Ctx.Extensions().LoadExtension(m.package);
+  });
+  QObject::connect(PythonContext::GetExtensionContext(), &PythonContext::extensionLoaded, this,
+                   &MainWindow::PythonStatusUpdate);
+
+  QTimer *pyStatusTimer = new QTimer(this);
+  QObject::connect(pyStatusTimer, &QTimer::timeout, this, &MainWindow::PythonStatusUpdate);
+
+  pyStatusTimer->setSingleShot(false);
+  pyStatusTimer->setInterval(500);
+  pyStatusTimer->start();
 
   QObject::connect(&m_MessageTick, &QTimer::timeout, this, &MainWindow::messageCheck);
   m_MessageTick.setSingleShot(false);
@@ -737,6 +774,11 @@ void MainWindow::LoadFromFilename(const QString &filename, bool temporary)
   {
     LoadCapture(filename, m_Ctx.Config().DefaultReplayOptions, temporary, true);
   }
+  else if(ext == lit("py"))
+  {
+    m_Ctx.ShowPythonShell();
+    m_Ctx.GetPythonShell()->LoadScriptFromFilename(filename);
+  }
   else if(ext == lit("cap"))
   {
     OpenCaptureConfigFile(filename, false);
@@ -755,12 +797,14 @@ void MainWindow::LoadFromFilename(const QString &filename, bool temporary)
 void MainWindow::OnCaptureTrigger(const QString &exe, const QString &workingDir,
                                   const QString &cmdLine,
                                   const rdcarray<EnvironmentModification> &env, CaptureOptions opts,
-                                  std::function<void(LiveCapture *)> callback)
+                                  std::function<void(ICaptureConnection *)> callback)
 {
   if(!PromptCloseCapture())
     return;
 
-  LambdaThread *th = new LambdaThread([this, exe, workingDir, cmdLine, env, opts, callback]() {
+  ExecuteResult ret = {};
+
+  LambdaThread *th = new LambdaThread([this, exe, workingDir, cmdLine, env, opts, callback, &ret]() {
     if(isUnshareableDeviceInUse())
     {
       RDDialog::warning(this, tr("RenderDoc is already capturing an app on this device"),
@@ -772,42 +816,7 @@ void MainWindow::OnCaptureTrigger(const QString &exe, const QString &workingDir,
 
     QString capturefile = m_Ctx.TempCaptureFilename(QFileInfo(exe).baseName());
 
-    ExecuteResult ret =
-        m_Ctx.Replay().ExecuteAndInject(exe, workingDir, cmdLine, env, capturefile, opts);
-
-    GUIInvoke::call(this, [this, exe, ret, callback]() {
-      if(ret.result.code == ResultCode::JDWPFailure)
-      {
-        RDDialog::critical(
-            this, tr("Error connecting to debugger"),
-            tr("<html>Error launching %1 for capture.\n\n"
-               "Something went wrong connecting to the debugger on the Android device.\n\n"
-               "This can happen if the package is not marked as debuggable, the device is not "
-               "configured to allow app debugging, if the intent arguments are badly specified, or "
-               "if another android tool such as Android Studio is interfering with the debug "
-               "connection.\n\n"
-               "Close <b>all</b> instances of Android Studio or other Android programs "
-               "and try again.</html>")
-                .arg(exe));
-        return;
-      }
-
-      if(ret.result.code != ResultCode::Succeeded)
-      {
-        RDDialog::critical(
-            this, tr("Error launching capture"),
-            tr("Error launching %1 for capture.\n\n%2").arg(exe).arg(ret.result.Message()));
-        return;
-      }
-
-      LiveCapture *live = new LiveCapture(
-          m_Ctx,
-          m_Ctx.Replay().CurrentRemote().IsValid() ? m_Ctx.Replay().CurrentRemote().Hostname() : "",
-          m_Ctx.Replay().CurrentRemote().IsValid() ? m_Ctx.Replay().CurrentRemote().Name() : "",
-          ret.ident, this, this);
-      ShowLiveCapture(live);
-      callback(live);
-    });
+    ret = m_Ctx.Replay().ExecuteAndInject(exe, workingDir, cmdLine, env, capturefile, opts);
   });
   th->setName(lit("ExecuteAndInject"));
   th->start();
@@ -820,33 +829,53 @@ void MainWindow::OnCaptureTrigger(const QString &exe, const QString &workingDir,
                        [th]() { return !th->isRunning(); });
   }
   th->deleteLater();
+
+  if(ret.result.code == ResultCode::JDWPFailure)
+  {
+    RDDialog::critical(
+        this, tr("Error connecting to debugger"),
+        tr("<html>Error launching %1 for capture.\n\n"
+           "Something went wrong connecting to the debugger on the Android device.\n\n"
+           "This can happen if the package is not marked as debuggable, the device is not "
+           "configured to allow app debugging, if the intent arguments are badly specified, or "
+           "if another android tool such as Android Studio is interfering with the debug "
+           "connection.\n\n"
+           "Close <b>all</b> instances of Android Studio or other Android programs "
+           "and try again.</html>")
+            .arg(exe));
+    return;
+  }
+
+  if(ret.result.code != ResultCode::Succeeded)
+  {
+    RDDialog::critical(
+        this, tr("Error launching capture"),
+        tr("Error launching %1 for capture.\n\n%2").arg(exe).arg(ret.result.Message()));
+    return;
+  }
+
+  LiveCapture *live = new LiveCapture(
+      m_Ctx,
+      m_Ctx.Replay().CurrentRemote().IsValid() ? m_Ctx.Replay().CurrentRemote().Hostname() : "",
+      m_Ctx.Replay().CurrentRemote().IsValid() ? m_Ctx.Replay().CurrentRemote().Name() : "",
+      ret.ident, this, this);
+  ShowLiveCapture(live);
+  callback(live);
 }
 
 void MainWindow::OnInjectTrigger(uint32_t PID, const rdcarray<EnvironmentModification> &env,
                                  const QString &name, CaptureOptions opts,
-                                 std::function<void(LiveCapture *)> callback)
+                                 std::function<void(ICaptureConnection *)> callback)
 {
   if(!PromptCloseCapture())
     return;
 
-  LambdaThread *th = new LambdaThread([this, PID, env, name, opts, callback]() {
+  ExecuteResult ret = {};
+
+  LambdaThread *th = new LambdaThread([this, PID, env, name, opts, callback, &ret]() {
     QString capturefile = m_Ctx.TempCaptureFilename(name);
 
-    ExecuteResult ret = DCOMP_InjectIntoProcess(PID, env, capturefile, opts, false);
-
-    GUIInvoke::call(this, [this, PID, ret, callback]() {
-      if(ret.result.code != ResultCode::Succeeded)
-      {
-        RDDialog::critical(
-            this, tr("Error injecting into process"),
-            tr("Error injecting into process %1 for capture.\n\n%2").arg(PID).arg(ret.result.Message()));
-        return;
-      }
-
-      LiveCapture *live = new LiveCapture(m_Ctx, QString(), QString(), ret.ident, this, this);
-      ShowLiveCapture(live);
-      callback(live);
-    });
+    ret = DCOMP_InjectIntoProcess(PID, env, capturefile, opts, false);
   });
   th->start();
   // wait a few ms before popping up a progress bar
@@ -857,6 +886,18 @@ void MainWindow::OnInjectTrigger(uint32_t PID, const rdcarray<EnvironmentModific
                        [th]() { return !th->isRunning(); });
   }
   th->deleteLater();
+
+  if(ret.result.code != ResultCode::Succeeded)
+  {
+    RDDialog::critical(
+        this, tr("Error injecting into process"),
+        tr("Error injecting into process %1 for capture.\n\n%2").arg(PID).arg(ret.result.Message()));
+    return;
+  }
+
+  LiveCapture *live = new LiveCapture(m_Ctx, QString(), QString(), ret.ident, this, this);
+  ShowLiveCapture(live);
+  callback(live);
 }
 
 void MainWindow::LoadCapture(const QString &filename, const ReplayOptions &opts, bool temporary,
@@ -1211,7 +1252,7 @@ bool MainWindow::PromptCloseCapture()
     }
   }
 
-  CloseCapture();
+  m_Ctx.CloseCapture();
 
   if(!deletepath.isEmpty())
   {
@@ -1222,32 +1263,36 @@ bool MainWindow::PromptCloseCapture()
   return true;
 }
 
-void MainWindow::CloseCapture()
-{
-  QString path = m_Ctx.GetCaptureFilename();
-  bool local = m_Ctx.IsCaptureLocal();
-  bool temp = m_Ctx.IsCaptureTemporary();
-
-  m_Ctx.CloseCapture();
-
-  if(m_OwnTempCapture && temp)
-  {
-    m_Ctx.Replay().DeleteCapture(path, local);
-    RemoveRecentCapture(path);
-    m_OwnTempCapture = false;
-  }
-
-  ui->action_Save_Capture_Inplace->setEnabled(false);
-  ui->action_Save_Capture_As->setEnabled(false);
-  ui->menu_Export_As->setEnabled(false);
-}
-
 void MainWindow::SetTitle(const QString &filename)
 {
-  QString text = lit(RDOC_PRODUCT_DISPLAY_NAME " ").trimmed();
+  QString prefix;
 
-  if(m_Ctx.IsCaptureLoaded())
-    text = QFileInfo(filename).fileName() + lit(" - ") + text;
+  if(m_Ctx.IsCaptureLoaded() && !filename.isEmpty())
+  {
+    prefix = QFileInfo(filename).fileName();
+    if(m_Ctx.APIProps().degraded)
+      prefix += tr(" !DEGRADED PERFORMANCE!");
+    prefix += lit(" - ");
+  }
+
+  if(m_Ctx.Replay().CurrentRemote().IsValid())
+    prefix += tr("Remote: %1 - ").arg(m_Ctx.Replay().CurrentRemote().Name());
+
+  QString text = prefix + lit(RDOC_PRODUCT_DISPLAY_NAME " ");
+
+  if(RENDERDOC_STABLE_BUILD)
+    text += lit(FULL_VERSION_STRING);
+  else
+    text += tr("Unstable %1 Build (%2 - %3)")
+                .arg(DCOMP_IsReleaseBuild() ? lit("Release") : lit("Development"))
+                .arg(lit(FULL_VERSION_STRING))
+                .arg(QString::fromLatin1(DCOMP_GetCommitHash()));
+
+  if(IsRunningAsAdmin())
+    text += tr(" (Administrator)");
+
+  if(QString::fromLatin1(DCOMP_GetVersionString()) != lit(MAJOR_MINOR_VERSION_STRING))
+    text += tr(" - !! VERSION MISMATCH DETECTED !!");
 
   setWindowTitle(text);
 }
@@ -1335,6 +1380,35 @@ void MainWindow::ClearRecentCaptureSettings()
 {
   m_Ctx.Config().RecentCaptureSettings.clear();
   PopulateRecentCaptureSettings();
+}
+
+void MainWindow::PythonStatusUpdate()
+{
+  int num = m_Ctx.Extensions().GetLoadedExtensions().count();
+
+  if(num > 0 || PythonContext::IsDebuggerConnected())
+  {
+    // extensions can't be unloaded so we can just unconditionally show this now
+    extensionStatus->setVisible(true);
+
+    QString text = tr("%n extension(s) active", NULL, num);
+
+    bool reloadVisible = false;
+    for(const ExtensionMetadata &m : m_Ctx.Extensions().GetInstalledExtensions())
+    {
+      if(m.hasChanges)
+      {
+        text += tr(" (changed on disk)");
+        reloadVisible = true;
+        break;
+      }
+    }
+    extensionReload->setVisible(reloadVisible);
+
+    if(PythonContext::IsDebuggerConnected())
+      text += tr(": Python debugger connected");
+    extensionStatus->setText(text);
+  }
 }
 
 void MainWindow::networkRequestFailed(QUrl url, QString error)
@@ -2041,7 +2115,7 @@ void MainWindow::setRemoteHost(int hostIdx)
     // allow live captures to this host to stay open, that way
     // we can connect to a live capture, then switch into that
     // context
-    if(host.IsValid() && live->hostname() == host.Hostname())
+    if(host.IsValid() && live->Hostname() == host.Hostname())
       continue;
 
     // if the user previously selected 'no to all' in the save prompts below, apply that to all
@@ -2313,6 +2387,16 @@ void MainWindow::OnCaptureLoaded()
 
 void MainWindow::OnCaptureClosed()
 {
+  if(m_OwnTempCapture && m_Ctx.IsCaptureTemporary())
+  {
+    QString path = m_Ctx.GetCaptureFilename();
+
+    m_Ctx.Replay().DeleteCapture(path, m_Ctx.IsCaptureLocal());
+    RemoveRecentCapture(path);
+  }
+
+  m_OwnTempCapture = false;
+
   ui->action_Save_Capture_Inplace->setEnabled(false);
   ui->action_Save_Capture_As->setEnabled(false);
   ui->action_Close_Capture->setEnabled(false);
@@ -2335,7 +2419,7 @@ void MainWindow::OnCaptureClosed()
   ui->action_EmbedExternalFiles->setEnabled(false);
   ui->action_RemoveExternalFiles->setEnabled(false);
 
-  SetTitle();
+  SetTitle(QString());
 
   // if the remote sever disconnected during capture replay, resort back to a 'disconnected' state
   if(m_Ctx.Replay().CurrentRemote().IsValid() && !m_Ctx.Replay().CurrentRemote().IsServerRunning())
@@ -3501,6 +3585,17 @@ void MainWindow::closeEvent(QCloseEvent *event)
 
     live->cleanItems();
     delete live;
+  }
+
+  if(m_Ctx.HasPythonShell())
+  {
+    IPythonShell *shell = m_Ctx.GetPythonShell();
+
+    if(!shell->CheckUnsavedChanges())
+    {
+      event->ignore();
+      return;
+    }
   }
 
   SaveLayout(0);

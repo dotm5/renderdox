@@ -41,6 +41,7 @@ class MainWindow;
 }
 
 class RDLabel;
+class RDToolButton;
 class RDMenu;
 class LambdaThread;
 class QMimeData;
@@ -111,15 +112,14 @@ public:
   void captureModified();
   void LoadFromFilename(const QString &filename, bool temporary);
   void LoadCapture(const QString &filename, const ReplayOptions &opts, bool temporary, bool local);
-  void CloseCapture();
   QString GetSavePath(QString title = QString(), QString filter = QString());
 
   void OnCaptureTrigger(const QString &exe, const QString &workingDir, const QString &cmdLine,
                         const rdcarray<EnvironmentModification> &env, CaptureOptions opts,
-                        std::function<void(LiveCapture *)> callback);
+                        std::function<void(ICaptureConnection *)> callback);
   void OnInjectTrigger(uint32_t PID, const rdcarray<EnvironmentModification> &env,
                        const QString &name, CaptureOptions opts,
-                       std::function<void(LiveCapture *)> callback);
+                       std::function<void(ICaptureConnection *)> callback);
 
   void ShowLiveCapture(LiveCapture *live);
   void LiveCaptureClosed(LiveCapture *live);
@@ -209,6 +209,8 @@ private slots:
   void ClearRecentCaptureFiles();
   void ClearRecentCaptureSettings();
 
+  void PythonStatusUpdate();
+
   void networkRequestFailed(QUrl url, QString error);
   void networkRequestCompleted(QUrl url, QByteArray data);
 
@@ -263,6 +265,8 @@ private:
 
   RDLabel *statusIcon;
   RDLabel *statusText;
+  RDToolButton *extensionStatus;
+  RDToolButton *extensionReload;
   QProgressBar *statusProgress;
   RDMenu *contextChooserMenu;
   QToolButton *contextChooser;

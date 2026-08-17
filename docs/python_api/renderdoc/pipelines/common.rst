@@ -89,6 +89,9 @@ Rasterizer
 .. autoclass:: renderdoc.CullMode
   :members:
 
+.. autoclass:: renderdoc.DepthBiasMode
+  :members:
+
 .. autoclass:: renderdoc.FillMode
   :members:
 
@@ -161,6 +164,3 @@ Shader Messages
 
 .. autoclass:: renderdoc.ShaderComputeMessageLocation
   :members:
-
-
-* qrenderdoc.ShaderMessageViewer

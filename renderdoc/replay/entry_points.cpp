@@ -377,11 +377,6 @@ DCOMP_ExecuteAndInject(const rdcstr &app, const rdcstr &workingDir, const rdcstr
   return ret;
 }
 
-extern "C" RENDERDOC_API void RENDERDOC_CC DCOMP_GetDefaultCaptureOptions(CaptureOptions *opts)
-{
-  *opts = CaptureOptions();
-}
-
 extern "C" RENDERDOC_API ResultDetails RENDERDOC_CC DCOMP_StartGlobalHook(
     const rdcstr &pathmatch, const rdcstr &capturefile, const CaptureOptions &opts)
 {

@@ -465,8 +465,10 @@ void DoSerialise(SerialiserType &ser, TextureDescription &el)
   SERIALISE_MEMBER(msQual);
   SERIALISE_MEMBER(msSamp);
   SERIALISE_MEMBER(byteSize);
+  SERIALISE_MEMBER(memory);
+  SERIALISE_MEMBER(memoryOffset);
 
-  SIZE_CHECK(72);
+  SIZE_CHECK(88);
 }
 
 template <typename SerialiserType>
@@ -476,8 +478,10 @@ void DoSerialise(SerialiserType &ser, BufferDescription &el)
   SERIALISE_MEMBER(creationFlags);
   SERIALISE_MEMBER(gpuAddress);
   SERIALISE_MEMBER(length);
+  SERIALISE_MEMBER(memory);
+  SERIALISE_MEMBER(memoryOffset);
 
-  SIZE_CHECK(32);
+  SIZE_CHECK(48);
 }
 
 template <typename SerialiserType>
@@ -576,7 +580,7 @@ void DoSerialise(SerialiserType &ser, ActionDescription &el)
   SERIALISE_MEMBER(copyDestinationSubresource);
 
   if(ser.IsReading())
-    el.parent = el.previous = el.next = NULL;
+    el.parent = el.previousAction = el.nextAction = NULL;
 
   SERIALISE_MEMBER(outputs);
   SERIALISE_MEMBER(depthOut);
@@ -2134,6 +2138,9 @@ void DoSerialise(SerialiserType &ser, VKPipe::Rasterizer &el)
   SERIALISE_MEMBER(depthBias);
   SERIALISE_MEMBER(depthBiasClamp);
   SERIALISE_MEMBER(slopeScaledDepthBias);
+  SERIALISE_MEMBER(depthBiasExact);
+  SERIALISE_MEMBER(depthBiasRepresentation);
+
   SERIALISE_MEMBER(lineWidth);
 
   SERIALISE_MEMBER(lineRasterMode);
@@ -2143,7 +2150,7 @@ void DoSerialise(SerialiserType &ser, VKPipe::Rasterizer &el)
   SERIALISE_MEMBER(pipelineShadingRate);
   SERIALISE_MEMBER(shadingRateCombiners);
 
-  SIZE_CHECK(68);
+  SIZE_CHECK(76);
 }
 
 template <typename SerialiserType>
@@ -2329,7 +2336,7 @@ void DoSerialise(SerialiserType &ser, VKPipe::State &el)
 
   SERIALISE_MEMBER(conditionalRendering);
 
-  SIZE_CHECK(1928);
+  SIZE_CHECK(1936);
 }
 
 #pragma endregion Vulkan pipeline state

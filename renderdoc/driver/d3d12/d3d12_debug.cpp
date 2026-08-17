@@ -865,6 +865,18 @@ bool D3D12DebugManager::CreateShaderDebugResources()
       {
         smMajor = smMaxSupport.HighestShaderModel >> 4;
         smMinor = smMaxSupport.HighestShaderModel & 0xF;
+
+        // make sure we can compile this SM version
+        ID3DBlob *testBlob = NULL;
+        if(m_pDevice->GetShaderCache()->GetShaderBlob(
+               "float4 main() : SV_Target0 { return 0.0f.xxxx; }", "main", 0, {},
+               StringFormat::Fmt("ps_%d_%d", smMajor, smMinor).c_str(), &testBlob) != "")
+        {
+          SAFE_RELEASE(testBlob);
+          continue;
+        }
+        SAFE_RELEASE(testBlob);
+
         break;
       }
     }

@@ -467,8 +467,13 @@ void D3D12Descriptor::Create(D3D12_DESCRIPTOR_HEAP_TYPE heapType, WrappedID3D12D
         }
       }
 
-      if(countRes == NULL && desc && desc->ViewDimension == D3D12_UAV_DIMENSION_BUFFER)
-        desc->Buffer.CounterOffsetInBytes = 0;
+      if(countRes == NULL && desc)
+      {
+        if(desc->ViewDimension == D3D12_UAV_DIMENSION_BUFFER)
+          desc->Buffer.CounterOffsetInBytes = 0;
+        if(desc->ViewDimension == D3D12_UAV_DIMENSION_BUFFER_BYTE_OFFSET)
+          desc->BufferByteOffset.CounterOffsetInBytes = 0;
+      }
 
       D3D12_UNORDERED_ACCESS_VIEW_DESC planeDesc;
       // ensure that multi-plane formats have a valid plane slice specified. This shouldn't be

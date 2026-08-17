@@ -343,7 +343,8 @@ public:
   virtual bool IsCBVCached(const DXDebug::BindingSlot &slot) const = 0;
   virtual bool IsSRVCached(const DXDebug::BindingSlot &slot) const = 0;
   virtual bool IsUAVCached(const DXDebug::BindingSlot &slot) const = 0;
-  virtual bool IsResourceInfoCached(const DXDebug::BindingSlot &slot, uint32_t mipLevel) = 0;
+  virtual bool IsResourceInfoCached(DXIL::ResourceClass resClass, const DXDebug::BindingSlot &slot,
+                                    uint32_t mipLevel) = 0;
   virtual bool IsSampleInfoCached(const DXDebug::BindingSlot &slot) = 0;
   virtual bool IsRenderTargetSampleInfoCached() = 0;
   virtual bool IsResourceReferenceInfoCached(const DXDebug::BindingSlot &slot) = 0;

@@ -31,18 +31,42 @@
 
 typedef uint8_t byte;
 
+#ifndef DCOMP_DEFAULT_HOOK_INTO_CHILDREN
+#define DCOMP_DEFAULT_HOOK_INTO_CHILDREN 0
+#endif
+
 // see renderdoc_app.h RENDERDOC_CaptureOption - make sure any changes here are reflected there, to
 // the options or to the documentation
-DOCUMENT(R"(Sets up configuration and options for optional features either at capture time or at API
+DOCUMENT(R"(
+CaptureOptions()
+CaptureOptions(other: CaptureOptions)
+
+Sets up configuration and options for optional features either at capture time or at API
 initialisation time that the user can enable or disable at will.
 )");
 struct CaptureOptions
 {
-// for convenience, don't export the constructor but allow it within the module
-// for constructing defaults
-#ifdef DCOMP_EXPORTS
-  CaptureOptions();
-#endif
+  DOCUMENT("");
+  CaptureOptions()
+  {
+    static_assert(DCOMP_DEFAULT_HOOK_INTO_CHILDREN == 0 ||
+                      DCOMP_DEFAULT_HOOK_INTO_CHILDREN == 1,
+                  "DCOMP_DEFAULT_HOOK_INTO_CHILDREN must be 0 or 1");
+    // since we're reading from all bytes even padding etc in EncodeAsString, memset to 0
+    memset(this, 0, sizeof(CaptureOptions));
+    allowVSync = true;
+    allowFullscreen = true;
+    apiValidation = false;
+    captureCallstacks = false;
+    captureCallstacksOnlyActions = false;
+    delayForDebugger = 0;
+    verifyBufferAccess = false;
+    hookIntoChildren = DCOMP_DEFAULT_HOOK_INTO_CHILDREN != 0;
+    refAllResources = false;
+    captureAllCmdLists = false;
+    debugOutputMute = true;
+    softMemoryLimit = 0;
+  }
 
   DOCUMENT(R"(Encode the current options to a string suitable for passing around between processes.
 

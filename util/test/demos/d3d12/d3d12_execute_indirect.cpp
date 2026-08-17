@@ -415,24 +415,28 @@ void main(uint3 gid : SV_GroupID)
     ID3D12PipelineStatePtr patchpso2 =
         MakePSO().RootSig(patchsig).InputLayout(layout).VS(vsblob).PS(psblob);
 
-    struct PatchArgs3
+    D3D12_DRAW_ARGUMENTS singleDraw;
+    singleDraw.VertexCountPerInstance = 3;
+    singleDraw.InstanceCount = 1024;
+    singleDraw.StartInstanceLocation = 0;
+    singleDraw.StartVertexLocation = 6;
+
+    ID3D12ResourcePtr patchArgBuf3 = MakeBuffer().Upload().Size(sizeof(singleDraw)).Data(&singleDraw);
+
+    const uint32_t maxCountDraws = 1024;
+    D3D12_DRAW_ARGUMENTS countSingleDraws[maxCountDraws];
+    for(uint32_t i = 0; i < maxCountDraws; ++i)
     {
-      D3D12_DRAW_ARGUMENTS draw;
-    } patchargs3;
+      countSingleDraws[i].VertexCountPerInstance = 3;
+      countSingleDraws[i].InstanceCount = i + 1;
+      countSingleDraws[i].StartInstanceLocation = 0;
+      countSingleDraws[i].StartVertexLocation = (9 + (i * 3)) % 18;
+    }
+    ID3D12ResourcePtr countSingleDrawsArgBuf =
+        MakeBuffer().Size(sizeof(countSingleDraws)).Data(&countSingleDraws);
 
-    patchargs3.draw.VertexCountPerInstance = 3;
-    patchargs3.draw.InstanceCount = 1024;
-    patchargs3.draw.StartInstanceLocation = 0;
-    patchargs3.draw.StartVertexLocation = 6;
-
-    std::vector<char> patchArgsData3;
-    patchArgsData3.resize(sizeof(PatchArgs3));
-
-    char *ptr3 = patchArgsData3.data();
-    patchArgsData3.resize(sizeof(PatchArgs3));
-    memcpy(ptr3, &patchargs3.draw, sizeof(D3D12_DRAW_ARGUMENTS));
-    ID3D12ResourcePtr patchArgBuf3 =
-        MakeBuffer().Upload().Size((UINT)patchArgsData3.size()).Data(patchArgsData3.data());
+    uint32_t counts[] = {0, 5, 7, 11};
+    ID3D12ResourcePtr countBuf = MakeBuffer().Data(counts);
 
     ID3D12PipelineStatePtr patchpso3 =
         MakePSO().RootSig(patchsig).InputLayout(layout).VS(vsblob).PS(psblob);
@@ -706,6 +710,42 @@ void main(uint3 gid : SV_GroupID)
         OMSetRenderTargets(cmd, {rtv}, {});
         cmd->SetGraphicsRoot32BitConstants(3, 4, baseConstData, 0);
         cmd->ExecuteIndirect(patchArgSig, countDrawsInFullBuffer, fullargsStateDrawBuf, 0, NULL, 0);
+        NextTest();
+      }
+      popMarker(cmd);
+
+      pushMarker(cmd, "Count Buffer Draws");
+      {
+        cmd->SetPipelineState(patchpso3);
+        cmd->SetGraphicsRootSignature(patchsig);
+        cmd->SetDescriptorHeaps(1, &m_CBVUAVSRV.GetInterfacePtr());
+        cmd->SetGraphicsRootDescriptorTable(5, m_CBVUAVSRV->GetGPUDescriptorHandleForHeapStart());
+        cmd->SetGraphicsRootConstantBufferView(0, cbv->GetGPUVirtualAddress() + 256);
+        cmd->SetGraphicsRootShaderResourceView(1, srv->GetGPUVirtualAddress() + 256);
+        cmd->SetGraphicsRootUnorderedAccessView(2, uav->GetGPUVirtualAddress() + 256);
+        D3D12_VERTEX_BUFFER_VIEW view;
+        view.BufferLocation = vb->GetGPUVirtualAddress();
+        view.SizeInBytes = sizeof(tris);
+        view.StrideInBytes = sizeof(A2V);
+        cmd->IASetVertexBuffers(0, 1, &view);
+
+        RSSetViewport(cmd, {viewXY.x, viewXY.y, sqSize, sqSize, 0.0f, 1.0f});
+        RSSetScissorRect(cmd, {0, 0, screenWidth, screenHeight});
+
+        OMSetRenderTargets(cmd, {rtv}, {});
+
+        cmd->SetGraphicsRoot32BitConstants(3, 4, baseConstData, 0);
+
+        setMarker(cmd, "MaxCount: 1024 CountBuf: 5");
+        cmd->ExecuteIndirect(plainArgSig, maxCountDraws, countSingleDrawsArgBuf, 0, countBuf, 4);
+        NextTest();
+        setMarker(cmd, "MaxCount: 1 CountBuf: 7");
+        RSSetViewport(cmd, {viewXY.x, viewXY.y, sqSize, sqSize, 0.0f, 1.0f});
+        cmd->ExecuteIndirect(plainArgSig, 1, countSingleDrawsArgBuf, 0, countBuf, 8);
+        NextTest();
+        setMarker(cmd, "MaxCount: 0 CountBuf: 11");
+        RSSetViewport(cmd, {viewXY.x, viewXY.y, sqSize, sqSize, 0.0f, 1.0f});
+        cmd->ExecuteIndirect(plainArgSig, 0, countSingleDrawsArgBuf, 0, countBuf, 12);
         NextTest();
       }
       popMarker(cmd);

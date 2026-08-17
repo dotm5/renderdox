@@ -755,6 +755,8 @@ public:
     rdcarray<uint32_t> spirvWords;
     SPIRVPatchData patchData;
 
+    rdcarray<SpecConstant> specInfo;
+
     // used if the application uploaded GLSL but we were able to compile to SPIR-V
     bool convertedSPIRV = false;
     bool convertedAutomapped = false;
@@ -787,7 +789,7 @@ public:
     void Disassemble(const rdcstr &disasmEntryPoint)
     {
       if(disassembly.empty())
-        disassembly = spirv.Disassemble(disasmEntryPoint, spirvInstructionLines);
+        disassembly = spirv.Disassemble(disasmEntryPoint, specInfo, spirvInstructionLines);
     }
 
   private:

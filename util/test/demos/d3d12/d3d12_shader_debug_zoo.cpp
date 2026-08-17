@@ -1154,6 +1154,14 @@ float4 main(v2f IN) : SV_Target0
     return float4(asfloat(rootbytesrv.Load(z+0).x), asfloat(rootbytesrv.Load(z+4).x),
                   asfloat(rootbytesrv.Load(z+8).x), float(rootbytesrv.Load(z+12).x));
   }
+  if(IN.tri == 113)
+  {
+    uint a = 0, b = 0, c = 0;
+    byterotest.GetDimensions(a);
+    byterwtest.GetDimensions(b);
+    byterwtest2.GetDimensions(c);
+    return float4(float(a), float(b), float(c), 0.0f);
+  }
   return float4(0.4f, 0.4f, 0.4f, 0.4f);
 }
 )EOSHADER";

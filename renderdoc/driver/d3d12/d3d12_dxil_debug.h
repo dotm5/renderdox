@@ -80,7 +80,8 @@ public:
   bool IsCBVCached(const DXDebug::BindingSlot &slot) const override;
   bool IsSRVCached(const DXDebug::BindingSlot &slot) const override;
   bool IsUAVCached(const DXDebug::BindingSlot &slot) const override;
-  bool IsResourceInfoCached(const DXDebug::BindingSlot &slot, uint32_t mipLevel) override;
+  bool IsResourceInfoCached(DXIL::ResourceClass resClass, const DXDebug::BindingSlot &slot,
+                            uint32_t mipLevel) override;
   bool IsSampleInfoCached(const DXDebug::BindingSlot &slot) override;
   bool IsRenderTargetSampleInfoCached() override;
   bool IsResourceReferenceInfoCached(const DXDebug::BindingSlot &slot) override;
@@ -166,19 +167,22 @@ private:
 
   struct ResourceInfoMiplevel
   {
+    DXIL::ResourceClass resClass;
     BindingSlot slot;
     uint32_t mipLevel;
 
     bool operator<(const ResourceInfoMiplevel &o) const
     {
-      if(mipLevel == o.mipLevel)
+      if(resClass != o.resClass)
+        return resClass < o.resClass;
+      if(!(slot == o.slot))
         return slot < o.slot;
       return mipLevel < o.mipLevel;
     }
 
     bool operator==(const ResourceInfoMiplevel &o) const
     {
-      return slot == o.slot && mipLevel == o.mipLevel;
+      return resClass == o.resClass && slot == o.slot && mipLevel == o.mipLevel;
     }
   };
 

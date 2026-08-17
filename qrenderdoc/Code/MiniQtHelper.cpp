@@ -60,7 +60,7 @@ MiniQtHelper::~MiniQtHelper()
   });
 }
 
-void MiniQtHelper::InvokeOntoUIThread(std::function<void()> callback)
+void MiniQtHelper::InvokeOntoUIThread(UIInvokeCallback callback)
 {
   GUIInvoke::call(m_Ctx.GetMainWindow()->Widget(), callback);
 }

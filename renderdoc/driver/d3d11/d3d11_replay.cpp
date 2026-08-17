@@ -1726,9 +1726,9 @@ rdcarray<uint32_t> D3D11Replay::GetPassEvents(uint32_t eventId)
   const ActionDescription *action = m_pDevice->GetAction(eventId);
 
   const ActionDescription *start = action;
-  while(start && start->previous && !(start->previous->flags & ActionFlags::Clear))
+  while(start && start->previousAction && !(start->previousAction->flags & ActionFlags::Clear))
   {
-    const ActionDescription *prev = start->previous;
+    const ActionDescription *prev = start->previousAction;
 
     if(start->outputs != prev->outputs || start->depthOut != prev->depthOut)
       break;
@@ -1744,7 +1744,7 @@ rdcarray<uint32_t> D3D11Replay::GetPassEvents(uint32_t eventId)
     if(start->flags & ActionFlags::Drawcall)
       passEvents.push_back(start->eventId);
 
-    start = start->next;
+    start = start->nextAction;
   }
 
   return passEvents;

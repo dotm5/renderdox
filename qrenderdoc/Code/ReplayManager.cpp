@@ -26,6 +26,7 @@
 #include <QApplication>
 #include <QMutexLocker>
 #include <QProgressDialog>
+#include "Code/pyrenderdoc/PythonContext.h"
 #include "CaptureContext.h"
 #include "QRDUtils.h"
 
@@ -55,7 +56,11 @@ void ReplayManager::OpenCapture(const QString &capturefile, const ReplayOptions 
   int proxyRenderer = -1;
 
   m_Thread = new LambdaThread([this, proxyRenderer, capturefile, opts, progress]() {
+    PythonContext::AddDebuggableThread();
+
     run(proxyRenderer, capturefile, opts, progress);
+
+    PythonContext::RemoveDebuggableThread();
   });
   m_Thread->setName(lit("ReplayManager"));
   m_Thread->start(QThread::HighestPriority);
@@ -247,7 +252,7 @@ QString ReplayManager::GetCurrentProcessingTag()
   return m_CommandTag;
 }
 
-void ReplayManager::AsyncInvoke(const rdcstr &tag, ReplayManager::InvokeCallback m)
+void ReplayManager::AsyncInvoke(ReplayManager::ReplayInvokeCallback m, rdcstr tag)
 {
   QString qtag;
 
@@ -277,16 +282,14 @@ void ReplayManager::AsyncInvoke(const rdcstr &tag, ReplayManager::InvokeCallback
   PushInvoke(cmd);
 }
 
-void ReplayManager::AsyncInvoke(ReplayManager::InvokeCallback m)
+void ReplayManager::BlockInvoke(ReplayManager::ReplayInvokeCallback m)
 {
-  InvokeHandle *cmd = new InvokeHandle(m);
-  cmd->selfdelete = true;
+  if(IsRunning() && m_Thread->isCurrentThread())
+  {
+    m(m_Renderer);
+    return;
+  }
 
-  PushInvoke(cmd);
-}
-
-void ReplayManager::BlockInvoke(ReplayManager::InvokeCallback m)
-{
   InvokeHandle *cmd = new InvokeHandle(m);
 
   PushInvoke(cmd);

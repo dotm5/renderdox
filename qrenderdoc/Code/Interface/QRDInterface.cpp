@@ -75,7 +75,6 @@ CaptureSettings::CaptureSettings()
   autoStart = false;
   queuedFrameCap = 0;
   numQueuedFrames = 0;
-  DCOMP_GetDefaultCaptureOptions(&options);
 }
 
 CaptureSettings::operator QVariant() const

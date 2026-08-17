@@ -693,6 +693,24 @@ void D3D12PipelineStateViewer::setViewDetails(RDTreeWidgetItem *node, const D3D1
     viewdetails = true;
   }
 
+  uint32_t effectiveDepth = qMax(1U, tex->depth >> res.firstMip);
+
+  if(effectiveDepth > 1 &&
+     ((effectiveDepth != res.numSlices && res.numSlices > 0) || res.firstSlice > 0))
+  {
+    if(res.numSlices == 1)
+      text += tr("The texture has %1 3D slices at first mip, the view covers slice %2.\n")
+                  .arg(effectiveDepth)
+                  .arg(res.firstSlice);
+    else
+      text += tr("The texture has %1 3D slices at first mip, the view covers slices %2-%3.\n")
+                  .arg(effectiveDepth)
+                  .arg(res.firstSlice)
+                  .arg(res.firstSlice + res.numSlices - 1);
+
+    viewdetails = true;
+  }
+
   if(view.descriptor.minLODClamp != 0.0f)
   {
     text += tr("The texture has a ResourceMinLODClamp of %1.\n").arg(view.descriptor.minLODClamp);
@@ -2423,7 +2441,7 @@ void D3D12PipelineStateViewer::resource_itemActivated(RDTreeWidgetItem *item, in
 
     if(shaderRes)
     {
-      format = BufferFormatter::GetBufferFormatString(Packing::D3DUAV, stage->resourceId,
+      format = BufferFormatter::GetBufferFormatString(PackingRules::D3DUAV(), stage->resourceId,
                                                       *shaderRes, view.descriptor.format);
 
       if(view.descriptor.flags & DescriptorFlags::RawBuffer)

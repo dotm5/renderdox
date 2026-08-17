@@ -130,7 +130,7 @@ class D3D12_Shader_Debug_Zoo(rdtest.TestCase):
                     if (test_marker is None):
                         rdtest.log.print(f"Skipping Graphics tests for {sectionName}")
                         continue
-                    action = test_marker.next
+                    action = test_marker.nextAction
                     self.controller.SetFrameEvent(action.eventId, False)
 
                     pipe: rd.PipeState = self.controller.GetPipelineState()
@@ -195,7 +195,7 @@ class D3D12_Shader_Debug_Zoo(rdtest.TestCase):
         for marker in msaaMarkers:
             rdtest.log.begin_section(marker)
             test_marker: rd.ActionDescription = self.find_action(marker)
-            action = test_marker.next
+            action = test_marker.nextAction
             self.controller.SetFrameEvent(action.eventId, False)
             pipe: rd.PipeState = self.controller.GetPipelineState()
             for (x,y) in [(4, 4), (4, 5), (3, 4), (3, 5)]:
@@ -236,7 +236,7 @@ class D3D12_Shader_Debug_Zoo(rdtest.TestCase):
             if test_marker is None:
                 rdtest.log.print(f"Skipping Vertex Sample tests for {shaderModels[sm]}")
                 continue
-            action = test_marker.next
+            action = test_marker.nextAction
             self.controller.SetFrameEvent(action.eventId, False)
             pipe: rd.PipeState = self.controller.GetPipelineState()
 
@@ -284,7 +284,7 @@ class D3D12_Shader_Debug_Zoo(rdtest.TestCase):
         rdtest.log.end_section("VertexSample tests")
 
         test_marker: rd.ActionDescription = self.find_action("Banned")
-        action = test_marker.next
+        action = test_marker.nextAction
         self.controller.SetFrameEvent(action.eventId, False)
         pipe: rd.PipeState = self.controller.GetPipelineState()
 
@@ -340,7 +340,7 @@ class D3D12_Shader_Debug_Zoo(rdtest.TestCase):
                 rdtest.log.print(f"Skipping Compute tests for {csShaderModels[sm]}")
                 rdtest.log.end_section(section)
                 continue
-            action = test_marker.next
+            action = test_marker.nextAction
             self.controller.SetFrameEvent(action.eventId, False)
             pipe: rd.PipeState = self.controller.GetPipelineState()
             if not pipe.GetShaderReflection(rd.ShaderStage.Compute).debugInfo.debuggable:

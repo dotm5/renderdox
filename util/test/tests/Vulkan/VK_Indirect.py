@@ -315,6 +315,10 @@ class VK_Indirect(rdtest.TestCase):
 
     def check_capture(self):
 
+        with rdtest.log.auto_section("Checking Indirect Action Names"):
+            if not self.check_indirect_action_name_consistency(self.controller):
+                raise rdtest.TestFailureException("Indirect action parameters do not match its event parameters")
+
         fill = self.find_action("vkCmdFillBuffer")
 
         self.check(fill is not None)
@@ -366,13 +370,13 @@ class VK_Indirect(rdtest.TestCase):
 
             # Rewind to the start of the capture
             action: rd.ActionDescription = dispatches.children[0]
-            while action.previous is not None:
-                action = action.previous
+            while action.previousAction is not None:
+                action = action.previousAction
 
             # Ensure we can select all actions
             while action is not None:
                 self.controller.SetFrameEvent(action.eventId, False)
-                action = action.next
+                action = action.nextAction
 
             rdtest.log.success("Selected all {} actions".format(level))
 

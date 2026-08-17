@@ -250,7 +250,7 @@
   </action>
   <action name="action_Python_Shell">
    <property name="text">
-    <string>P&amp;ython Shell</string>
+    <string>P&amp;ython Scripting</string>
    </property>
   </action>
   <action name="action_Event_Browser">
