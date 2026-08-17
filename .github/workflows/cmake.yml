@@ -87,4 +87,6 @@ jobs:
         run: ./build/bin/renderdoccmd test unit -o core-unit-tests.log
 
       - name: Validate install layout
-        run: cmake --install build --config Release --prefix install
+        env:
+          DESTDIR: ${{ github.workspace }}/install-root
+        run: cmake --install build --config Release --prefix /usr/local
