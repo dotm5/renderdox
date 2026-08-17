@@ -24,6 +24,7 @@
 
 #include <algorithm>
 #include "api/replay/version.h"
+#include "generated/product_identity.h"
 #include "strings/string_utils.h"
 #include "vk_core.h"
 #include "vk_replay.h"
@@ -220,8 +221,8 @@ void WrappedVulkan::AddRequiredExtensions(bool instance, rdcarray<rdcstr> &exten
 
 // embedded data file
 
-extern unsigned char driver_vulkan_renderdoc_json[];
-extern int driver_vulkan_renderdoc_json_len;
+extern unsigned char RDOC_VULKAN_JSON_EMBEDDED_DATA[];
+extern unsigned int RDOC_VULKAN_JSON_EMBEDDED_DATA_LEN;
 
 #if ENABLED(RDOC_ANDROID)
 bool VulkanReplay::CheckVulkanLayer(VulkanLayerFlags &flags, rdcarray<rdcstr> &myJSONs,
@@ -236,8 +237,8 @@ void VulkanReplay::InstallVulkanLayer(bool systemLevel)
 #else
 static rdcstr GenerateJSON(const rdcstr &sopath)
 {
-  char *txt = (char *)driver_vulkan_renderdoc_json;
-  int len = driver_vulkan_renderdoc_json_len;
+  char *txt = (char *)RDOC_VULKAN_JSON_EMBEDDED_DATA;
+  unsigned int len = RDOC_VULKAN_JSON_EMBEDDED_DATA_LEN;
 
   rdcstr json = rdcstr(txt, len);
 

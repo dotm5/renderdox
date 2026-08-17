@@ -321,6 +321,10 @@ def render_header(identity):
         "#undef RDOC_REPLAY_PROGRAM_MARKER",
         "#endif",
         "#define RDOC_REPLAY_PROGRAM_MARKER {}__replay__marker".format(core),
+        "#define RDOC_VULKAN_JSON_EMBEDDED_DATA driver_vulkan_{}_json".format(core),
+        "#define RDOC_VULKAN_JSON_EMBEDDED_DATA_LEN driver_vulkan_{}_json_len".format(
+            core
+        ),
     ]
     wide_values = {
         "RDOC_CORE_BASE_NAME",

@@ -172,6 +172,20 @@ Require-Text $generatedHeaderPath $generatedHeader `
   'RDOC_THUMBNAIL_HANDLER_CLSID_INITIALIZER'
 Require-Text $generatedHeaderPath $generatedHeader `
   "#define RDOC_REPLAY_PROGRAM_MARKER $replayMarker"
+Require-Text $generatedHeaderPath $generatedHeader `
+  "#define RDOC_VULKAN_JSON_EMBEDDED_DATA driver_vulkan_$($identity.coreBaseName)_json"
+Require-Text $generatedHeaderPath $generatedHeader `
+  "#define RDOC_VULKAN_JSON_EMBEDDED_DATA_LEN driver_vulkan_$($identity.coreBaseName)_json_len"
+
+$posixVulkanPath = 'renderdoc\driver\vulkan\vk_posix.cpp'
+$posixVulkan = Read-RepositoryText $posixVulkanPath
+foreach($requiredEmbeddedJsonContract in @('generated/product_identity.h',
+                                           'RDOC_VULKAN_JSON_EMBEDDED_DATA',
+                                           'RDOC_VULKAN_JSON_EMBEDDED_DATA_LEN'))
+{
+  Require-Text $posixVulkanPath $posixVulkan $requiredEmbeddedJsonContract
+}
+Forbid-Text $posixVulkanPath $posixVulkan 'driver_vulkan_renderdoc_json'
 
 $replayMarkerProducers = @(
   @{
@@ -245,8 +259,6 @@ $rootCMake = Read-RepositoryText $rootCMakePath
 Require-Text $rootCMakePath $rootCMake 'build/product_identity.cmake'
 Require-Text $rootCMakePath $rootCMake 'RDOC_PRODUCT_CORE_BASE_NAME'
 
-$posixVulkanPath = 'renderdoc\driver\vulkan\vk_posix.cpp'
-$posixVulkan = Read-RepositoryText $posixVulkanPath
 foreach($runtimeIdentityMacro in @('RENDERDOC_VULKAN_LAYER_NAME',
                                    'RENDERDOC_VULKAN_LAYER_VAR',
                                    'RENDERDOC_VULKAN_LAYER_DISABLE_VAR'))

@@ -8,6 +8,8 @@
 #undef RDOC_REPLAY_PROGRAM_MARKER
 #endif
 #define RDOC_REPLAY_PROGRAM_MARKER dgcore__replay__marker
+#define RDOC_VULKAN_JSON_EMBEDDED_DATA driver_vulkan_dgcore_json
+#define RDOC_VULKAN_JSON_EMBEDDED_DATA_LEN driver_vulkan_dgcore_json_len
 #define RDOC_PRODUCT_DISPLAY_NAME "DComp"
 #define RDOC_UI_DISPLAY_NAME "DCompUI"
 #define RDOC_CORE_BASE_NAME "dgcore"
