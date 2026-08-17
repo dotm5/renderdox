@@ -1,120 +1,140 @@
-name: Windows release provenance
+name: Automatic Windows release
 
 on:
-  release:
-    types: [published]
-  workflow_dispatch:
+  workflow_run:
+    workflows: [MSBuild]
+    types: [completed]
 
-# The OpenSSF generic generator previously suggested by GitHub is no longer
-# actively maintained. actions/attest is GitHub's maintained replacement and
-# emits signed in-toto SLSA build provenance for the exact release archives.
+# This privileged workflow never checks out or executes triggering content. It
+# only accepts artifacts from a successful push run in this repository's
+# default branch, waits for the matching CMake run, then publishes the exact
+# archives already attested by MSBuild.
 permissions:
+  actions: read
   contents: write
-  id-token: write
-  attestations: write
 
 concurrency:
-  group: release-provenance-${{ github.event.release.tag_name || github.ref }}
+  group: automatic-release-${{ github.event.workflow_run.head_sha }}
   cancel-in-progress: false
 
-env:
-  QRENDERDOC_THIRDPARTY_URL: https://renderdoc.org/qrenderdoc_3rdparty.zip
-  QRENDERDOC_THIRDPARTY_SHA256: 9FDF4B298DF843571120FF139B745B4183D9C332B157F1982F4242C96E038F1C
-
 jobs:
-  windows-release:
-    name: Build, attest, and publish
-    runs-on: windows-2025
-    timeout-minutes: 180
+  publish:
+    name: Publish validated Windows archives
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'dgcore-main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
 
     steps:
-      - name: Check out release source
-        uses: actions/checkout@v6
+      - name: Wait for the matching CMake run
+        id: cmake
+        uses: actions/github-script@v8
         with:
-          fetch-depth: 5
-          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref }}
-          submodules: recursive
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const sha = context.payload.workflow_run.head_sha;
+            const delay = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 
-      - name: Add MSBuild to PATH
-        uses: microsoft/setup-msbuild@v3
+            for (let attempt = 1; attempt <= 60; attempt++) {
+              const response = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'cmake.yml',
+                head_sha: sha,
+                event: 'push',
+                per_page: 20,
+              });
 
-      - name: Download pinned QRenderDoc dependencies
-        shell: pwsh
-        run: |
-          $archive = Join-Path $env:RUNNER_TEMP 'qrenderdoc_3rdparty.zip'
-          & curl.exe --fail --location --retry 3 --output $archive $env:QRENDERDOC_THIRDPARTY_URL
-          if($LASTEXITCODE -ne 0) { throw "Dependency download failed with exit code $LASTEXITCODE" }
+              const runs = response.data.workflow_runs.filter(run =>
+                run.head_sha === sha && run.event === 'push');
+              const successful = runs.find(run =>
+                run.status === 'completed' && run.conclusion === 'success');
 
-          $actual = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash
-          if($actual -ne $env:QRENDERDOC_THIRDPARTY_SHA256)
-          {
-            throw "QRenderDoc dependency hash mismatch: $actual"
-          }
+              if (successful) {
+                core.setOutput('run-id', successful.id.toString());
+                core.setOutput('run-url', successful.html_url);
+                return;
+              }
 
-          & 7z x $archive -y
-          if($LASTEXITCODE -ne 0) { throw "Dependency extraction failed with exit code $LASTEXITCODE" }
+              const active = runs.some(run => run.status !== 'completed');
+              if (runs.length > 0 && !active) {
+                const results = runs.map(run => `${run.id}:${run.conclusion}`).join(', ');
+                core.setFailed(`CMake did not succeed for ${sha}: ${results}`);
+                return;
+              }
 
-      - name: Build the complete Windows release matrix
-        shell: pwsh
-        run: |
-          $output = Join-Path $env:RUNNER_TEMP 'dcomp-release'
-          ./util/buildscripts/build_windows_release_matrix.ps1 `
-            -Target Rebuild `
-            -ChildPropagation OneGeneration `
-            -MaxCpuCount 4 `
-            -OutputDirectory $output `
-            -IncludeBootstrap
+              core.info(`CMake result for ${sha} is not ready (attempt ${attempt}/60)`);
+              await delay(30000);
+            }
 
-      - name: Create release archives
-        shell: pwsh
-        run: |
-          $matrixRoot = Join-Path $env:RUNNER_TEMP 'dcomp-release'
-          $assetRoot = Join-Path $env:RUNNER_TEMP 'release-assets'
-          New-Item -ItemType Directory -Path $assetRoot | Out-Null
+            core.setFailed(`Timed out waiting for CMake to validate ${sha}`);
 
-          $label = if('${{ github.event_name }}' -eq 'release') {
-            '${{ github.event.release.tag_name }}'
-          } else {
-            (git rev-parse --short=10 HEAD).Trim()
-          }
-          $label = $label -replace '[^A-Za-z0-9._-]', '-'
-
-          foreach($package in @('msvc-release', 'clangcl-release'))
-          {
-            $source = Join-Path $matrixRoot $package
-            $archive = Join-Path $assetRoot "renderdox-$label-windows-x64-$package.zip"
-            Compress-Archive -Path (Join-Path $source '*') -DestinationPath $archive -CompressionLevel Optimal
-          }
-
-          Copy-Item -LiteralPath (Join-Path $matrixRoot 'manifest.json') `
-            -Destination (Join-Path $assetRoot "renderdox-$label-windows-x64-manifest.json")
-
-          Get-ChildItem -LiteralPath $assetRoot -File | ForEach-Object {
-            $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
-            Write-Host "$hash  $($_.Name)"
-          }
-
-      - name: Generate signed SLSA build provenance
-        uses: actions/attest@v4
-        with:
-          subject-path: '${{ runner.temp }}/release-assets/*'
-
-      - name: Upload workflow artifacts
-        uses: actions/upload-artifact@v4
+      - name: Download the attested MSBuild artifacts
+        uses: actions/download-artifact@v5
         with:
           name: renderdox-windows-release
-          path: '${{ runner.temp }}/release-assets/*'
-          if-no-files-found: error
-          retention-days: 30
+          path: ${{ runner.temp }}/release-assets
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Attach assets to the GitHub release
-        if: github.event_name == 'release'
-        shell: pwsh
+      - name: Validate release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          asset_root="${RUNNER_TEMP}/release-assets"
+          msvc=("${asset_root}"/renderdox-*-windows-x64-msvc-release.zip)
+          clang=("${asset_root}"/renderdox-*-windows-x64-clangcl-release.zip)
+          manifest=("${asset_root}"/renderdox-*-windows-x64-manifest.json)
+
+          [[ ${#msvc[@]} -eq 1 ]]
+          [[ ${#clang[@]} -eq 1 ]]
+          [[ ${#manifest[@]} -eq 1 ]]
+          [[ -f "${asset_root}/SHA256SUMS.txt" ]]
+          [[ $(find "${asset_root}" -maxdepth 1 -type f | wc -l) -eq 4 ]]
+          (cd "${asset_root}" && sha256sum --check SHA256SUMS.txt)
+
+      - name: Create the continuous pre-release
+        id: release
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          MSBUILD_URL: ${{ github.event.workflow_run.html_url }}
+          CMAKE_URL: ${{ steps.cmake.outputs.run-url }}
         run: |
-          $assetRoot = Join-Path $env:RUNNER_TEMP 'release-assets'
-          $assets = @(Get-ChildItem -LiteralPath $assetRoot -File | Select-Object -ExpandProperty FullName)
-          & gh release upload $env:RELEASE_TAG @assets --clobber
-          if($LASTEXITCODE -ne 0) { throw "Release upload failed with exit code $LASTEXITCODE" }
+          set -euo pipefail
+          short_sha="${HEAD_SHA:0:12}"
+          tag="continuous-${short_sha}"
+          title="RenderDox continuous ${short_sha}"
+          asset_root="${RUNNER_TEMP}/release-assets"
+          notes="${RUNNER_TEMP}/release-notes.md"
+
+          printf '%s\n' \
+            "Continuous RenderDox pre-release for [${HEAD_SHA}](https://github.com/${GITHUB_REPOSITORY}/commit/${HEAD_SHA})." \
+            '' \
+            'Validated by:' \
+            "- [CMake](${CMAKE_URL})" \
+            "- [MSBuild](${MSBUILD_URL})" \
+            '' \
+            'The Windows MSVC and ClangCL archives were built from the same commit and have GitHub artifact attestations. Verify their hashes with SHA256SUMS.txt.' \
+            > "${notes}"
+
+          assets=("${asset_root}"/*)
+          if gh release view "${tag}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            gh release upload "${tag}" "${assets[@]}" --clobber --repo "${GITHUB_REPOSITORY}"
+          else
+            gh release create "${tag}" "${assets[@]}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --target "${HEAD_SHA}" \
+              --title "${title}" \
+              --notes-file "${notes}" \
+              --prerelease
+          fi
+
+          release_url=$(gh release view "${tag}" --repo "${GITHUB_REPOSITORY}" --json url --jq .url)
+          printf 'url=%s\n' "${release_url}" >> "${GITHUB_OUTPUT}"
+          printf '### Automatic release\n\n[%s](%s)\n' "${title}" "${release_url}" >> "${GITHUB_STEP_SUMMARY}"

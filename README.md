@@ -6,9 +6,10 @@
 
 <p align="center">
   <a href="LICENSE.md"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT licensed"></a>
-  <a href="https://github.com/baldurk/renderdoc"><img src="https://img.shields.io/badge/upstream-RenderDoc%20v1.45-blue.svg" alt="RenderDoc v1.45 upstream"></a>
+  <a href="https://github.com/baldurk/renderdoc/tree/v1.x"><img src="https://img.shields.io/badge/upstream-RenderDoc%20v1.x-blue.svg" alt="RenderDoc v1.x upstream"></a>
   <a href="https://github.com/dotm5/renderdox/actions/workflows/cmake.yml"><img src="https://github.com/dotm5/renderdox/actions/workflows/cmake.yml/badge.svg?branch=dgcore-main" alt="CMake status"></a>
   <a href="https://github.com/dotm5/renderdox/actions/workflows/msbuild.yml"><img src="https://github.com/dotm5/renderdox/actions/workflows/msbuild.yml/badge.svg?branch=dgcore-main" alt="MSBuild status"></a>
+  <a href="https://github.com/dotm5/renderdox/releases"><img src="https://img.shields.io/badge/releases-continuous-orange.svg" alt="Continuous releases"></a>
 </p>
 
 RenderDox is a downstream branch of [RenderDoc](https://github.com/baldurk/renderdoc), the frame-capture graphics debugger for Vulkan, D3D11, D3D12, OpenGL, and OpenGL ES. The repository name is **RenderDox**; its isolated Windows runtime and desktop application are branded **DComp** and **DCompUI**.
@@ -35,7 +36,7 @@ The graphics capture and replay implementation remains upstream-derived. The mai
 
 | Area | Upstream RenderDoc | RenderDox / DComp |
 | --- | --- | --- |
-| Baseline | General-purpose upstream project | Maintained downstream line based on RenderDoc v1.45 |
+| Baseline | General-purpose upstream project | Maintained downstream line that tracks reviewed RenderDoc `v1.x` sync points |
 | Runtime identity | `renderdoc.dll`, `qrenderdoc.exe`, `renderdoccmd.exe` | `dgcore.dll`, `dgcoreui.exe`, `dgcorecmd.exe`, `dgcorestub.exe`, and `dgcoreshim32/64.dll` |
 | Runtime API | `RENDERDOC_GetAPI` | Isolated `DCOMP_GetAPI` entry point; the upstream runtime export is intentionally absent |
 | Windows releases | Upstream build and installer layouts | Complete x64 MSVC and ClangCL portable packages from one source commit, with manifests and contract checks |
@@ -125,6 +126,8 @@ Unless `-OutputDirectory` is supplied, the script creates a timestamped director
 Each package contains the GUI, command-line tools, capture runtime, injection shim, Qt plugins, Python runtime, Python modules, Vulkan descriptor, and symbol helpers. `-IncludeBootstrap` adds the optional DXGI, D3D11, and D3D12 bootstrap outputs.
 
 For a single toolchain, use `util/buildscripts/build_windows_release.ps1`. The scripts validate product identity, exports, embedded DXIL, static-runtime requirements for injected components, Vulkan descriptor identity, required runtime files, and optional bootstrap exports before declaring success.
+
+Every successful `dgcore-main` push is released automatically after both the CMake and MSBuild workflows validate the same commit. The [continuous pre-release](https://github.com/dotm5/renderdox/releases) contains matching x64 MSVC and ClangCL archives, a complete manifest, SHA-256 checksums, and GitHub build-provenance attestations. Pull requests and manually dispatched builds remain validation-only and never publish a release.
 
 See [Compiling.md](docs/CONTRIBUTING/Compiling.md) for upstream prerequisites and platform notes.
 

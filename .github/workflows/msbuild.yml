@@ -57,6 +57,10 @@ jobs:
     needs: contracts
     runs-on: windows-2025
     timeout-minutes: 150
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
 
     steps:
       - name: Check out source
@@ -112,13 +116,45 @@ jobs:
             if($LASTEXITCODE -ne 0) { throw "$package core unit tests failed; inspect $testLog" }
           }
 
-      - name: Upload release manifests
+      - name: Create portable release archives
+        shell: pwsh
+        run: |
+          $matrixRoot = Join-Path $env:RUNNER_TEMP 'dcomp-release'
+          $assetRoot = Join-Path $env:RUNNER_TEMP 'release-assets'
+          New-Item -ItemType Directory -Path $assetRoot -Force | Out-Null
+
+          $label = (git rev-parse --short=12 HEAD).Trim()
+          foreach($package in @('msvc-release', 'clangcl-release'))
+          {
+            $source = Join-Path $matrixRoot $package
+            $archive = Join-Path $assetRoot "renderdox-$label-windows-x64-$package.zip"
+            Compress-Archive -Path (Join-Path $source '*') `
+              -DestinationPath $archive -CompressionLevel Optimal
+          }
+
+          Copy-Item -LiteralPath (Join-Path $matrixRoot 'manifest.json') `
+            -Destination (Join-Path $assetRoot "renderdox-$label-windows-x64-manifest.json")
+
+          $checksums = Get-ChildItem -LiteralPath $assetRoot -File |
+            Sort-Object Name |
+            ForEach-Object {
+              $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+              "$hash  $($_.Name)"
+            }
+          $checksums | Set-Content -LiteralPath (Join-Path $assetRoot 'SHA256SUMS.txt') `
+            -Encoding ascii
+          $checksums | ForEach-Object { Write-Host $_ }
+
+      - name: Generate signed build provenance
+        if: github.event_name == 'push' && github.ref == 'refs/heads/dgcore-main'
+        uses: actions/attest@v4
+        with:
+          subject-path: '${{ runner.temp }}/release-assets/*'
+
+      - name: Upload portable release archives
         uses: actions/upload-artifact@v4
         with:
-          name: windows-release-manifests
-          path: |
-            ${{ runner.temp }}/dcomp-release/manifest.json
-            ${{ runner.temp }}/dcomp-release/msvc-release/manifest.json
-            ${{ runner.temp }}/dcomp-release/clangcl-release/manifest.json
+          name: renderdox-windows-release
+          path: '${{ runner.temp }}/release-assets/*'
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30
