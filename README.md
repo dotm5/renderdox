@@ -1,74 +1,113 @@
 <h1 align="center">RenderDox</h1>
 
-<p align="center">A downstream RenderDoc branch for reproducible Windows capture builds.</p>
+<p align="center">
+  A Windows-focused RenderDoc derivative for reproducible builds, early graphics capture, and focused replay analysis.
+</p>
 
-[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
-[![Upstream](https://img.shields.io/badge/upstream-RenderDoc-blue.svg)](https://github.com/baldurk/renderdoc)
-[![CI](https://github.com/dotm5/renderdox/actions/workflows/ci.yml/badge.svg?branch=dgcore-main&event=push)](https://github.com/dotm5/renderdox/actions)
-[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](docs/CODE_OF_CONDUCT.md) 
+<p align="center">
+  <a href="LICENSE.md"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT licensed"></a>
+  <a href="https://github.com/baldurk/renderdoc"><img src="https://img.shields.io/badge/upstream-RenderDoc%20v1.45-blue.svg" alt="RenderDoc v1.45 upstream"></a>
+  <a href="https://github.com/dotm5/renderdox/actions"><img src="https://github.com/dotm5/renderdox/actions/workflows/ci.yml/badge.svg?branch=dgcore-main&event=push" alt="CI status"></a>
+</p>
 
-RenderDox is a downstream branch of [RenderDoc](https://github.com/baldurk/renderdoc), the frame-capture based graphics debugger for Vulkan, D3D11, D3D12, OpenGL, and OpenGL ES. It preserves RenderDoc's capture and replay formats while maintaining an isolated Windows runtime identity, reproducible MSVC and ClangCL Release builds, and a focused set of capture and analysis extensions.
+RenderDox is a downstream branch of [RenderDoc](https://github.com/baldurk/renderdoc), the frame-capture graphics debugger for Vulkan, D3D11, D3D12, OpenGL, and OpenGL ES. The repository name is **RenderDox**; its isolated Windows runtime and desktop application are branded **DComp** and **DCompUI**.
 
-RenderDox follows RenderDoc's intended-use boundary and is intended for debugging programs you own or are authorised to analyse. Projects created with third-party engines such as Unreal Engine or Unity are supported. This fork is independently maintained and is not supported by the upstream RenderDoc maintainers.
+The project keeps RenderDoc's capture-and-replay architecture and `.rdc` workflow while adding a reproducible Windows release matrix, an isolated runtime identity, two early-capture deployment paths, controlled child-process propagation, and a modern localized desktop interface. It is independently maintained and is not supported by the upstream RenderDoc maintainers.
 
-For RenderDox-specific questions, suggestions, or problems, [create an issue](https://github.com/dotm5/renderdox/issues). For upstream RenderDoc documentation and community support, see the links below.
-
-RenderDox currently ships as a portable x64 Windows build rather than an MSI. The full Release matrix includes the GUI, command-line tools, capture runtime, Qt and Python runtimes, and is produced from the repository build scripts. Official RenderDoc installers and packages remain available from the upstream [builds page](https://renderdoc.org/builds).
-
-* **Upstream**: [RenderDoc repository](https://github.com/baldurk/renderdoc), [stable and nightly builds](https://renderdoc.org/builds)
-* **Documentation**: [RenderDoc HTML documentation](https://renderdoc.org/docs), [Videos](https://www.youtube.com/user/baldurkarlsson)
-* **RenderDox issues**: [Issue tracker](https://github.com/dotm5/renderdox/issues)
-* **Code of Conduct**: [Contributor Covenant](docs/CODE_OF_CONDUCT.md)
-* **Information for contributors**: [All contribution information](docs/CONTRIBUTING.md), [Compilation instructions](docs/CONTRIBUTING/Compiling.md)
-* **Upstream extensions**: [RenderDoc extensions repository](https://github.com/baldurk/renderdoc-contrib)
+Use RenderDox only with software you own or are explicitly authorised to analyse. It does not provide or document protection bypasses.
 
 Screenshots
---------------
+-----------
 
-| [ ![Texture view](https://renderdoc.org/fp/ts_screen1.jpg?2) ](https://renderdoc.org/fp/screen1.jpg) | [ ![Pixel history & shader debug](https://renderdoc.org/fp/ts_screen2.jpg?2) ](https://renderdoc.org/fp/screen2.png) |
+The screenshots below follow one normal replay workflow in DCompUI: load the same D3D11 capture, select a draw event, inspect its output and pipeline, examine the mesh data, and follow the swap-chain resource. They use the Modern Light interface with the bundled Chinese translation.
+
+| [![Texture viewer showing the replayed swap-chain image](docs/imgs/Screenshots/DCompTextureViewer.jpg)](docs/imgs/Screenshots/DCompTextureViewer.jpg) | [![D3D11 pipeline state for the selected event](docs/imgs/Screenshots/DCompPipelineState.jpg)](docs/imgs/Screenshots/DCompPipelineState.jpg) |
 | --- | --- |
-| [ ![Mesh viewer](https://renderdoc.org/fp/ts_screen3.jpg?2) ](https://renderdoc.org/fp/screen3.png) | [ ![Pipeline viewer & constants](https://renderdoc.org/fp/ts_screen4.jpg?2) ](https://renderdoc.org/fp/screen4.png) |
+| **Texture Viewer** — replayed output and pixel context | **Pipeline State** — input layout and graphics stages |
+| [![Mesh viewer showing vertex inputs and outputs](docs/imgs/Screenshots/DCompMeshViewer.jpg)](docs/imgs/Screenshots/DCompMeshViewer.jpg) | [![Resource inspector showing swap-chain usage and initialisation](docs/imgs/Screenshots/DCompResourceInspector.jpg)](docs/imgs/Screenshots/DCompResourceInspector.jpg) |
+| **Mesh Viewer** — vertex input/output inspection at the selected draw | **Resource Inspector** — swap-chain creation, use, and capture metadata |
 
-API Support
---------------
+What differs from upstream RenderDoc
+------------------------------------
 
-|                          | Windows                  | Linux                    | Android                   |
-| ------------------------ | ------------------------ | ------------------------ | ------------------------  |
-| Vulkan                   | :heavy_check_mark:       | :heavy_check_mark:       | :heavy_check_mark:        |
-| OpenGL ES 2.0 - 3.2      | :heavy_check_mark:       | :heavy_check_mark:       | :heavy_check_mark:        |
-| OpenGL 3.2 - 4.6 Core    | :heavy_check_mark:       | :heavy_check_mark:       |  N/A                      |
-| D3D11 & D3D12            | :heavy_check_mark:       |  N/A                     |  N/A                      |
-| OpenGL 1.0 - 2.0 Compat  | :heavy_multiplication_x: | :heavy_multiplication_x: |  N/A                      |
-| D3D9 & 10                | :heavy_multiplication_x: |  N/A                     |  N/A                      |
-| Metal                    |  N/A                     |  N/A                     |  N/A                      |
+The graphics capture and replay implementation remains upstream-derived. The main downstream differences are deliberately concentrated around Windows identity, deployment, build reproducibility, and analysis presentation.
 
-* Nintendo Switch&trade; support is distributed separately for authorized developers as part of the NintendoSDK. For more information, consult the Nintendo Developer Portal.
+| Area | Upstream RenderDoc | RenderDox / DComp |
+| --- | --- | --- |
+| Baseline | General-purpose upstream project | Maintained downstream line based on RenderDoc v1.45 |
+| Runtime identity | `renderdoc.dll`, `qrenderdoc.exe`, `renderdoccmd.exe` | `dgcore.dll`, `dgcoreui.exe`, `dgcorecmd.exe`, `dgcorestub.exe`, and `dgcoreshim32/64.dll` |
+| Runtime API | `RENDERDOC_GetAPI` | Isolated `DCOMP_GetAPI` entry point; the upstream runtime export is intentionally absent |
+| Windows releases | Upstream build and installer layouts | Complete x64 MSVC and ClangCL portable packages from one source commit, with manifests and contract checks |
+| Injected runtime | Upstream configuration | Static MSVC runtime for `dgcore.dll`, the injection shim, and optional bootstrap DLLs |
+| Early capture | Standard launch, inject, and attach paths | Standard paths plus an opt-in DXGI/D3D import bootstrap and tool-agnostic direct DLL injection |
+| Child processes | Standard capture option | Reproducible one-generation default or all-generation propagation selected at build time |
+| Desktop UI | Upstream QRenderDoc interface | DComp identity, Modern Light styling, modern icon states, Chinese localisation, and compact pipeline/capture summaries |
+| Analysis extensions | Built-in replay UI and APIs | Read-only capture health/pass analysis, structured table export, action visibility, and evidence-package tooling |
 
-Downloads
---------------
+The `.rdc` format, Qt/Python replay components, and most user-facing replay concepts intentionally stay close to upstream. A capture should still be replayed with a compatible DComp or RenderDoc build; downstream and future upstream versions are not assumed to be interchangeable without testing.
 
-RenderDox portable builds are produced from the `dgcore-main` branch. Until signed binary releases are published, build from source and use the generated package directory under the configured artifacts root.
+Capture workflows
+-----------------
 
-If you need the standard RenderDoc distribution, use an upstream [stable build](https://renderdoc.org/builds). RenderDox packages are intended for the additional runtime and build requirements documented in this repository.
+RenderDox supports two distinct Windows activation routes. Use one route per run so that loading and hook timing remain easy to diagnose.
 
-Documentation
---------------
+### 1. DXGI import bootstrap
 
-The text documentation is available [online for the latest stable version](https://renderdoc.org/docs/), as well as in [renderdoc.chm](https://renderdoc.org/docs/renderdoc.chm) in any build. It's built from [restructured text with sphinx](docs).
+This route is useful when an owned application follows the normal Windows DLL search path and must load the capture runtime before its first DXGI/D3D call. The bootstrap DLLs are optional, are not part of the default solution graph, and remain plain System32 forwarders unless explicitly enabled.
 
-As mentioned above there are some [youtube videos](https://www.youtube.com/user/baldurkarlsson) showing the use of some basic features and an introduction/overview.
+Build a package with the bootstrap projects:
 
-There is also a great presentation by [@Icetigris](https://twitter.com/Icetigris) which goes into some details of how RenderDoc can be used in real world situations: [slides are up here](https://docs.google.com/presentation/d/1LQUMIld4SGoQVthnhT1scoA3k4Sg0as14G4NeSiSgFU/edit#slide=id.p).
+```powershell
+pwsh -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass `
+  -File .\util\buildscripts\build_windows_release_matrix.ps1 `
+  -Target Rebuild -ChildPropagation OneGeneration -IncludeBootstrap
+```
 
-License
---------------
+Copy matching-architecture files from one package next to the application executable:
 
-RenderDox is derived from RenderDoc and remains under the MIT license. See [LICENSE.md](LICENSE.md) for the full text and third-party library acknowledgements.
+| RHI | Required files |
+| --- | --- |
+| D3D11 | `bootstrap\dxgi_proxy\dxgi.dll`, `bootstrap\d3d11_proxy\d3d11.dll`, and `dgcore.dll` |
+| D3D12 | `bootstrap\dxgi_proxy\dxgi.dll`, `bootstrap\d3d12_proxy\d3d12.dll`, and `dgcore.dll` |
 
-Compiling
----------
+Enable the bootstrap in the environment inherited by the application:
 
-The upstream compilation instructions remain applicable. For the complete Windows x64 MSVC and ClangCL portable Release matrix, run:
+```powershell
+$env:DCOMP_BOOTSTRAP_ENABLE = '1'
+$env:DCOMP_BOOTSTRAP_LOG = 'C:\Temp\dcomp-bootstrap.log' # optional absolute path
+.\OwnedApplication.exe
+```
+
+After DComp reports an active graphics API, open `dgcoreui.exe` and attach to the running instance. Remove the local proxy DLLs and environment variables when the test is complete.
+
+This workflow only applies when the target actually resolves the local DXGI/D3D import path. A custom loader, private graphics function table, or different RHI path can bypass the bootstrap; use direct injection instead of adding application-specific logic to the proxies. Export names and ordinals are tied to the build machine's Windows baseline, so packages for a different Windows generation must be revalidated against its System32 DLLs.
+
+See [bootstrap/README.md](bootstrap/README.md) for the loader-safety and fallback contracts.
+
+### 2. Early direct injection
+
+This route loads `dgcore.dll` into the real rendering process with an existing user-mode loader, debugger, or suspended-start launcher. The portable package does not require a particular injector.
+
+1. Select a `dgcore.dll` whose architecture and source build match the DCompUI package.
+2. Start or suspend the real rendering process early enough that DXGI/D3D factory, device, queue, and swap-chain creation have not completed.
+3. Load `dgcore.dll`, verify that the operation succeeded, and then resume the process.
+4. Start `dgcoreui.exe` from the same package and attach to the running instance.
+5. Confirm an active API or overlay and a working control connection before requesting a capture.
+
+For a launcher that creates one rendering child, the default `OneGeneration` build propagates capture once and stops there. Use `AllGenerations` only for an owned process tree that genuinely requires recursive propagation:
+
+```powershell
+pwsh -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass `
+  -File .\util\buildscripts\build_windows_release_matrix.ps1 `
+  -Target Rebuild -ChildPropagation AllGenerations
+```
+
+A loaded module is not proof that capture is ready: the graphics hooks, target-control channel, active API registration, and replayable `.rdc` output are separate checkpoints. Cross-bitness child injection also requires the matching 32-bit components.
+
+Builds
+------
+
+The supported downstream Windows release boundary is the complete x64 MSVC/ClangCL matrix:
 
 ```powershell
 pwsh -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass `
@@ -76,10 +115,52 @@ pwsh -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass `
   -Target Rebuild -ChildPropagation OneGeneration
 ```
 
-See [Compiling.md](docs/CONTRIBUTING/Compiling.md) for the upstream platform requirements. The matrix command above defines the downstream Windows Release boundary.
+Unless `-OutputDirectory` is supplied, the script creates a timestamped directory under the sibling `artifacts` directory. It produces:
 
-Contributing & Development
---------------
+- `msvc-release` — Visual C++ v143 Release package.
+- `clangcl-release` — ClangCL Release package with isolated outputs.
+- `manifest.json` — source commit, toolchain, file size, and SHA-256 inventory.
 
-I've added some notes on how to contribute, as well as where to get started looking through the code in [Developing-Change.md](docs/CONTRIBUTING/Developing-Change.md). All contribution information is available under [CONTRIBUTING.md](docs/CONTRIBUTING.md).
+Each package contains the GUI, command-line tools, capture runtime, injection shim, Qt plugins, Python runtime, Python modules, Vulkan descriptor, and symbol helpers. `-IncludeBootstrap` adds the optional DXGI, D3D11, and D3D12 bootstrap outputs.
 
+For a single toolchain, use `util/buildscripts/build_windows_release.ps1`. The scripts validate product identity, exports, embedded DXIL, static-runtime requirements for injected components, Vulkan descriptor identity, required runtime files, and optional bootstrap exports before declaring success.
+
+See [Compiling.md](docs/CONTRIBUTING/Compiling.md) for upstream prerequisites and platform notes.
+
+API support
+-----------
+
+| | Windows | Linux | Android |
+| --- | --- | --- | --- |
+| Vulkan | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| OpenGL ES 2.0 - 3.2 | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| OpenGL 3.2 - 4.6 Core | :heavy_check_mark: | :heavy_check_mark: | N/A |
+| D3D11 & D3D12 | :heavy_check_mark: | N/A | N/A |
+| OpenGL 1.0 - 2.0 Compat | :heavy_multiplication_x: | :heavy_multiplication_x: | N/A |
+| D3D9 & D3D10 | :heavy_multiplication_x: | N/A | N/A |
+| Metal | N/A | N/A | N/A |
+
+Nintendo Switch&trade; support is distributed separately to authorised developers as part of the NintendoSDK. Consult the Nintendo Developer Portal for details.
+
+Repository lines
+----------------
+
+- `dgcore-main` is the maintained RenderDox branch and the default branch of this repository.
+- `v1.x` follows the upstream RenderDoc line without downstream product changes.
+- `archive/fullstack-v145` preserves the earlier full-stack implementation as reference material.
+
+Downstream changes should remain reviewable as focused commits on top of the upstream baseline. Product identity is generated from [build/product_identity.json](build/product_identity.json); new code should consume that contract instead of scattering additional names through the tree.
+
+Documentation and support
+-------------------------
+
+- RenderDox issues: [github.com/dotm5/renderdox/issues](https://github.com/dotm5/renderdox/issues)
+- Upstream RenderDoc: [repository](https://github.com/baldurk/renderdoc), [documentation](https://renderdoc.org/docs), and [builds](https://renderdoc.org/builds)
+- Contribution guide: [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)
+- Code of Conduct: [docs/CODE_OF_CONDUCT.md](docs/CODE_OF_CONDUCT.md)
+- Upstream extensions: [renderdoc-contrib](https://github.com/baldurk/renderdoc-contrib)
+
+License
+-------
+
+RenderDox is derived from RenderDoc and is distributed under the MIT license. See [LICENSE.md](LICENSE.md) for the full text and third-party acknowledgements.
