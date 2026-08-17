@@ -2,7 +2,7 @@
 """Generate the Modern Light SVG icon set and its auditable inventory.
 
 The generated SVGs are build inputs. This script is a development helper only;
-QRenderDoc's normal MSVC/Qt build does not execute Python.
+The native MSVC/Qt build does not execute Python.
 """
 
 from __future__ import annotations
@@ -629,7 +629,7 @@ def main() -> int:
 
     manifest = {
         "schema": 2,
-        "design_source": "RenderDoc Modern Light UI Codex Bundle v3, legacy PNG palette audit, seven ImageGen art-direction sheets, and the focused connector corrective reference",
+        "design_source": "DComp Modern Light UI asset bundle v3, legacy PNG palette audit, seven ImageGen art-direction sheets, and the focused connector corrective reference",
         "canonical_viewbox": [0, 0, 24, 24],
         "display_sizes_px": [16, 20, 24, 32, 48],
         "legacy_png_records": 142,

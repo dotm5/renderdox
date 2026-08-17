@@ -8340,26 +8340,6 @@ The capture is on a remote host, would you like to save these changes locally?</
       <translation type="unfinished" />
     </message>
     <message>
-      <source> !DEGRADED PERFORMANCE!</source>
-      <translation type="unfinished" />
-    </message>
-    <message>
-      <source>Remote: %1 - </source>
-      <translation type="unfinished" />
-    </message>
-    <message>
-      <source>Unstable %1 Build (%2 - %3)</source>
-      <translation type="unfinished" />
-    </message>
-    <message>
-      <source> (Administrator)</source>
-      <translation type="unfinished" />
-    </message>
-    <message>
-      <source> - !! VERSION MISMATCH DETECTED !!</source>
-      <translation type="unfinished" />
-    </message>
-    <message>
       <source>Unofficial build - mismatched versions</source>
       <translation type="unfinished" />
     </message>
@@ -9645,16 +9625,8 @@ Documentation is available: https://renderdoc.org/docs/python_api/index.html</so
       <translation>经典浅色</translation>
     </message>
     <message>
-      <source>Classic Light: original cross-platform RenderDoc light theme.</source>
-      <translation>经典浅色：原始的跨平台 RenderDoc 浅色主题。</translation>
-    </message>
-    <message>
       <source>Dark</source>
       <translation>深色</translation>
-    </message>
-    <message>
-      <source>Dark: Cross-platform custom RenderDoc dark theme (white-on-black).</source>
-      <translation>深色：跨平台 RenderDoc 深色主题（黑底白字）。</translation>
     </message>
     <message>
       <source>Native</source>
@@ -9663,6 +9635,14 @@ Documentation is available: https://renderdoc.org/docs/python_api/index.html</so
     <message>
       <source>Native: uses the built-in Qt native widgets for your platform.</source>
       <translation>系统原生：使用当前平台内置的 Qt 原生控件。</translation>
+    </message>
+    <message>
+      <source>Classic Light: original cross-platform light theme.</source>
+      <translation>经典浅色：原始的跨平台浅色主题。</translation>
+    </message>
+    <message>
+      <source>Dark: cross-platform custom dark theme (white-on-black).</source>
+      <translation>深色：跨平台自定义深色主题（黑底白字）。</translation>
     </message>
   </context>
   <context>

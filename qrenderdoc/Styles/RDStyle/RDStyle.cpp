@@ -105,7 +105,7 @@ static const QColor TextTertiary(0x87, 0x92, 0x9D);
 static const QColor InteractionBlue(0x47, 0x7E, 0xAA);
 static const QColor HoverSurface(0xEE, 0xF4, 0xF8);
 static const QColor SelectionSurface(0xE5, 0xEF, 0xF7);
-static const QColor RenderDocGreen(0x20, 0xA7, 0x6B);
+static const QColor ProductGreen(0x20, 0xA7, 0x6B);
 static const QColor GreenSurface(0xE5, 0xF5, 0xEE);
 static const QColor Error(0xB4, 0x47, 0x3D);
 static const QColor ScrollThumb(0x94, 0xA2, 0xAE);
@@ -1889,7 +1889,7 @@ void RDStyle::drawPrimitive(PrimitiveElement element, const QStyleOption *opt, Q
         if(selected)
         {
           const QColor indicator = m_Scheme == LightModern
-                                       ? ModernLight::RenderDocGreen
+                                       ? ModernLight::ProductGreen
                                        : viewitem->palette.color(QPalette::Highlight);
           QRectF indicatorRect(itemRect.left(), itemRect.top() + 8.0, 3.0,
                                qMax(8.0, itemRect.height() - 16.0));
@@ -2294,7 +2294,7 @@ void RDStyle::drawControl(ControlElement control, const QStyleOption *opt, QPain
     }
 
     if(m_Scheme == LightModern)
-      p->fillPath(path, ModernLight::RenderDocGreen);
+      p->fillPath(path, ModernLight::ProductGreen);
     else
       p->fillPath(path, opt->palette.brush(QPalette::Highlight));
 
@@ -2632,7 +2632,7 @@ void RDStyle::drawControl(ControlElement control, const QStyleOption *opt, QPain
       if(opt->state & State_Selected)
       {
         p->fillRect(QRect(rect.left() + 1, rect.top(), qMax(0, rect.width() - 2), 2),
-                    ModernLight::RenderDocGreen);
+                    ModernLight::ProductGreen);
       }
 
       p->restore();

@@ -54,13 +54,13 @@ const ThemeDescriptor availStyles[] = {
     ThemeDescriptor(
         lit("RDLightClassic"), QString::fromUtf8(QT_TRANSLATE_NOOP("RDStyle", "Classic Light")),
         QString::fromUtf8(QT_TRANSLATE_NOOP(
-            "RDStyle", "Classic Light: original cross-platform RenderDoc light theme.")),
+            "RDStyle", "Classic Light: original cross-platform light theme.")),
         []() { return new RDStyle(RDStyle::Light); }),
 
     ThemeDescriptor(
         lit("RDDark"), QString::fromUtf8(QT_TRANSLATE_NOOP("RDStyle", "Dark")),
         QString::fromUtf8(QT_TRANSLATE_NOOP(
-            "RDStyle", "Dark: Cross-platform custom RenderDoc dark theme (white-on-black).")),
+            "RDStyle", "Dark: cross-platform custom dark theme (white-on-black).")),
         []() { return new RDStyle(RDStyle::Dark); }),
 
     ThemeDescriptor(
