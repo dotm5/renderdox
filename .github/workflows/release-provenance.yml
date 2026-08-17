@@ -109,23 +109,50 @@ jobs:
           set -euo pipefail
           short_sha="${HEAD_SHA:0:12}"
           tag="continuous-${short_sha}"
-          title="RenderDox continuous ${short_sha}"
+          title="RenderDox development build ${short_sha}"
           asset_root="${RUNNER_TEMP}/release-assets"
           notes="${RUNNER_TEMP}/release-notes.md"
 
-          printf '%s\n' \
-            "Continuous RenderDox pre-release for [${HEAD_SHA}](https://github.com/${GITHUB_REPOSITORY}/commit/${HEAD_SHA})." \
-            '' \
-            'Validated by:' \
-            "- [CMake](${CMAKE_URL})" \
-            "- [MSBuild](${MSBUILD_URL})" \
-            '' \
-            'The Windows MSVC and ClangCL archives were built from the same commit and have GitHub artifact attestations. Verify their hashes with SHA256SUMS.txt.' \
-            > "${notes}"
+          previous_tag="$(
+            gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
+              --jq ".[] | select(.tag_name != \"${tag}\") | select(.tag_name | startswith(\"continuous-\")) | .tag_name" \
+              | sed -n '1p'
+          )"
+
+          {
+            printf '# RenderDox development build %s\n\n' "${short_sha}"
+            printf 'This build contains changes from `dgcore-main` through [%s](https://github.com/%s/commit/%s).\n\n' \
+              "${short_sha}" "${GITHUB_REPOSITORY}" "${HEAD_SHA}"
+            printf '**NOTE**: This is an automated development snapshot and may be less stable than a versioned release. It is maintained by the RenderDox project and is not an upstream RenderDoc release.\n\n'
+            printf 'Windows x64 binaries built with MSVC and ClangCL are available below.\n\n'
+            printf '# Changes\n\n'
+            if [[ -n "${previous_tag}" ]]; then
+              printf 'Changes since [%s](https://github.com/%s/releases/tag/%s) can be reviewed in the [full comparison](https://github.com/%s/compare/%s...%s).\n\n' \
+                "${previous_tag}" "${GITHUB_REPOSITORY}" "${previous_tag}" \
+                "${GITHUB_REPOSITORY}" "${previous_tag}" "${HEAD_SHA}"
+            else
+              printf 'This is the first RenderDox continuous build after synchronising with upstream RenderDoc `v1.x`.\n\n'
+            fi
+            printf '# Packages\n\n'
+            printf '* `renderdox-%s-windows-x64-msvc-release.zip` - MSVC Release build.\n' "${short_sha}"
+            printf '* `renderdox-%s-windows-x64-clangcl-release.zip` - ClangCL Release build.\n' "${short_sha}"
+            printf '* `renderdox-%s-windows-x64-manifest.json` - Package manifest.\n' "${short_sha}"
+            printf '* `SHA256SUMS.txt` - SHA-256 checksums for the published files.\n\n'
+            printf '# Validation\n\n'
+            printf '* [CMake](%s)\n' "${CMAKE_URL}"
+            printf '* [MSBuild](%s)\n\n' "${MSBUILD_URL}"
+            printf 'The archives have GitHub build-provenance attestations. Verify a downloaded archive with `gh attestation verify <archive> --repo %s`.\n' \
+              "${GITHUB_REPOSITORY}"
+          } > "${notes}"
 
           assets=("${asset_root}"/*)
           if gh release view "${tag}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
             gh release upload "${tag}" "${assets[@]}" --clobber --repo "${GITHUB_REPOSITORY}"
+            gh release edit "${tag}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --title "${title}" \
+              --notes-file "${notes}" \
+              --prerelease
           else
             gh release create "${tag}" "${assets[@]}" \
               --repo "${GITHUB_REPOSITORY}" \
