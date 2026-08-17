@@ -1,0 +1,124 @@
+name: MSBuild
+
+on:
+  push:
+    branches: [dgcore-main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+  pull_request:
+    branches: [dgcore-main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: msbuild-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  QRENDERDOC_THIRDPARTY_URL: https://renderdoc.org/qrenderdoc_3rdparty.zip
+  QRENDERDOC_THIRDPARTY_SHA256: 9FDF4B298DF843571120FF139B745B4183D9C332B157F1982F4242C96E038F1C
+
+jobs:
+  contracts:
+    name: Windows build contracts
+    runs-on: windows-2025
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 5
+          submodules: recursive
+
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@v3
+
+      - name: Validate generated product identity
+        shell: pwsh
+        run: python util/buildscripts/generate_product_identity.py --check
+
+      - name: Validate runtime identity contracts
+        shell: pwsh
+        run: ./util/buildscripts/check_windows_identity_contracts.ps1
+
+      - name: Validate solution and build contracts
+        shell: pwsh
+        run: ./util/buildscripts/check_windows_build_contracts.ps1 -Configuration Release -Platform x64
+
+  build:
+    name: MSVC and ClangCL x64 Release
+    needs: contracts
+    runs-on: windows-2025
+    timeout-minutes: 150
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 5
+          submodules: recursive
+
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@v3
+
+      - name: Download pinned QRenderDoc dependencies
+        shell: pwsh
+        run: |
+          $archive = Join-Path $env:RUNNER_TEMP 'qrenderdoc_3rdparty.zip'
+          & curl.exe --fail --location --retry 3 --output $archive $env:QRENDERDOC_THIRDPARTY_URL
+          if($LASTEXITCODE -ne 0) { throw "Dependency download failed with exit code $LASTEXITCODE" }
+
+          $actual = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash
+          if($actual -ne $env:QRENDERDOC_THIRDPARTY_SHA256)
+          {
+            throw "QRenderDoc dependency hash mismatch: $actual"
+          }
+
+          & 7z x $archive -y
+          if($LASTEXITCODE -ne 0) { throw "Dependency extraction failed with exit code $LASTEXITCODE" }
+
+      - name: Build and validate the Windows release matrix
+        shell: pwsh
+        run: |
+          $output = Join-Path $env:RUNNER_TEMP 'dcomp-release'
+          ./util/buildscripts/build_windows_release_matrix.ps1 `
+            -Target Rebuild `
+            -ChildPropagation OneGeneration `
+            -MaxCpuCount 4 `
+            -OutputDirectory $output `
+            -IncludeBootstrap
+
+      - name: Smoke-test packaged command line executables
+        shell: pwsh
+        run: |
+          $output = Join-Path $env:RUNNER_TEMP 'dcomp-release'
+          $identity = Get-Content -LiteralPath 'build/product_identity.json' -Raw | ConvertFrom-Json
+          $command = "$($identity.commandBaseName).exe"
+          foreach($package in @('msvc-release', 'clangcl-release'))
+          {
+            $executable = Join-Path (Join-Path $output $package) $command
+            & $executable version
+            if($LASTEXITCODE -ne 0) { throw "$package command line smoke test failed" }
+
+            $testLog = Join-Path $env:RUNNER_TEMP "$package-unit-tests.log"
+            & $executable test unit -o $testLog
+            if($LASTEXITCODE -ne 0) { throw "$package core unit tests failed; inspect $testLog" }
+          }
+
+      - name: Upload release manifests
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release-manifests
+          path: |
+            ${{ runner.temp }}/dcomp-release/manifest.json
+            ${{ runner.temp }}/dcomp-release/msvc-release/manifest.json
+            ${{ runner.temp }}/dcomp-release/clangcl-release/manifest.json
+          if-no-files-found: error
+          retention-days: 14

@@ -7,7 +7,8 @@
 <p align="center">
   <a href="LICENSE.md"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT licensed"></a>
   <a href="https://github.com/baldurk/renderdoc"><img src="https://img.shields.io/badge/upstream-RenderDoc%20v1.45-blue.svg" alt="RenderDoc v1.45 upstream"></a>
-  <a href="https://github.com/dotm5/renderdox/actions"><img src="https://github.com/dotm5/renderdox/actions/workflows/ci.yml/badge.svg?branch=dgcore-main&event=push" alt="CI status"></a>
+  <a href="https://github.com/dotm5/renderdox/actions/workflows/cmake.yml"><img src="https://github.com/dotm5/renderdox/actions/workflows/cmake.yml/badge.svg?branch=dgcore-main" alt="CMake status"></a>
+  <a href="https://github.com/dotm5/renderdox/actions/workflows/msbuild.yml"><img src="https://github.com/dotm5/renderdox/actions/workflows/msbuild.yml/badge.svg?branch=dgcore-main" alt="MSBuild status"></a>
 </p>
 
 RenderDox is a downstream branch of [RenderDoc](https://github.com/baldurk/renderdoc), the frame-capture graphics debugger for Vulkan, D3D11, D3D12, OpenGL, and OpenGL ES. The repository name is **RenderDox**; its isolated Windows runtime and desktop application are branded **DComp** and **DCompUI**.

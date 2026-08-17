@@ -1,0 +1,90 @@
+name: CMake
+
+on:
+  push:
+    branches: [dgcore-main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+  pull_request:
+    branches: [dgcore-main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cmake-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Ubuntu GCC Release
+            os: ubuntu-24.04
+            cc: gcc
+            cxx: g++
+            metal: 'OFF'
+          - name: macOS AppleClang Release
+            os: macos-14
+            cc: clang
+            cxx: clang++
+            metal: 'ON'
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 5
+          submodules: recursive
+
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libegl1-mesa-dev \
+            libgl1-mesa-dev \
+            libx11-dev \
+            libx11-xcb-dev \
+            libxcb-keysyms1-dev \
+            libxcb1-dev \
+            mesa-common-dev
+
+      - name: Validate generated product identity
+        run: python3 util/buildscripts/generate_product_identity.py --check
+
+      # RenderDoc's CMake build is the POSIX build path. Windows intentionally
+      # rejects CMake and is covered by the separate MSBuild workflow.
+      - name: Configure
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        run: >-
+          cmake -S . -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DENABLE_METAL=${{ matrix.metal }}
+          -DENABLE_PYRENDERDOC=OFF
+          -DENABLE_QRENDERDOC=OFF
+
+      - name: Build
+        run: cmake --build build --config Release --parallel 2
+
+      - name: Smoke-test command line executable
+        run: ./build/bin/renderdoccmd version
+
+      - name: Run core unit tests
+        run: ./build/bin/renderdoccmd test unit -o core-unit-tests.log
+
+      - name: Validate install layout
+        run: cmake --install build --config Release --prefix install
