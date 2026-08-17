@@ -470,6 +470,31 @@ foreach($requiredStaticRuntimeContract in @('DCompStaticRuntime', 'DCompCoreRunt
   }
 }
 
+[xml]$directoryBuildTargetsXml = $directoryBuildTargets
+$releaseCondition = "'`$(Configuration)'=='Release'"
+$releaseDefaultGroups = @($directoryBuildTargetsXml.Project.PropertyGroup |
+  Where-Object { $_.GetAttribute('Condition') -eq $releaseCondition })
+if($releaseDefaultGroups.Count -ne 1)
+{
+  $errors.Add('Directory.Build.targets must define exactly one Release default contract group')
+}
+else
+{
+  foreach($releaseDefaultName in @('DCompHookIntoChildrenDefault', 'DCompStaticRuntime',
+                                    'DCompInlineGraphicsHooks',
+                                    'DCompSingleGenerationChildHook'))
+  {
+    $releaseDefault = $releaseDefaultGroups[0].SelectSingleNode(
+      "*[local-name()='$releaseDefaultName']")
+    $propertyReference = '$(' + $releaseDefaultName + ')'
+    if($null -eq $releaseDefault -or $releaseDefault.InnerText -ne '1' -or
+       -not $releaseDefault.GetAttribute('Condition').Contains($propertyReference))
+    {
+      $errors.Add("Release default contract is missing or not overrideable: $releaseDefaultName=1")
+    }
+  }
+}
+
 $qtUiProject = 'qrenderdoc\qrenderdoc_local.vcxproj'
 $qtUiProjectText = Get-Content -LiteralPath `
   (Join-Path $repositoryRoot $qtUiProject) -Raw

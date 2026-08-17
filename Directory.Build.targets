@@ -1,6 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
   <!--
+    Keep an ordinary Release build aligned with the shipped Windows runtime.
+    Command-line properties can still override any of these defaults for
+    diagnostics or an all-generations child-propagation build.
+  -->
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <DCompHookIntoChildrenDefault
+        Condition="'$(DCompHookIntoChildrenDefault)'==''">1</DCompHookIntoChildrenDefault>
+    <DCompStaticRuntime Condition="'$(DCompStaticRuntime)'==''">1</DCompStaticRuntime>
+    <DCompInlineGraphicsHooks
+        Condition="'$(DCompInlineGraphicsHooks)'==''">1</DCompInlineGraphicsHooks>
+    <DCompSingleGenerationChildHook
+        Condition="'$(DCompSingleGenerationChildHook)'==''">1</DCompSingleGenerationChildHook>
+  </PropertyGroup>
+
+  <!--
     Fast Release is the default for local builds. Set RDocEnableLTCG=true for
     the original whole-program-optimised release profile.
 
@@ -13,29 +28,26 @@
     <RDocEnableLTCG Condition="'$(RDocEnableLTCG)'==''">false</RDocEnableLTCG>
     <RDocClangMsvcFallback Condition="'$(RDocClangMsvcFallback)'==''">true</RDocClangMsvcFallback>
     <!--
-      Raw DLL injection does not receive capture options from the GUI. Set this
-      property to 1 for a Core build that propagates capture into child
-      processes by default, e.g. /p:DCompHookIntoChildrenDefault=1.
+      Raw DLL injection does not receive capture options from the GUI. Release
+      builds propagate capture into child processes by default; non-Release
+      builds keep the upstream default unless explicitly overridden.
     -->
     <DCompHookIntoChildrenDefault Condition="'$(DCompHookIntoChildrenDefault)'==''">0</DCompHookIntoChildrenDefault>
     <!--
-      Injected Core builds must not bind to an application-local MSVC runtime.
-      Set this property to 1 to compile the Core and every static library in its
-      link graph with /MT, e.g. /p:DCompStaticRuntime=1.
+      Release Core builds and every static library in their link graph use /MT
+      so injection cannot bind to an application-local MSVC runtime.
     -->
     <DCompStaticRuntime Condition="'$(DCompStaticRuntime)'==''">0</DCompStaticRuntime>
     <!--
       Some applications resolve graphics entry points from export tables and never
       expose an import or GetProcAddress call that the normal hook path can patch.
-      Opt in to entry detours for the already-registered DXGI/D3D hooks with
-      /p:DCompInlineGraphicsHooks=1.
+      Release builds enable entry detours for registered DXGI/D3D hooks.
     -->
     <DCompInlineGraphicsHooks Condition="'$(DCompInlineGraphicsHooks)'==''">0</DCompInlineGraphicsHooks>
     <!--
       A manually injected launcher still needs to inject the real game, but the
-      game should not necessarily propagate the Core into login/helper
-      descendants. Set this property to 1 to clear hookIntoChildren only in the
-      options forwarded to an injected child.
+      game should not propagate the Core into login/helper descendants by
+      default. Release builds clear hookIntoChildren in the injected child.
     -->
     <DCompSingleGenerationChildHook Condition="'$(DCompSingleGenerationChildHook)'==''">0</DCompSingleGenerationChildHook>
     <!--
