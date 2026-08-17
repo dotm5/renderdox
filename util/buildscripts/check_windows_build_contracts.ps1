@@ -478,6 +478,29 @@ if(-not $qtUiProjectText.Contains(
 {
   $errors.Add("$qtUiProject no longer preserves the Qt/Python-compatible /MD ABI")
 }
+foreach($requiredTranslationFallback in @(
+    'if exist "$(QtBinDir)\lrelease.exe"',
+    'if not exist "Translations\qrenderdoc_zh_CN.qm"',
+    'Missing tracked translation catalog'))
+{
+  if(-not $qtUiProjectText.Contains($requiredTranslationFallback))
+  {
+    $errors.Add("$qtUiProject is missing clean-build translation fallback: " +
+                $requiredTranslationFallback)
+  }
+}
+if($qtUiProjectText.Contains(
+    'Translations\qrenderdoc_zh_CN.qm;$(QtBinDir)\lrelease.exe;'))
+{
+  $errors.Add("$qtUiProject still requires lrelease.exe as a custom-build input")
+}
+$trackedTranslationCatalog = Join-Path $repositoryRoot `
+  'qrenderdoc\Translations\qrenderdoc_zh_CN.qm'
+if(-not (Test-Path -LiteralPath $trackedTranslationCatalog -PathType Leaf))
+{
+  $errors.Add('Tracked Chinese translation catalog is missing: ' +
+              'qrenderdoc\Translations\qrenderdoc_zh_CN.qm')
+}
 
 $legacyMacroMatches = @(& git -C $repositoryRoot grep --text -n -E `
   'RENDERDOC_(EXPORTS|PLATFORM_WIN32)' -- renderdoc qrenderdoc `
