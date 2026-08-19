@@ -372,7 +372,7 @@ Require-Text $aboutPath $about 'ui->rdocName->setText'
 
 $mainWindowPath = 'qrenderdoc\Windows\MainWindow.cpp'
 $mainWindow = Read-RepositoryText $mainWindowPath
-Require-Text $mainWindowPath $mainWindow 'lit(RDOC_PRODUCT_DISPLAY_NAME " ")'
+Require-Text $mainWindowPath $mainWindow 'QString text = lit(RDOC_PRODUCT_DISPLAY_NAME);'
 
 $legacyNames = @(& git -C $repositoryRoot grep --text -n -i -E `
   'rendertest|qrendertest' -- docs tools 2>$null)
