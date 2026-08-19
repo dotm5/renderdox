@@ -28,18 +28,24 @@
 #include <QDialogButtonBox>
 #include <QFrame>
 #include <QFontDatabase>
+#include <QGuiApplication>
 #include <QGridLayout>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QListWidget>
 #include <QPushButton>
+#include <QResizeEvent>
+#include <QScreen>
 #include <QScrollArea>
+#include <QShowEvent>
 #include <QSizePolicy>
 #include <QTextEdit>
 #include <QToolButton>
 #include <QVBoxLayout>
+#include <QWindow>
 #include "Code/Interface/QRDInterface.h"
 #include "Code/QRDUtils.h"
+#include "Code/Resources.h"
 #include "Code/pyrenderdoc/PythonContext.h"
 #include "Styles/StyleData.h"
 #include "Widgets/OrderedListEditor.h"
@@ -154,6 +160,7 @@ SettingsDialog::SettingsDialog(ICaptureContext &ctx, QWidget *parent)
     ui->pages->addItem(ui->tabWidget->tabText(i));
 
   setupNavigationIcons();
+  updateResponsiveLayout();
 
   for(int i = 0; i < (int)TimeUnit::Count; i++)
   {
@@ -177,8 +184,6 @@ SettingsDialog::SettingsDialog(ICaptureContext &ctx, QWidget *parent)
   ui->pages->clearSelection();
   ui->pages->item(0)->setSelected(true);
   ui->tabWidget->setCurrentIndex(0);
-
-  ui->pages->setFixedWidth(208);
 
   for(int i = 0; i < StyleData::numAvailable; i++)
   {
@@ -389,23 +394,149 @@ SettingsDialog::~SettingsDialog()
   delete ui;
 }
 
+void SettingsDialog::fitToAvailableScreen()
+{
+  QScreen *screen = NULL;
+  if(parentWidget() && parentWidget()->windowHandle())
+    screen = parentWidget()->windowHandle()->screen();
+  if(!screen)
+    screen = QGuiApplication::primaryScreen();
+  if(!screen)
+    return;
+
+  const QRect availableGeometry = screen->availableGeometry();
+  const QSize available = availableGeometry.size();
+  const int maximumWidth = qMax(1, available.width() - 48);
+  const int maximumHeight = qMax(1, available.height() - 64);
+  const int minimumWidth = qMin(780, maximumWidth);
+  const int minimumHeight = qMin(480, maximumHeight);
+
+  setMinimumSize(minimumWidth, minimumHeight);
+
+  const QSize preferred(qBound(minimumWidth, qRound(available.width() * 0.74),
+                               qMin(1000, maximumWidth)),
+                        qBound(minimumHeight, qRound(available.height() * 0.72),
+                               qMin(680, maximumHeight)));
+  resize(preferred);
+
+  const QPoint centred = availableGeometry.center() - QPoint(width() / 2, height() / 2);
+  move(qMax(availableGeometry.left(), centred.x()), qMax(availableGeometry.top(), centred.y()));
+}
+
+void SettingsDialog::showEvent(QShowEvent *event)
+{
+  QDialog::showEvent(event);
+
+  if(!m_FittedToScreen)
+  {
+    fitToAvailableScreen();
+    m_FittedToScreen = true;
+  }
+
+  updateResponsiveLayout();
+}
+
+void SettingsDialog::resizeEvent(QResizeEvent *event)
+{
+  QDialog::resizeEvent(event);
+  updateResponsiveLayout();
+}
+
+void SettingsDialog::updateResponsiveLayout()
+{
+  if(!m_ResponsiveLayoutReady)
+    return;
+
+  const bool compact = width() < 1040 || height() < 720;
+  const bool narrow = width() < 820;
+  const int sidebarWidth = narrow ? 148 : (compact ? 168 : 192);
+  const int itemHeight = compact ? 36 : 40;
+  const int pageMargin = narrow ? 8 : (compact ? 12 : 20);
+  const int pageTopMargin = compact ? 10 : 16;
+  const int cardHorizontalMargin = compact ? 12 : 18;
+  const int cardTopMargin = compact ? 10 : 16;
+  const int cardBottomMargin = compact ? 12 : 18;
+
+  ui->pages->setFixedWidth(sidebarWidth);
+  for(int i = 0; i < ui->pages->count(); i++)
+    ui->pages->item(i)->setSizeHint(QSize(0, itemHeight));
+
+  if(QWidget *host = findChild<QWidget *>(lit("generalSettingsScrollHost")))
+  {
+    if(QLayout *layout = host->layout())
+      layout->setContentsMargins(pageMargin, pageTopMargin, pageMargin, pageMargin);
+  }
+
+  if(QWidget *page = findChild<QWidget *>(lit("generalSettingsPage")))
+  {
+    if(QLayout *layout = page->layout())
+      layout->setSpacing(compact ? 10 : 16);
+
+    const QList<QFrame *> cards = page->findChildren<QFrame *>();
+    for(QFrame *card : cards)
+    {
+      if(card->property("uiRole").toString() != lit("settingsCard") || !card->layout())
+        continue;
+
+      card->layout()->setContentsMargins(cardHorizontalMargin, cardTopMargin,
+                                         cardHorizontalMargin, cardBottomMargin);
+      card->layout()->setSpacing(compact ? 8 : 10);
+    }
+
+    const QList<QGridLayout *> forms = page->findChildren<QGridLayout *>();
+    for(QGridLayout *form : forms)
+    {
+      if(form->property("uiRole").toString() != lit("settingsFormGrid"))
+        continue;
+
+      form->setColumnMinimumWidth(0, compact ? 200 : 260);
+      form->setHorizontalSpacing(compact ? 12 : 24);
+      form->setVerticalSpacing(compact ? 4 : 8);
+    }
+
+    const QList<QWidget *> responsiveWidgets = page->findChildren<QWidget *>();
+    for(QWidget *widget : responsiveWidgets)
+    {
+      const QString role = widget->property("uiRole").toString();
+      if(role == lit("settingsLabel"))
+      {
+        widget->setMinimumHeight(compact ? 36 : 40);
+      }
+      else if(role == lit("settingsControl") || role == lit("settingsPath"))
+      {
+        widget->setMinimumHeight(qobject_cast<QCheckBox *>(widget) ? (compact ? 36 : 40)
+                                                                   : (compact ? 32 : 34));
+      }
+    }
+  }
+
+  ui->okButton->setContentsMargins(12, compact ? 4 : 6, 16, compact ? 4 : 6);
+}
+
 void SettingsDialog::setupModernGeneralPage()
 {
-  setMinimumSize(1040, 720);
-  resize(1080, 760);
+  setMinimumSize(780, 480);
+  resize(920, 620);
 
-  ui->gridLayout->setContentsMargins(0, 0, 0, 12);
+  ui->gridLayout->setContentsMargins(0, 0, 0, 0);
   ui->gridLayout->setHorizontalSpacing(0);
-  ui->gridLayout->setVerticalSpacing(8);
+  ui->gridLayout->setVerticalSpacing(0);
+  ui->gridLayout->setRowStretch(0, 1);
+  ui->gridLayout->setRowStretch(1, 0);
+  ui->gridLayout->setColumnStretch(0, 0);
+  ui->gridLayout->setColumnStretch(2, 1);
 
   ui->pages->setFrameShape(QFrame::NoFrame);
   ui->pages->setProperty("uiRole", lit("settingsSidebar"));
   ui->pages->setIconSize(QSize(18, 18));
   ui->pages->setSpacing(2);
-  ui->pages->setFixedWidth(208);
+  ui->pages->setUniformItemSizes(true);
+  ui->pages->setFixedWidth(168);
 
   ui->tabWidget->setProperty("uiRole", lit("settingsPages"));
-  ui->okButton->setContentsMargins(12, 0, 12, 0);
+  ui->gridLayout->removeWidget(ui->okButton);
+  ui->gridLayout->addWidget(ui->okButton, 1, 0, 1, 3);
+  ui->okButton->setContentsMargins(12, 4, 16, 4);
 
   if(QPushButton *ok = ui->okButton->button(QDialogButtonBox::Ok))
   {
@@ -432,12 +563,11 @@ void SettingsDialog::setupModernGeneralPage()
   scrollHost->setProperty("uiRole", lit("settingsPage"));
 
   QHBoxLayout *hostLayout = new QHBoxLayout(scrollHost);
-  hostLayout->setContentsMargins(24, 20, 24, 24);
+  hostLayout->setContentsMargins(12, 10, 12, 12);
   hostLayout->setSpacing(0);
 
   QWidget *page = new QWidget(scrollHost);
   page->setObjectName(lit("generalSettingsPage"));
-  page->setMaximumWidth(920);
   page->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
   page->setProperty("uiRole", lit("settingsPage"));
 
@@ -499,9 +629,10 @@ void SettingsDialog::setupModernGeneralPage()
 
   auto configureGrid = [](QGridLayout *layout) {
     layout->setContentsMargins(0, 0, 0, 0);
+    layout->setProperty("uiRole", lit("settingsFormGrid"));
     layout->setHorizontalSpacing(24);
     layout->setVerticalSpacing(8);
-    layout->setColumnMinimumWidth(0, 288);
+    layout->setColumnMinimumWidth(0, 260);
     layout->setColumnStretch(1, 1);
   };
 
@@ -517,6 +648,7 @@ void SettingsDialog::setupModernGeneralPage()
     label->setMinimumHeight(40);
     label->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     label->setWordWrap(true);
+    label->setProperty("uiRole", lit("settingsLabel"));
     prepareControl(control);
     layout->addWidget(label, row, 0);
     layout->addWidget(control, row, 1, Qt::AlignVCenter);
@@ -556,6 +688,7 @@ void SettingsDialog::setupModernGeneralPage()
   addSettingRow(appearanceGrid, 3, ui->label_21, ui->Font_MonoFamily);
   addSettingRow(appearanceGrid, 4, ui->label_27, ui->Font_GlobalScale);
   addSettingRow(appearanceGrid, 5, ui->label_9, ui->Font_PreferMonospaced);
+  ui->Font_PreferMonospaced->setMinimumWidth(18);
   ui->Font_PreferMonospaced->setMaximumWidth(34);
 
   QObject::connect(m_UILanguage, OverloadedSlot<int>::of(&QComboBox::currentIndexChanged), this,
@@ -576,9 +709,10 @@ void SettingsDialog::setupModernGeneralPage()
       createCard(lit("captureLocationsCard"), tr("Capture Locations"), QString());
   QGridLayout *captureGrid = new QGridLayout();
   captureGrid->setContentsMargins(0, 0, 0, 0);
+  captureGrid->setProperty("uiRole", lit("settingsFormGrid"));
   captureGrid->setHorizontalSpacing(12);
   captureGrid->setVerticalSpacing(8);
-  captureGrid->setColumnMinimumWidth(0, 288);
+  captureGrid->setColumnMinimumWidth(0, 260);
   captureGrid->setColumnStretch(1, 1);
   captureLocations->addLayout(captureGrid);
 
@@ -587,6 +721,7 @@ void SettingsDialog::setupModernGeneralPage()
     label->setMinimumHeight(40);
     label->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     label->setWordWrap(true);
+    label->setProperty("uiRole", lit("settingsLabel"));
     path->setMinimumHeight(34);
     path->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     path->setProperty("uiRole", lit("settingsPath"));
@@ -620,6 +755,7 @@ void SettingsDialog::setupModernGeneralPage()
     label->setMinimumHeight(40);
     label->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     label->setWordWrap(true);
+    label->setProperty("uiRole", lit("settingsLabel"));
     layout->addWidget(toggle, row, 0, Qt::AlignTop);
     layout->addWidget(label, row, 1);
   };
@@ -638,32 +774,33 @@ void SettingsDialog::setupModernGeneralPage()
   privacy->addWidget(ui->analyticsOptOut);
 
   pageLayout->addStretch(1);
-  hostLayout->addStretch(1);
   hostLayout->addWidget(page, 1);
-  hostLayout->addStretch(1);
   scrollArea->setWidget(scrollHost);
   ui->verticalLayout_3->addWidget(scrollArea);
 
   ui->line->hide();
   ui->groupBox->hide();
   ui->groupBox_9->hide();
+
+  m_ResponsiveLayoutReady = true;
+  updateResponsiveLayout();
 }
 
 void SettingsDialog::setupNavigationIcons()
 {
-  const char *icons[] = {
-      ":/modern/mono/cog.svg",          ":/modern/mono/wrench.svg",
-      ":/modern/mono/control_play_blue.svg", ":/modern/mono/checkerboard.svg",
-      ":/modern/mono/page_white_code.svg",   ":/modern/mono/action.svg",
-      ":/modern/mono/text_add.svg",     ":/modern/mono/connect.svg",
-  };
+  // Keep this order aligned with the pages in SettingsDialog.ui. These are
+  // semantic panel identities, not recycled action glyphs.
+  const char *icons[] = {"sliders-horizontal", "cpu",            "square-terminal",
+                         "monitor-play",       "grid-3x3",       "code-xml",
+                         "list-tree",          "message-square-text",
+                         "monitor-smartphone"};
 
   for(int i = 0; i < ui->pages->count(); i++)
   {
     QListWidgetItem *item = ui->pages->item(i);
     item->setSizeHint(QSize(0, 40));
     if(i < int(sizeof(icons) / sizeof(icons[0])))
-      item->setIcon(QIcon(QString::fromLatin1(icons[i])));
+      item->setIcon(Icons::library(icons[i]));
   }
 }
 

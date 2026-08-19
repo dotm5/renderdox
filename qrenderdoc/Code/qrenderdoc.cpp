@@ -31,8 +31,10 @@
 #include <QRegularExpression>
 #include <QRegularExpressionMatch>
 #include <QStandardPaths>
+#include <QStringList>
 #include <QSysInfo>
 #include <QTranslator>
+#include <QtMath>
 #include "../../renderdoc/generated/product_identity.h"
 #include "Code/CaptureContext.h"
 #include "Code/QRDUtils.h"
@@ -145,10 +147,92 @@ std::ostream &clog()
 #endif
 
 #if defined(Q_OS_WIN32)
+#include <qt_windows.h>
+
 extern "C" {
 _declspec(dllexport) unsigned long NvOptimusEnablement = 0x00000001;
 _declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
 }
+
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+namespace
+{
+typedef HRESULT(WINAPI *SetProcessDpiAwarenessFunc)(int awareness);
+typedef HRESULT(WINAPI *GetDpiForMonitorFunc)(HMONITOR monitor, int dpiType, UINT *dpiX,
+                                              UINT *dpiY);
+
+struct LegacyMonitorScaleContext
+{
+  GetDpiForMonitorFunc getDpiForMonitor = NULL;
+  QStringList factors;
+};
+
+BOOL CALLBACK appendLegacyMonitorScale(HMONITOR monitor, HDC, LPRECT, LPARAM userData)
+{
+  LegacyMonitorScaleContext *context = reinterpret_cast<LegacyMonitorScaleContext *>(userData);
+  if(!context || !context->getDpiForMonitor)
+    return TRUE;
+
+  MONITORINFOEXW monitorInfo = {};
+  monitorInfo.cbSize = sizeof(monitorInfo);
+  UINT dpiX = 96;
+  UINT dpiY = 96;
+
+  if(!GetMonitorInfoW(monitor, &monitorInfo) ||
+     FAILED(context->getDpiForMonitor(monitor, 0, &dpiX, &dpiY)) || dpiX == 0)
+    return TRUE;
+
+  // Qt 5.9 rounds the native scale to an integer before rendering. Supply a named per-screen
+  // multiplier that restores the exact Windows scale (e.g. 150% becomes 2.0 * 0.75).
+  const qreal nativeScale = qreal(dpiX) / 96.0;
+  const int roundedScale = qMax(1, qRound(nativeScale));
+  const qreal correction = nativeScale / qreal(roundedScale);
+  QString factor = QString::number(correction, 'f', 4);
+  while(factor.contains(QLatin1Char('.')) && factor.endsWith(QLatin1Char('0')))
+    factor.chop(1);
+  if(factor.endsWith(QLatin1Char('.')))
+    factor.chop(1);
+
+  context->factors << QString::fromWCharArray(monitorInfo.szDevice) + QLatin1Char('=') + factor;
+  return TRUE;
+}
+
+void applyLegacyWindowsHighDpiScaleFactors()
+{
+  // Explicit Qt scale overrides are an advanced-user/debugging contract; never replace them.
+  if(!qgetenv("QT_SCALE_FACTOR").isEmpty() || !qgetenv("QT_SCREEN_SCALE_FACTORS").isEmpty())
+    return;
+
+  HMODULE shcore = LoadLibraryW(L"Shcore.dll");
+  if(!shcore)
+    return;
+
+  SetProcessDpiAwarenessFunc setProcessDpiAwareness =
+      reinterpret_cast<SetProcessDpiAwarenessFunc>(GetProcAddress(shcore, "SetProcessDpiAwareness"));
+  GetDpiForMonitorFunc getDpiForMonitor =
+      reinterpret_cast<GetDpiForMonitorFunc>(GetProcAddress(shcore, "GetDpiForMonitor"));
+
+  // This is harmless when the manifest or host has already selected DPI awareness (the API then
+  // returns E_ACCESSDENIED), and ensures GetDpiForMonitor reports each monitor's effective DPI.
+  if(setProcessDpiAwareness)
+    setProcessDpiAwareness(2);
+
+  LegacyMonitorScaleContext context;
+  context.getDpiForMonitor = getDpiForMonitor;
+  if(getDpiForMonitor)
+    EnumDisplayMonitors(NULL, NULL, appendLegacyMonitorScale, reinterpret_cast<LPARAM>(&context));
+
+  FreeLibrary(shcore);
+
+  if(context.factors.isEmpty())
+    return;
+
+  const QByteArray screenFactors = context.factors.join(QLatin1Char(';')).toLatin1();
+  qputenv("QT_SCREEN_SCALE_FACTORS", screenFactors);
+  qInfo() << "Applied exact Windows per-monitor scaling for legacy Qt:" << screenFactors;
+}
+}
+#endif
 #endif
 
 REPLAY_PROGRAM_MARKER()
@@ -239,6 +323,10 @@ int main(int argc, char *argv[])
       envChanged = true;
     }
   }
+#endif
+
+#if defined(Q_OS_WIN32) && QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+  applyLegacyWindowsHighDpiScaleFactors();
 #endif
 
   QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);

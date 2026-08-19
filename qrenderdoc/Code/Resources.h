@@ -26,7 +26,66 @@
 
 #include <QIcon>
 #include <QPixmap>
+#include <QString>
 #include <QWidget>
+
+// Semantic identities for dock/tool-window tabs. These deliberately describe
+// the panel rather than the action that opened it, so the same icon remains
+// useful when a window is restored, floated, or moved between tab groups.
+enum class PanelIcon
+{
+  EventBrowser,
+  APIInspector,
+  Annotation,
+  Texture,
+  Mesh,
+  Pipeline,
+  Capture,
+  DebugMessages,
+  DiagnosticLog,
+  Comments,
+  PerformanceCounters,
+  Statistics,
+  Timeline,
+  Python,
+  ResourceInspector,
+  Shader,
+  Buffer,
+  PixelHistory,
+  Descriptors,
+  ShaderMessages,
+  LiveCapture,
+  TextureList,
+  TextureInputs,
+  TextureOutputs,
+  PixelContext,
+  ResourceList,
+  RelatedResources,
+  ResourceInitialisation,
+  ResourceUsage,
+  Preview,
+  MeshInput,
+  MeshOutput,
+  SourceEditor,
+  ProjectExplorer,
+  InteractiveConsole,
+  Output,
+  Help,
+  Find,
+  FindResults,
+  Disassembly,
+  Errors,
+  Compilation,
+  Watch,
+  Variables,
+  ConstantsResources,
+  AccessedResources,
+  Callstack,
+  InputSignature,
+  OutputSignature,
+  FileList,
+  DebugLog,
+};
 
 #define RESOURCE_LIST()                                                        \
   RESOURCE_DEF(add, "add.png")                                                 \
@@ -122,6 +181,11 @@ class Resources
 public:
   static void Initialise();
   static QIcon ModerniseIcon(const QIcon &icon);
+  static QPixmap ModernisePixmap(const QPixmap &pixmap, int logicalSize,
+                                 qreal devicePixelRatio);
+  static QIcon LibraryIcon(const QString &name);
+  static QPixmap LibraryPixmap(const QString &name, int logicalSize,
+                               qreal devicePixelRatio);
   ~Resources();
 
 #undef RESOURCE_DEF
@@ -152,6 +216,12 @@ private:
 
 struct Pixmaps
 {
+  static QPixmap library(const char *name, QWidget *widget, int logicalSize = 16)
+  {
+    return Resources::LibraryPixmap(QString::fromLatin1(name), logicalSize,
+                                    widget ? widget->devicePixelRatioF() : 1.0);
+  }
+
 #undef RESOURCE_DEF
 #define RESOURCE_DEF(name, filename)               \
   static const QPixmap &name(int devicePixelRatio) \
@@ -170,6 +240,16 @@ struct Pixmaps
 
 struct Icons
 {
+  // Returns a semantic Lucide icon generated from the pinned Morphicons asset
+  // workspace. The SVG remains scalable so Qt can rasterise at the target DPR.
+  static QIcon library(const char *name)
+  {
+    return Resources::LibraryIcon(QString::fromLatin1(name));
+  }
+
+  // Returns a semantic icon for a dock/tool-window tab.
+  static QIcon panel(PanelIcon panel);
+
 #undef RESOURCE_DEF
 #define RESOURCE_DEF(name, filename) \
   static const QIcon &name()         \

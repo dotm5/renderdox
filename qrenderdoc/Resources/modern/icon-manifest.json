@@ -1,6 +1,6 @@
 {
   "schema": 2,
-  "design_source": "DComp Modern Light UI asset bundle v3, legacy PNG palette audit, seven ImageGen art-direction sheets, and the focused connector corrective reference",
+  "design_source": "DComp Modern Light UI asset bundle v4, usage-driven semantic audit, and reviewed stroke-icon libraries",
   "canonical_viewbox": [
     0,
     0,
@@ -21,6 +21,29 @@
     "legacy_color"
   ],
   "default_variant": "legacy_color",
+  "library_selection": {
+    "policy": "Prefer same-semantic 24x24 outline geometry; keep RenderDoc-specific or mixed-use semantics locally redrawn",
+    "primary": {
+      "name": "Tabler Icons",
+      "version": "3.46.0",
+      "license": "MIT",
+      "replacement_count": 50
+    },
+    "reviewed": [
+      {
+        "name": "Tabler Icons",
+        "version": "3.46.0"
+      },
+      {
+        "name": "Lucide",
+        "version": "1.28.0"
+      },
+      {
+        "name": "Heroicons",
+        "version": "2.2.0"
+      }
+    ]
+  },
   "legacy_color_palette": {
     "success_current_green": "#20A76B",
     "warning_amber": "#A76B1D",
@@ -39,6 +62,10 @@
   "palette_policy": "Preserve legacy functional hue families with flat modern colours; colour is never the only state cue",
   "small_size_strategy": "Prefer solid silhouettes, integer-aligned geometry, the maximum permitted 2 px detail stroke, two-unit semantic gaps, and direct rendering at each target size over smoothing a single raster",
   "intentional_geometry_equivalences": [
+    [
+      "action",
+      "action_hover"
+    ],
     [
       "control_base_blue",
       "control_play_blue"
@@ -113,12 +140,26 @@
       "color_variant_source_colors": [
         "#87929D"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "arrow-big-right",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/arrow-big-right.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b000_r0_c0_action.png",
         "artifacts/icon-modernization/v3/reference-cells/b000_r0_c1_action@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:110",
+        "qrenderdoc/Code/Resources.cpp:337",
+        "qrenderdoc/Code/Resources.cpp:344",
+        "qrenderdoc/Code/Resources.cpp:355",
+        "qrenderdoc/Code/Resources.cpp:393",
+        "qrenderdoc/Code/Resources.cpp:411",
+        "qrenderdoc/Code/Resources.h:169",
         "qrenderdoc/Widgets/AnnotationDisplay.cpp:75",
         "qrenderdoc/Widgets/AnnotationDisplay.cpp:216",
         "qrenderdoc/Windows/DescriptorViewer.cpp:1312",
@@ -171,8 +212,8 @@
         "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:4604",
         "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:4891",
         "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:5318",
-        "qrenderdoc/Windows/TextureViewer.cpp:666",
-        "qrenderdoc/Windows/TextureViewer.cpp:2361"
+        "qrenderdoc/Windows/TextureViewer.cpp:671",
+        "qrenderdoc/Windows/TextureViewer.cpp:2376"
       ],
       "notes": "Preserve the legacy action semantics"
     },
@@ -202,12 +243,21 @@
       "color_variant_source_colors": [
         "#20A76B"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "arrow-big-right",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/arrow-big-right.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b000_r0_c2_action_hover.png",
         "artifacts/icon-modernization/v3/reference-cells/b000_r0_c3_action_hover@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:111",
+        "qrenderdoc/Code/Resources.h:170",
         "qrenderdoc/Widgets/AnnotationDisplay.cpp:75",
         "qrenderdoc/Widgets/BufferFormatSpecifier.ui:213",
         "qrenderdoc/Windows/DescriptorViewer.cpp:1312",
@@ -217,8 +267,8 @@
         "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.cpp:93",
         "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.cpp:148",
         "qrenderdoc/Windows/ResourceInspector.ui:226",
-        "qrenderdoc/Windows/TextureViewer.cpp:666",
-        "qrenderdoc/Windows/TextureViewer.cpp:2361"
+        "qrenderdoc/Windows/TextureViewer.cpp:671",
+        "qrenderdoc/Windows/TextureViewer.cpp:2376"
       ],
       "notes": "State variant of action; preserve rightward direction"
     },
@@ -250,6 +300,15 @@
       "color_variant_source_colors": [
         "#20A76B"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "circle-plus",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/circle-plus.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b000_r0_c4_add.png",
         "artifacts/icon-modernization/v3/reference-cells/b004_r3_c5_plugin_add.png",
@@ -259,7 +318,8 @@
         "artifacts/icon-modernization/v3/reference-cells/b005_r0_c4_text_add@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:32",
+        "qrenderdoc/Code/Resources.h:91",
+        "qrenderdoc/Windows/PythonShell.cpp:1964",
         "qrenderdoc/Windows/TextureViewer.ui:870"
       ],
       "notes": "Preserve the legacy action semantics"
@@ -271,7 +331,7 @@
       "source_sha256": "b6673d3fa3f3960cf580a55cc24c480036cfdb98fdc84e02e64da0069f159811",
       "source_2x_sha256": "02a5cdfd43b6d2e6b0f7cb98788cf09a4aa7130f811fc2fc47939d0d25df6b44",
       "qrc_alias": ":/modern/align.svg",
-      "semantic": "Align data or columns",
+      "semantic": "Show visible padding in tabular views",
       "category": "view",
       "states": [
         "normal",
@@ -298,12 +358,16 @@
         "#66717D",
         "#87929D"
       ],
+      "geometry_source": {
+        "kind": "local_redraw"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b000_r1_c0_align.png",
         "artifacts/icon-modernization/v3/reference-cells/b000_r1_c1_align@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:33",
+        "qrenderdoc/Code/Resources.h:92",
         "qrenderdoc/Windows/BufferViewer.ui:891"
       ],
       "notes": "Preserve the legacy action semantics"
@@ -315,7 +379,7 @@
       "source_sha256": "e182c75f645d21eb965e0ffea6203ac2e0f5d19280b0a2964d8b55005c3f3948",
       "source_2x_sha256": "499ca58ad82873b80f797f1abd5222242a7a6eee40e53a02dc869b16b7dd4049",
       "qrc_alias": ":/modern/arrow_in.svg",
-      "semantic": "Collapse or move four directions inward",
+      "semantic": "Collapse a hierarchy or fit inward",
       "category": "navigation",
       "states": [
         "normal",
@@ -337,15 +401,24 @@
       "color_variant_source_colors": [
         "#20A76B"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "arrows-minimize",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/arrows-minimize.svg"
+      },
+      "fallback_svg": "qrenderdoc/Resources/modern/fallback/arrow_in.svg",
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b000_r1_c2_arrow_in.png",
         "artifacts/icon-modernization/v3/reference-cells/b000_r1_c3_arrow_in@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:34",
-        "qrenderdoc/Widgets/Extended/RDTreeView.cpp:350",
-        "qrenderdoc/Windows/BufferViewer.cpp:3026",
-        "qrenderdoc/Windows/EventBrowser.cpp:6307"
+        "qrenderdoc/Code/Resources.h:93",
+        "qrenderdoc/Widgets/Extended/RDTreeView.cpp:246",
+        "qrenderdoc/Windows/BufferViewer.cpp:3034",
+        "qrenderdoc/Windows/PythonShell.cpp:1898"
       ],
       "notes": "Four diagonal arrows terminate at the centre-facing corners; never reuse arrow_out geometry"
     },
@@ -356,7 +429,7 @@
       "source_sha256": "9f2da68b85430a8eba6a89db7f3a9820345a501a36d3d108910d47fe2c310fcc",
       "source_2x_sha256": "6246ec026c233756c9ab03be6e289b66bd51dba26d29cc880cad15a1a68964c3",
       "qrc_alias": ":/modern/arrow_join.svg",
-      "semantic": "Join branches into the forward path",
+      "semantic": "Synchronize views or jump to related mesh data",
       "category": "navigation",
       "states": [
         "normal",
@@ -378,14 +451,24 @@
       "color_variant_source_colors": [
         "#20A76B"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "arrows-exchange",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/arrows-exchange.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b000_r1_c4_arrow_join.png",
         "artifacts/icon-modernization/v3/reference-cells/b000_r1_c5_arrow_join@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:35",
+        "qrenderdoc/Code/Resources.cpp:343",
+        "qrenderdoc/Code/Resources.h:94",
         "qrenderdoc/Windows/BufferViewer.cpp:2515",
-        "qrenderdoc/Windows/BufferViewer.cpp:3030",
+        "qrenderdoc/Windows/BufferViewer.cpp:3038",
         "qrenderdoc/Windows/BufferViewer.ui:917",
         "qrenderdoc/Windows/PerformanceCounterViewer.ui:94"
       ],
@@ -420,16 +503,28 @@
       "color_variant_source_colors": [
         "#20A76B"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "arrow-left",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/arrow-left.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b000_r2_c0_arrow_left.png",
         "artifacts/icon-modernization/v3/reference-cells/b000_r2_c1_arrow_left@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:36",
+        "qrenderdoc/Code/Resources.cpp:371",
+        "qrenderdoc/Code/Resources.cpp:386",
+        "qrenderdoc/Code/Resources.cpp:414",
+        "qrenderdoc/Code/Resources.h:95",
         "qrenderdoc/Windows/Dialogs/VirtualFileDialog.ui:26",
         "qrenderdoc/Windows/EventBrowser.ui:73",
         "qrenderdoc/Windows/EventBrowser.ui:276",
-        "qrenderdoc/Windows/ShaderViewer.cpp:1375"
+        "qrenderdoc/Windows/ShaderViewer.cpp:1362"
       ],
       "notes": "Preserve the legacy action semantics"
     },
@@ -440,7 +535,7 @@
       "source_sha256": "7d15d9880a4bfe2f78658c8878bd764df4b93e524ef0a76866889524a7fe69d0",
       "source_2x_sha256": "0fcb12c3218fa8d818f24a2b230d847adf02bb6f5b286d5bb60ba76dadf39750",
       "qrc_alias": ":/modern/arrow_out.svg",
-      "semantic": "Expand or move four directions outward",
+      "semantic": "Expand a hierarchy or fit outward",
       "category": "navigation",
       "states": [
         "normal",
@@ -462,15 +557,24 @@
       "color_variant_source_colors": [
         "#20A76B"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "arrows-maximize",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/arrows-maximize.svg"
+      },
+      "fallback_svg": "qrenderdoc/Resources/modern/fallback/arrow_out.svg",
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b000_r2_c2_arrow_out.png",
         "artifacts/icon-modernization/v3/reference-cells/b000_r2_c3_arrow_out@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:68",
-        "qrenderdoc/Widgets/Extended/RDTreeView.cpp:349",
-        "qrenderdoc/Windows/BufferViewer.cpp:3025",
-        "qrenderdoc/Windows/EventBrowser.cpp:6306",
+        "qrenderdoc/Code/Resources.h:127",
+        "qrenderdoc/Widgets/Extended/RDTreeView.cpp:245",
+        "qrenderdoc/Windows/BufferViewer.cpp:3033",
+        "qrenderdoc/Windows/PythonShell.cpp:1895",
         "qrenderdoc/Windows/TextureViewer.ui:362"
       ],
       "notes": "Four diagonal arrows terminate at the outer corners; never reuse arrow_in geometry"
@@ -504,12 +608,21 @@
       "color_variant_source_colors": [
         "#20A76B"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "refresh",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/refresh.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b000_r2_c4_arrow_refresh.png",
         "artifacts/icon-modernization/v3/reference-cells/b000_r2_c5_arrow_refresh@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:37",
+        "qrenderdoc/Code/Resources.h:96",
         "qrenderdoc/Windows/LogView.ui:56",
         "qrenderdoc/Windows/ShaderViewer.ui:405"
       ],
@@ -544,17 +657,29 @@
       "color_variant_source_colors": [
         "#20A76B"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "arrow-right",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/arrow-right.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b000_r3_c0_arrow_right.png",
         "artifacts/icon-modernization/v3/reference-cells/b000_r3_c1_arrow_right@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:38",
+        "qrenderdoc/Code/Resources.cpp:373",
+        "qrenderdoc/Code/Resources.cpp:388",
+        "qrenderdoc/Code/Resources.cpp:416",
+        "qrenderdoc/Code/Resources.h:97",
         "qrenderdoc/Windows/Dialogs/VirtualFileDialog.ui:46",
         "qrenderdoc/Windows/EventBrowser.ui:87",
         "qrenderdoc/Windows/EventBrowser.ui:290",
-        "qrenderdoc/Windows/PythonShell.ui:229",
-        "qrenderdoc/Windows/ShaderViewer.cpp:1370"
+        "qrenderdoc/Windows/PythonShell.ui:297",
+        "qrenderdoc/Windows/ShaderViewer.cpp:1357"
       ],
       "notes": "Preserve the legacy action semantics"
     },
@@ -587,18 +712,26 @@
       "color_variant_source_colors": [
         "#20A76B"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "arrow-back-up",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/arrow-back-up.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b000_r3_c2_arrow_undo.png",
         "artifacts/icon-modernization/v3/reference-cells/b000_r3_c3_arrow_undo@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:39",
+        "qrenderdoc/Code/Resources.h:98",
         "qrenderdoc/Windows/BufferViewer.cpp:2512",
-        "qrenderdoc/Windows/BufferViewer.cpp:3028",
+        "qrenderdoc/Windows/BufferViewer.cpp:3036",
         "qrenderdoc/Windows/BufferViewer.ui:237",
         "qrenderdoc/Windows/BufferViewer.ui:1037",
         "qrenderdoc/Windows/Dialogs/ConfigEditor.cpp:429",
-        "qrenderdoc/Windows/EventBrowser.cpp:6311",
         "qrenderdoc/Windows/ResourceInspector.ui:209",
         "qrenderdoc/Windows/ShaderViewer.ui:425",
         "qrenderdoc/Windows/TextureViewer.ui:192"
@@ -612,7 +745,7 @@
       "source_sha256": "30e5be55320060872499fb728c1c016e386ae0ed5e91ec6bd03a06e7eed29fa1",
       "source_2x_sha256": "35ad4857446db1cc2e87eeb205dc1469e596bd7f53f88a64ee399ce581272dc8",
       "qrc_alias": ":/modern/asterisk_orange.svg",
-      "semantic": "Attention or modified marker",
+      "semantic": "Bookmark, highlight, or modified marker",
       "category": "status",
       "states": [
         "normal",
@@ -631,18 +764,25 @@
         "orange"
       ],
       "color_variant_source_colors": [
-        "#000000",
         "#CF7628"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "asterisk",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/asterisk.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b000_r3_c4_asterisk_orange.png",
         "artifacts/icon-modernization/v3/reference-cells/b000_r3_c5_asterisk_orange@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:40",
+        "qrenderdoc/Code/Resources.h:99",
         "qrenderdoc/Windows/BufferViewer.ui:369",
         "qrenderdoc/Windows/EventBrowser.cpp:894",
-        "qrenderdoc/Windows/EventBrowser.cpp:6308",
         "qrenderdoc/Windows/EventBrowser.ui:162",
         "qrenderdoc/Windows/EventBrowser.ui:410"
       ],
@@ -676,13 +816,22 @@
       "color_variant_source_colors": [
         "#3C86B8"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "bookmark",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/bookmark.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b001_r0_c0_bookmark_blue.png",
         "artifacts/icon-modernization/v3/reference-cells/b001_r0_c1_bookmark_blue@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:112",
-        "qrenderdoc/Windows/ShaderViewer.cpp:1363",
+        "qrenderdoc/Code/Resources.h:171",
+        "qrenderdoc/Windows/ShaderViewer.cpp:1350",
         "qrenderdoc/Windows/ShaderViewer.ui:355"
       ],
       "notes": "Preserve the legacy action semantics"
@@ -714,19 +863,29 @@
         "blue"
       ],
       "color_variant_source_colors": [
-        "#000000",
-        "#CF7628",
-        "#66717D"
+        "#CF7628"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "bug",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/bug.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b001_r0_c2_bug.png",
         "artifacts/icon-modernization/v3/reference-cells/b001_r0_c3_bug@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:41",
-        "qrenderdoc/Windows/MainWindow.cpp:1450",
-        "qrenderdoc/Windows/MainWindow.cpp:1462",
-        "qrenderdoc/Windows/MainWindow.cpp:1463"
+        "qrenderdoc/Code/Resources.cpp:345",
+        "qrenderdoc/Code/Resources.cpp:402",
+        "qrenderdoc/Code/Resources.cpp:419",
+        "qrenderdoc/Code/Resources.h:100",
+        "qrenderdoc/Windows/MainWindow.cpp:1511",
+        "qrenderdoc/Windows/MainWindow.cpp:1523",
+        "qrenderdoc/Windows/MainWindow.cpp:1524"
       ],
       "notes": "Preserve the legacy action semantics"
     },
@@ -737,7 +896,7 @@
       "source_sha256": "611b7697c0a8f207ee28bf8f0ab709e661fffc0caf81345405037af780e17444",
       "source_2x_sha256": "bbb2bb82c98015efef5f8a27da41e6a6be1fac798b10d7224db51a1b7ad5c3f7",
       "qrc_alias": ":/modern/chart_curve.svg",
-      "semantic": "Open the curve or chart view",
+      "semantic": "Show a histogram over the visible range",
       "category": "view",
       "states": [
         "normal",
@@ -758,19 +917,25 @@
         "blue"
       ],
       "color_variant_source_colors": [
-        "#000000",
-        "#20A76B",
-        "#B4473D",
-        "#3C86B8",
-        "#66717D",
-        "#B3BDC6"
+        "#3C86B8"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "chart-histogram",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/chart-histogram.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b001_r0_c4_chart_curve.png",
         "artifacts/icon-modernization/v3/reference-cells/b001_r0_c5_chart_curve@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:42",
+        "qrenderdoc/Code/Resources.cpp:350",
+        "qrenderdoc/Code/Resources.cpp:351",
+        "qrenderdoc/Code/Resources.h:101",
         "qrenderdoc/Windows/TextureViewer.ui:215"
       ],
       "notes": "Preserve the legacy action semantics"
@@ -804,12 +969,22 @@
         "#000000",
         "#CF7628"
       ],
+      "geometry_source": {
+        "kind": "local_redraw"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b001_r1_c0_checkerboard.png",
         "artifacts/icon-modernization/v3/reference-cells/b001_r1_c1_checkerboard@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:60",
+        "qrenderdoc/Code/Resources.cpp:340",
+        "qrenderdoc/Code/Resources.cpp:362",
+        "qrenderdoc/Code/Resources.cpp:369",
+        "qrenderdoc/Code/Resources.cpp:371",
+        "qrenderdoc/Code/Resources.cpp:373",
+        "qrenderdoc/Code/Resources.cpp:375",
+        "qrenderdoc/Code/Resources.h:119",
         "qrenderdoc/Windows/TextureViewer.ui:941"
       ],
       "notes": "Preserve the legacy action semantics"
@@ -840,12 +1015,23 @@
       "color_variant_source_colors": [
         "#87929D"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "settings",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/settings.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b001_r1_c2_cog.png",
         "artifacts/icon-modernization/v3/reference-cells/b001_r1_c3_cog@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:43",
+        "qrenderdoc/Code/Resources.cpp:380",
+        "qrenderdoc/Code/Resources.cpp:404",
+        "qrenderdoc/Code/Resources.h:102",
         "qrenderdoc/Windows/BufferViewer.ui:211",
         "qrenderdoc/Windows/EventBrowser.ui:364"
       ],
@@ -892,12 +1078,16 @@
         "#C04783",
         "#66717D"
       ],
+      "geometry_source": {
+        "kind": "local_redraw"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b001_r1_c4_color_wheel.png",
         "artifacts/icon-modernization/v3/reference-cells/b001_r1_c5_color_wheel@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:44",
+        "qrenderdoc/Code/Resources.h:103",
         "qrenderdoc/Windows/TextureViewer.ui:921"
       ],
       "notes": "Preserve the legacy action semantics"
@@ -928,21 +1118,30 @@
         "blue"
       ],
       "color_variant_source_colors": [
-        "#000000",
-        "#20A76B",
-        "#3C86B8"
+        "#20A76B"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "plug-connected",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/plug-connected.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b001_r2_c0_connect.png",
         "artifacts/icon-modernization/v3/reference-cells/b001_r2_c1_connect@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:46",
-        "qrenderdoc/Windows/Dialogs/LiveCapture.cpp:1295",
+        "qrenderdoc/Code/Resources.cpp:344",
+        "qrenderdoc/Code/Resources.cpp:367",
+        "qrenderdoc/Code/Resources.h:105",
+        "qrenderdoc/Windows/Dialogs/LiveCapture.cpp:1453",
         "qrenderdoc/Windows/Dialogs/RemoteManager.cpp:167",
-        "qrenderdoc/Windows/EventBrowser.cpp:6290",
-        "qrenderdoc/Windows/MainWindow.cpp:2102",
-        "qrenderdoc/Windows/MainWindow.cpp:2207"
+        "qrenderdoc/Windows/EventBrowser.cpp:6321",
+        "qrenderdoc/Windows/MainWindow.cpp:2163",
+        "qrenderdoc/Windows/MainWindow.cpp:2268"
       ],
       "notes": "Single cable and plug body with separated twin pins; no mirrored second body that can read as a dumbbell"
     },
@@ -975,12 +1174,16 @@
         "#3C86B8",
         "#62A9D2"
       ],
+      "geometry_source": {
+        "kind": "local_redraw"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b001_r2_c2_control_base_blue.png",
         "artifacts/icon-modernization/v3/reference-cells/b001_r2_c3_control_base_blue@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:47"
+        "qrenderdoc/Code/Resources.h:106"
       ],
       "notes": "Legacy-equivalent plain forward triangle; intentionally matches control_play_blue"
     },
@@ -1013,13 +1216,17 @@
         "#3C86B8",
         "#62A9D2"
       ],
+      "geometry_source": {
+        "kind": "local_redraw"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b001_r2_c4_control_cursor_blue.png",
         "artifacts/icon-modernization/v3/reference-cells/b001_r2_c5_control_cursor_blue@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:48",
-        "qrenderdoc/Windows/ShaderViewer.cpp:949"
+        "qrenderdoc/Code/Resources.h:107",
+        "qrenderdoc/Windows/ShaderViewer.cpp:943"
       ],
       "notes": "Forward triangle plus a right-side I-beam with a two-unit separation zone"
     },
@@ -1052,13 +1259,17 @@
         "#3C86B8",
         "#62A9D2"
       ],
+      "geometry_source": {
+        "kind": "local_redraw"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b001_r3_c0_control_end_blue.png",
         "artifacts/icon-modernization/v3/reference-cells/b001_r3_c1_control_end_blue@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:49",
-        "qrenderdoc/Windows/ShaderViewer.cpp:942"
+        "qrenderdoc/Code/Resources.h:108",
+        "qrenderdoc/Windows/ShaderViewer.cpp:936"
       ],
       "notes": "Preserve the legacy action semantics"
     },
@@ -1092,13 +1303,17 @@
         "#62A9D2",
         "#66717D"
       ],
+      "geometry_source": {
+        "kind": "local_redraw"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b001_r3_c2_control_nan_blue.png",
         "artifacts/icon-modernization/v3/reference-cells/b001_r3_c3_control_nan_blue@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:51",
-        "qrenderdoc/Windows/ShaderViewer.cpp:966"
+        "qrenderdoc/Code/Resources.h:110",
+        "qrenderdoc/Windows/ShaderViewer.cpp:960"
       ],
       "notes": "Hash marker distinguishes NaN navigation from sample navigation"
     },
@@ -1131,15 +1346,19 @@
         "#3C86B8",
         "#62A9D2"
       ],
+      "geometry_source": {
+        "kind": "local_redraw"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b001_r3_c4_control_play_blue.png",
         "artifacts/icon-modernization/v3/reference-cells/b001_r3_c5_control_play_blue@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:50",
-        "qrenderdoc/Windows/ShaderViewer.cpp:977",
-        "qrenderdoc/Windows/ShaderViewer.cpp:984",
-        "qrenderdoc/Windows/ShaderViewer.cpp:992",
+        "qrenderdoc/Code/Resources.h:109",
+        "qrenderdoc/Windows/ShaderViewer.cpp:971",
+        "qrenderdoc/Windows/ShaderViewer.cpp:978",
+        "qrenderdoc/Windows/ShaderViewer.cpp:986",
         "qrenderdoc/Windows/ShaderViewer.ui:508"
       ],
       "notes": "Legacy-equivalent plain forward triangle; intentionally matches control_base_blue"
@@ -1173,12 +1392,16 @@
         "#3C86B8",
         "#62A9D2"
       ],
+      "geometry_source": {
+        "kind": "local_redraw"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b002_r0_c0_control_reverse_base_blue.png",
         "artifacts/icon-modernization/v3/reference-cells/b002_r0_c1_control_reverse_base_blue@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:53"
+        "qrenderdoc/Code/Resources.h:112"
       ],
       "notes": "Legacy-equivalent plain reverse triangle; intentionally matches control_reverse_blue"
     },
@@ -1211,15 +1434,19 @@
         "#3C86B8",
         "#62A9D2"
       ],
+      "geometry_source": {
+        "kind": "local_redraw"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b002_r0_c2_control_reverse_blue.png",
         "artifacts/icon-modernization/v3/reference-cells/b002_r0_c3_control_reverse_blue@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:52",
-        "qrenderdoc/Windows/ShaderViewer.cpp:912",
-        "qrenderdoc/Windows/ShaderViewer.cpp:919",
-        "qrenderdoc/Windows/ShaderViewer.cpp:927"
+        "qrenderdoc/Code/Resources.h:111",
+        "qrenderdoc/Windows/ShaderViewer.cpp:906",
+        "qrenderdoc/Windows/ShaderViewer.cpp:913",
+        "qrenderdoc/Windows/ShaderViewer.cpp:921"
       ],
       "notes": "Legacy-equivalent plain reverse triangle; intentionally matches control_reverse_base_blue"
     },
@@ -1252,13 +1479,17 @@
         "#3C86B8",
         "#62A9D2"
       ],
+      "geometry_source": {
+        "kind": "local_redraw"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b002_r0_c4_control_reverse_cursor_blue.png",
         "artifacts/icon-modernization/v3/reference-cells/b002_r0_c5_control_reverse_cursor_blue@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:54",
-        "qrenderdoc/Windows/ShaderViewer.cpp:884"
+        "qrenderdoc/Code/Resources.h:113",
+        "qrenderdoc/Windows/ShaderViewer.cpp:878"
       ],
       "notes": "Left-facing triangle plus the legacy right-side I-beam marker"
     },
@@ -1292,13 +1523,17 @@
         "#62A9D2",
         "#66717D"
       ],
+      "geometry_source": {
+        "kind": "local_redraw"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b002_r1_c0_control_reverse_nan_blue.png",
         "artifacts/icon-modernization/v3/reference-cells/b002_r1_c1_control_reverse_nan_blue@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:55",
-        "qrenderdoc/Windows/ShaderViewer.cpp:901"
+        "qrenderdoc/Code/Resources.h:114",
+        "qrenderdoc/Windows/ShaderViewer.cpp:895"
       ],
       "notes": "Left-facing reverse control with hash marker"
     },
@@ -1333,13 +1568,17 @@
         "#3C86B8",
         "#62A9D2"
       ],
+      "geometry_source": {
+        "kind": "local_redraw"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b002_r1_c2_control_reverse_sample_blue.png",
         "artifacts/icon-modernization/v3/reference-cells/b002_r1_c3_control_reverse_sample_blue@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:56",
-        "qrenderdoc/Windows/ShaderViewer.cpp:891"
+        "qrenderdoc/Code/Resources.h:115",
+        "qrenderdoc/Windows/ShaderViewer.cpp:885"
       ],
       "notes": "Left-facing reverse control with checker sample marker"
     },
@@ -1374,13 +1613,17 @@
         "#3C86B8",
         "#62A9D2"
       ],
+      "geometry_source": {
+        "kind": "local_redraw"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b002_r1_c4_control_sample_blue.png",
         "artifacts/icon-modernization/v3/reference-cells/b002_r1_c5_control_sample_blue@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:57",
-        "qrenderdoc/Windows/ShaderViewer.cpp:956"
+        "qrenderdoc/Code/Resources.h:116",
+        "qrenderdoc/Windows/ShaderViewer.cpp:950"
       ],
       "notes": "Right-facing forward control with checker sample marker"
     },
@@ -1413,13 +1656,17 @@
         "#3C86B8",
         "#62A9D2"
       ],
+      "geometry_source": {
+        "kind": "local_redraw"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b002_r2_c0_control_start_blue.png",
         "artifacts/icon-modernization/v3/reference-cells/b002_r2_c1_control_start_blue@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:58",
-        "qrenderdoc/Windows/ShaderViewer.cpp:876"
+        "qrenderdoc/Code/Resources.h:117",
+        "qrenderdoc/Windows/ShaderViewer.cpp:870"
       ],
       "notes": "Left stop bar plus a left-facing triangle, matching the legacy start control"
     },
@@ -1451,14 +1698,23 @@
       "color_variant_source_colors": [
         "#3C86B8"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "copy",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/copy.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b002_r2_c2_copy.png",
         "artifacts/icon-modernization/v3/reference-cells/b002_r2_c3_copy@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:45",
-        "qrenderdoc/Widgets/Extended/RDTreeView.cpp:352",
-        "qrenderdoc/Windows/BufferViewer.cpp:3027",
+        "qrenderdoc/Code/Resources.h:104",
+        "qrenderdoc/Widgets/Extended/RDTreeView.cpp:248",
+        "qrenderdoc/Windows/BufferViewer.cpp:3035",
         "qrenderdoc/Windows/DebugMessageView.cpp:245",
         "qrenderdoc/Windows/PipelineState/PipelineStateViewer.cpp:1171",
         "qrenderdoc/Windows/ShaderMessageViewer.cpp:210"
@@ -1493,20 +1749,28 @@
       "color_variant_source_colors": [
         "#B4473D"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "x",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/x.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b002_r2_c4_cross.png",
         "artifacts/icon-modernization/v3/reference-cells/b002_r2_c5_cross@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:59",
+        "qrenderdoc/Code/Resources.h:118",
         "qrenderdoc/Windows/EventBrowser.cpp:866",
-        "qrenderdoc/Windows/EventBrowser.cpp:6309",
-        "qrenderdoc/Windows/MainWindow.cpp:1944",
-        "qrenderdoc/Windows/MainWindow.cpp:1968",
-        "qrenderdoc/Windows/MainWindow.cpp:2001",
-        "qrenderdoc/Windows/MainWindow.cpp:2212",
-        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.cpp:1137",
-        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.cpp:1234",
+        "qrenderdoc/Windows/MainWindow.cpp:2005",
+        "qrenderdoc/Windows/MainWindow.cpp:2029",
+        "qrenderdoc/Windows/MainWindow.cpp:2062",
+        "qrenderdoc/Windows/MainWindow.cpp:2273",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.cpp:1145",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.cpp:1242",
         "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:2413",
         "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:2442",
         "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:2595",
@@ -1518,8 +1782,8 @@
         "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:3710",
         "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:3741",
         "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:3844",
-        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.cpp:1138",
-        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.cpp:1236",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.cpp:1141",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.cpp:1239",
         "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:2446",
         "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:2475",
         "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:2682",
@@ -1528,8 +1792,8 @@
         "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:3751",
         "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:3810",
         "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:3841",
-        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.cpp:1232",
-        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.cpp:1392",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.cpp:1222",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.cpp:1382",
         "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:2785",
         "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:2985",
         "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:3014",
@@ -1540,8 +1804,8 @@
         "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:4374",
         "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:4433",
         "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:4464",
-        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.cpp:1058",
-        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.cpp:1933",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.cpp:1050",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.cpp:1925",
         "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:2370",
         "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:2570",
         "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:2596",
@@ -1555,7 +1819,7 @@
         "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:4147",
         "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:4178",
         "qrenderdoc/Windows/ResourceInspector.ui:69",
-        "qrenderdoc/Windows/ShaderViewer.cpp:1382",
+        "qrenderdoc/Windows/ShaderViewer.cpp:1369",
         "qrenderdoc/Windows/TextureViewer.ui:1304"
       ],
       "notes": "Preserve the legacy action semantics"
@@ -1586,16 +1850,23 @@
         "blue"
       ],
       "color_variant_source_colors": [
-        "#000000",
-        "#3C86B8",
-        "#66717D"
+        "#3C86B8"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "cut",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/cut.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b002_r3_c0_cut.png",
         "artifacts/icon-modernization/v3/reference-cells/b002_r3_c1_cut@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:61"
+        "qrenderdoc/Code/Resources.h:120"
       ],
       "notes": "Preserve the legacy action semantics"
     },
@@ -1627,18 +1898,26 @@
       "color_variant_source_colors": [
         "#B4473D"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "circle-minus",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/circle-minus.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b002_r3_c2_del.png",
         "artifacts/icon-modernization/v3/reference-cells/b002_r3_c3_del@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:62",
+        "qrenderdoc/Code/Resources.h:121",
         "qrenderdoc/Widgets/BufferFormatSpecifier.ui:185",
         "qrenderdoc/Widgets/OrderedListEditor.cpp:106",
-        "qrenderdoc/Windows/Dialogs/LiveCapture.cpp:1273",
-        "qrenderdoc/Windows/EventBrowser.cpp:6472",
-        "qrenderdoc/Windows/MainWindow.cpp:1857",
-        "qrenderdoc/Windows/PythonShell.ui:249",
+        "qrenderdoc/Windows/Dialogs/LiveCapture.cpp:1429",
+        "qrenderdoc/Windows/MainWindow.cpp:1918",
+        "qrenderdoc/Windows/PythonShell.ui:334",
         "qrenderdoc/Windows/ShaderViewer.ui:385",
         "qrenderdoc/Windows/TextureViewer.ui:904"
       ],
@@ -1670,20 +1949,27 @@
         "blue"
       ],
       "color_variant_source_colors": [
-        "#000000",
-        "#B4473D",
-        "#3C86B8"
+        "#B4473D"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "plug-connected-x",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/plug-connected-x.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b002_r3_c4_disconnect.png",
         "artifacts/icon-modernization/v3/reference-cells/b002_r3_c5_disconnect@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:63",
-        "qrenderdoc/Windows/Dialogs/LiveCapture.cpp:1455",
+        "qrenderdoc/Code/Resources.h:122",
+        "qrenderdoc/Windows/Dialogs/LiveCapture.cpp:1613",
         "qrenderdoc/Windows/Dialogs/RemoteManager.cpp:167",
-        "qrenderdoc/Windows/MainWindow.cpp:2102",
-        "qrenderdoc/Windows/MainWindow.cpp:2208"
+        "qrenderdoc/Windows/MainWindow.cpp:2163",
+        "qrenderdoc/Windows/MainWindow.cpp:2269"
       ],
       "notes": "Same two-prong plug family as connect, plus a visible X so the state remains distinct without color"
     },
@@ -1694,7 +1980,7 @@
       "source_sha256": "593d3bdf3ed7f318385c099d9498c3c7d6525db45bc1bb395cdd6d4a5a747515",
       "source_2x_sha256": "7123f224c0e6185e4d94b1d88d030a64b3b123236dde7810ae0a5fb6b7591e38",
       "qrc_alias": ":/modern/draw_vertex.svg",
-      "semantic": "Display or highlight mesh vertices",
+      "semantic": "Open the mesh input view",
       "category": "view",
       "states": [
         "normal",
@@ -1713,16 +1999,23 @@
         "blue"
       ],
       "color_variant_source_colors": [
-        "#000000",
-        "#3C86B8",
-        "#66717D"
+        "#3C86B8"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "vector-triangle",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/vector-triangle.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b003_r0_c0_draw_vertex.png",
         "artifacts/icon-modernization/v3/reference-cells/b003_r0_c1_draw_vertex@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:64",
+        "qrenderdoc/Code/Resources.h:123",
         "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:5010",
         "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:5401"
       ],
@@ -1754,18 +2047,27 @@
         "blue"
       ],
       "color_variant_source_colors": [
-        "#000000",
         "#3C86B8"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "filter",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/filter.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b003_r0_c2_filter.png",
         "artifacts/icon-modernization/v3/reference-cells/b003_r0_c3_filter@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:66",
+        "qrenderdoc/Code/Resources.h:125",
         "qrenderdoc/Windows/BufferViewer.cpp:2509",
-        "qrenderdoc/Windows/BufferViewer.cpp:3029",
-        "qrenderdoc/Windows/EventBrowser.ui:324"
+        "qrenderdoc/Windows/BufferViewer.cpp:3037",
+        "qrenderdoc/Windows/EventBrowser.ui:324",
+        "qrenderdoc/Windows/PythonShell.cpp:1913"
       ],
       "notes": "Preserve the legacy action semantics"
     },
@@ -1801,12 +2103,16 @@
         "#20A76B",
         "#3C86B8"
       ],
+      "geometry_source": {
+        "kind": "local_redraw"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b003_r0_c4_filter_reapply.png",
         "artifacts/icon-modernization/v3/reference-cells/b003_r0_c5_filter_reapply@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:67"
+        "qrenderdoc/Code/Resources.h:126"
       ],
       "notes": "Preserve the legacy action semantics"
     },
@@ -1836,16 +2142,31 @@
       "color_variant_source_colors": [
         "#87929D"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "search",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/search.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b003_r1_c0_find.png",
         "artifacts/icon-modernization/v3/reference-cells/b003_r1_c1_find@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:65",
+        "qrenderdoc/Code/Resources.cpp:338",
+        "qrenderdoc/Code/Resources.cpp:357",
+        "qrenderdoc/Code/Resources.cpp:396",
+        "qrenderdoc/Code/Resources.cpp:398",
+        "qrenderdoc/Code/Resources.cpp:406",
+        "qrenderdoc/Code/Resources.h:124",
         "qrenderdoc/Windows/EventBrowser.cpp:896",
         "qrenderdoc/Windows/EventBrowser.ui:108",
         "qrenderdoc/Windows/EventBrowser.ui:233",
         "qrenderdoc/Windows/PixelHistoryView.cpp:895",
+        "qrenderdoc/Windows/PythonShell.ui:270",
         "qrenderdoc/Windows/ShaderMessageViewer.cpp:156",
         "qrenderdoc/Windows/ShaderMessageViewer.cpp:218",
         "qrenderdoc/Windows/ShaderViewer.ui:335",
@@ -1881,18 +2202,25 @@
         "yellow"
       ],
       "color_variant_source_colors": [
-        "#000000",
-        "#20A76B",
-        "#CF7628"
+        "#20A76B"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "flag",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/flag.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b003_r1_c2_flag_green.png",
         "artifacts/icon-modernization/v3/reference-cells/b003_r1_c3_flag_green@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:69",
+        "qrenderdoc/Code/Resources.h:128",
         "qrenderdoc/Windows/EventBrowser.cpp:892",
-        "qrenderdoc/Windows/TextureViewer.cpp:2346",
+        "qrenderdoc/Windows/TextureViewer.cpp:2361",
         "qrenderdoc/Windows/TimelineBar.cpp:641"
       ],
       "notes": "Preserve the legacy action semantics"
@@ -1926,12 +2254,21 @@
       "color_variant_source_colors": [
         "#20A76B"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "flip-vertical",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/flip-vertical.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b003_r1_c4_flip_y.png",
         "artifacts/icon-modernization/v3/reference-cells/b003_r1_c5_flip_y@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:70",
+        "qrenderdoc/Code/Resources.h:129",
         "qrenderdoc/Windows/TextureViewer.ui:404"
       ],
       "notes": "Preserve the legacy action semantics"
@@ -1965,15 +2302,26 @@
       "color_variant_source_colors": [
         "#D0A12A"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "folder",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/folder.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b003_r2_c0_folder.png",
         "artifacts/icon-modernization/v3/reference-cells/b003_r2_c1_folder@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:71",
+        "qrenderdoc/Code/Resources.cpp:391",
+        "qrenderdoc/Code/Resources.h:130",
         "qrenderdoc/Widgets/OrderedListEditor.cpp:121",
         "qrenderdoc/Windows/Dialogs/VirtualFileDialog.cpp:56",
-        "qrenderdoc/Windows/EventBrowser.cpp:6313"
+        "qrenderdoc/Windows/PythonShell.cpp:782",
+        "qrenderdoc/Windows/PythonShell.cpp:1907"
       ],
       "notes": "Preserve the legacy action semantics"
     },
@@ -2004,20 +2352,26 @@
         "yellow"
       ],
       "color_variant_source_colors": [
-        "#000000",
-        "#62A9D2",
-        "#CF7628",
         "#D0A12A"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "folder-open",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/folder-open.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b003_r2_c2_folder_page_white.png",
         "artifacts/icon-modernization/v3/reference-cells/b003_r2_c3_folder_page_white@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:72",
+        "qrenderdoc/Code/Resources.cpp:391",
+        "qrenderdoc/Code/Resources.h:131",
         "qrenderdoc/Widgets/OrderedListEditor.cpp:121",
-        "qrenderdoc/Windows/EventBrowser.cpp:6313",
-        "qrenderdoc/Windows/PythonShell.ui:182"
+        "qrenderdoc/Windows/PythonShell.ui:203"
       ],
       "notes": "Preserve the legacy action semantics"
     },
@@ -2049,13 +2403,24 @@
       "color_variant_source_colors": [
         "#3C86B8"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "help-circle",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/help-circle.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b003_r2_c4_help.png",
         "artifacts/icon-modernization/v3/reference-cells/b003_r2_c5_help@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:73",
-        "qrenderdoc/Widgets/BufferFormatSpecifier.ui:152"
+        "qrenderdoc/Code/Resources.cpp:395",
+        "qrenderdoc/Code/Resources.h:132",
+        "qrenderdoc/Widgets/BufferFormatSpecifier.ui:152",
+        "qrenderdoc/Windows/PythonShell.cpp:440"
       ],
       "notes": "Preserve the legacy action semantics"
     },
@@ -2086,16 +2451,23 @@
         "blue"
       ],
       "color_variant_source_colors": [
-        "#000000",
-        "#62A9D2",
         "#CF7628"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "hourglass",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/hourglass.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b003_r3_c0_hourglass.png",
         "artifacts/icon-modernization/v3/reference-cells/b003_r3_c1_hourglass@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:74",
+        "qrenderdoc/Code/Resources.h:133",
         "qrenderdoc/Windows/Dialogs/LiveCapture.cpp:119",
         "qrenderdoc/Windows/Dialogs/LiveCapture.ui:95",
         "qrenderdoc/Windows/Dialogs/RemoteManager.cpp:176",
@@ -2126,27 +2498,33 @@
       "target_svg": "qrenderdoc/Resources/modern/house.svg",
       "target_svg_color": "qrenderdoc/Resources/modern/color/house.svg",
       "target_svg_mono": "qrenderdoc/Resources/modern/mono/house.svg",
-      "color_strategy": "legacy palette reconstruction",
+      "color_strategy": "runtime tint mask",
       "legacy_color_families": [
         "orange",
         "blue"
       ],
       "color_variant_source_colors": [
-        "#000000",
-        "#3C86B8",
-        "#CF7628",
-        "#66717D"
+        "#000000"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "home",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/home.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b003_r3_c2_house.png",
         "artifacts/icon-modernization/v3/reference-cells/b003_r3_c3_house@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:75",
+        "qrenderdoc/Code/Resources.h:134",
         "qrenderdoc/Widgets/MarkerBreadcrumbs.cpp:325",
-        "qrenderdoc/Windows/MainWindow.cpp:225",
-        "qrenderdoc/Windows/MainWindow.cpp:2030",
-        "qrenderdoc/Windows/MainWindow.cpp:2087"
+        "qrenderdoc/Windows/MainWindow.cpp:235",
+        "qrenderdoc/Windows/MainWindow.cpp:2091",
+        "qrenderdoc/Windows/MainWindow.cpp:2148"
       ],
       "notes": "Preserve the legacy action semantics"
     },
@@ -2178,12 +2556,23 @@
       "color_variant_source_colors": [
         "#3C86B8"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "info-circle",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/info-circle.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b003_r3_c4_information.png",
         "artifacts/icon-modernization/v3/reference-cells/b003_r3_c5_information@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:76",
+        "qrenderdoc/Code/Resources.cpp:347",
+        "qrenderdoc/Code/Resources.cpp:364",
+        "qrenderdoc/Code/Resources.h:135",
         "qrenderdoc/Windows/Dialogs/CaptureDialog.ui:302",
         "qrenderdoc/Windows/Dialogs/CaptureDialog.ui:321",
         "qrenderdoc/Windows/Dialogs/CaptureDialog.ui:340",
@@ -2218,6 +2607,15 @@
       "color_variant_source_colors": [
         "#87929D"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "link",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/link.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b004_r0_c0_link.png",
         "artifacts/icon-modernization/v3/reference-cells/b004_r2_c1_page_white_link.png",
@@ -2225,14 +2623,16 @@
         "artifacts/icon-modernization/v3/reference-cells/b004_r2_c2_page_white_link@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/QRDUtils.cpp:815",
-        "qrenderdoc/Code/QRDUtils.cpp:975",
-        "qrenderdoc/Code/QRDUtils.cpp:1004",
-        "qrenderdoc/Code/QRDUtils.cpp:1075",
-        "qrenderdoc/Code/Resources.h:77",
+        "qrenderdoc/Code/QRDUtils.cpp:855",
+        "qrenderdoc/Code/QRDUtils.cpp:1015",
+        "qrenderdoc/Code/QRDUtils.cpp:1044",
+        "qrenderdoc/Code/QRDUtils.cpp:1115",
+        "qrenderdoc/Code/Resources.cpp:378",
+        "qrenderdoc/Code/Resources.cpp:409",
+        "qrenderdoc/Code/Resources.h:136",
         "qrenderdoc/Windows/BufferViewer.ui:956",
         "qrenderdoc/Windows/PipelineState/PipelineStateViewer.cpp:1179",
-        "qrenderdoc/Windows/TextureViewer.cpp:2362",
+        "qrenderdoc/Windows/TextureViewer.cpp:2377",
         "qrenderdoc/Windows/TextureViewer.ui:535"
       ],
       "notes": "Preserve the legacy action semantics"
@@ -2244,7 +2644,7 @@
       "source_sha256": "85bf5cf37e2f214165a6444124c278ffe6559688d018f59301ae76d904e89e5c",
       "source_2x_sha256": "fdf2434fbd06a7b201ae8e5c86a87350a6d429bf736079d9b681c486729adeb7",
       "qrc_alias": ":/modern/page_go.svg",
-      "semantic": "Open or export a document",
+      "semantic": "Export a list or identify a pinned texture tab",
       "category": "files",
       "states": [
         "normal",
@@ -2267,14 +2667,18 @@
         "#20A76B",
         "#3C86B8"
       ],
+      "geometry_source": {
+        "kind": "local_redraw"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b004_r0_c3_page_go.png",
         "artifacts/icon-modernization/v3/reference-cells/b004_r0_c4_page_go@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:78",
-        "qrenderdoc/Windows/EventBrowser.cpp:6314",
-        "qrenderdoc/Windows/TextureViewer.cpp:2108"
+        "qrenderdoc/Code/Resources.cpp:394",
+        "qrenderdoc/Code/Resources.h:137",
+        "qrenderdoc/Windows/TextureViewer.cpp:2118"
       ],
       "notes": "Preserve the legacy action semantics"
     },
@@ -2304,15 +2708,37 @@
         "blue"
       ],
       "color_variant_source_colors": [
-        "#3C86B8",
         "#87929D"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "file-code",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/file-code.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b004_r0_c5_page_white_code.png",
         "artifacts/icon-modernization/v3/reference-cells/b004_r1_c0_page_white_code@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:79",
+        "qrenderdoc/Code/Resources.cpp:338",
+        "qrenderdoc/Code/Resources.cpp:347",
+        "qrenderdoc/Code/Resources.cpp:355",
+        "qrenderdoc/Code/Resources.cpp:359",
+        "qrenderdoc/Code/Resources.cpp:366",
+        "qrenderdoc/Code/Resources.cpp:389",
+        "qrenderdoc/Code/Resources.cpp:391",
+        "qrenderdoc/Code/Resources.cpp:393",
+        "qrenderdoc/Code/Resources.cpp:400",
+        "qrenderdoc/Code/Resources.cpp:402",
+        "qrenderdoc/Code/Resources.cpp:404",
+        "qrenderdoc/Code/Resources.cpp:414",
+        "qrenderdoc/Code/Resources.cpp:416",
+        "qrenderdoc/Code/Resources.cpp:419",
+        "qrenderdoc/Code/Resources.h:138",
         "qrenderdoc/Windows/Dialogs/VirtualFileDialog.cpp:55",
         "qrenderdoc/Windows/TextureViewer.ui:504"
       ],
@@ -2325,7 +2751,7 @@
       "source_sha256": "9c360daff9f78a46d4a44b8e114ebb066c8db52a064f45a08bdf0d385f28659d",
       "source_2x_sha256": "c75671538a9914c5f150a10e7b3e343d6b7be562f821815744b8e5abfcbf911e",
       "qrc_alias": ":/modern/page_white_database.svg",
-      "semantic": "Open structured or database data",
+      "semantic": "Show empty pipeline bindings",
       "category": "files",
       "states": [
         "normal",
@@ -2345,12 +2771,26 @@
         "#62A9D2",
         "#87929D"
       ],
+      "geometry_source": {
+        "kind": "local_redraw"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b004_r1_c1_page_white_database.png",
         "artifacts/icon-modernization/v3/reference-cells/b004_r1_c2_page_white_database@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:80",
+        "qrenderdoc/Code/Resources.cpp:357",
+        "qrenderdoc/Code/Resources.cpp:360",
+        "qrenderdoc/Code/Resources.cpp:376",
+        "qrenderdoc/Code/Resources.cpp:378",
+        "qrenderdoc/Code/Resources.cpp:380",
+        "qrenderdoc/Code/Resources.cpp:382",
+        "qrenderdoc/Code/Resources.cpp:406",
+        "qrenderdoc/Code/Resources.cpp:407",
+        "qrenderdoc/Code/Resources.cpp:409",
+        "qrenderdoc/Code/Resources.cpp:411",
+        "qrenderdoc/Code/Resources.h:139",
         "qrenderdoc/Windows/Dialogs/VirtualFileDialog.cpp:54",
         "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:103",
         "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:103",
@@ -2366,7 +2806,7 @@
       "source_sha256": "1bf88594685dec69c5ffef3d9cc2b46330d209677030e564d3590f68da79eabd",
       "source_2x_sha256": "4dd12f00d133e4e27ff85145c08935c6c65fb011643d781fadfb0c040995baca",
       "qrc_alias": ":/modern/page_white_delete.svg",
-      "semantic": "Remove a document",
+      "semantic": "Show unused pipeline bindings",
       "category": "files",
       "states": [
         "normal",
@@ -2388,12 +2828,16 @@
         "#B4473D",
         "#87929D"
       ],
+      "geometry_source": {
+        "kind": "local_redraw"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b004_r1_c3_page_white_delete.png",
         "artifacts/icon-modernization/v3/reference-cells/b004_r1_c4_page_white_delete@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:81",
+        "qrenderdoc/Code/Resources.h:140",
         "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:80",
         "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:80",
         "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:80",
@@ -2427,17 +2871,25 @@
         "orange"
       ],
       "color_variant_source_colors": [
-        "#A76B1D",
-        "#87929D"
+        "#A76B1D"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "file-pencil",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/file-pencil.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b004_r1_c5_page_white_edit.png",
         "artifacts/icon-modernization/v3/reference-cells/b004_r2_c0_page_white_edit@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:82",
-        "qrenderdoc/Windows/EventBrowser.cpp:4006",
-        "qrenderdoc/Windows/EventBrowser.cpp:6471",
+        "qrenderdoc/Code/Resources.cpp:339",
+        "qrenderdoc/Code/Resources.h:141",
+        "qrenderdoc/Windows/EventBrowser.cpp:4037",
         "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:682",
         "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:1091",
         "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:1497",
@@ -2469,7 +2921,9 @@
         "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:4392",
         "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:4911",
         "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:5338",
-        "qrenderdoc/Windows/PythonShell.ui:162",
+        "qrenderdoc/Windows/PythonShell.cpp:488",
+        "qrenderdoc/Windows/PythonShell.cpp:1910",
+        "qrenderdoc/Windows/PythonShell.ui:183",
         "qrenderdoc/Windows/ResourceInspector.ui:192",
         "qrenderdoc/Windows/TextureViewer.ui:887"
       ],
@@ -2501,12 +2955,21 @@
       "color_variant_source_colors": [
         "#87929D"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "file-symlink",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/file-symlink.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b004_r2_c1_page_white_link.png",
         "artifacts/icon-modernization/v3/reference-cells/b004_r2_c2_page_white_link@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:83"
+        "qrenderdoc/Code/Resources.h:142"
       ],
       "notes": "Preserve the legacy action semantics"
     },
@@ -2536,12 +2999,27 @@
       "color_variant_source_colors": [
         "#87929D"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "files",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/files.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b004_r2_c3_page_white_stack.png",
         "artifacts/icon-modernization/v3/reference-cells/b004_r2_c4_page_white_stack@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:84",
+        "qrenderdoc/Code/Resources.cpp:343",
+        "qrenderdoc/Code/Resources.cpp:364",
+        "qrenderdoc/Code/Resources.cpp:369",
+        "qrenderdoc/Code/Resources.cpp:398",
+        "qrenderdoc/Code/Resources.cpp:412",
+        "qrenderdoc/Code/Resources.cpp:417",
+        "qrenderdoc/Code/Resources.h:143",
         "qrenderdoc/Windows/TextureViewer.ui:487"
       ],
       "notes": "Preserve the legacy action semantics"
@@ -2573,17 +3051,23 @@
         "blue"
       ],
       "color_variant_source_colors": [
-        "#000000",
-        "#3C86B8",
-        "#CF7628",
-        "#66717D"
+        "#CF7628"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "clipboard",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/clipboard.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b004_r2_c5_paste.png",
         "artifacts/icon-modernization/v3/reference-cells/b004_r3_c0_paste@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:85"
+        "qrenderdoc/Code/Resources.h:144"
       ],
       "notes": "Preserve the legacy action semantics"
     },
@@ -2613,15 +3097,24 @@
         "green"
       ],
       "color_variant_source_colors": [
-        "#000000",
         "#20A76B"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "history",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/history.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b004_r3_c1_pixel_history.png",
         "artifacts/icon-modernization/v3/reference-cells/b004_r3_c2_pixel_history@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:86",
+        "qrenderdoc/Code/Resources.cpp:362",
+        "qrenderdoc/Code/Resources.h:145",
         "qrenderdoc/Windows/TextureViewer.ui:1209"
       ],
       "notes": "Preserve the legacy action semantics"
@@ -2653,24 +3146,36 @@
         "yellow"
       ],
       "color_variant_source_colors": [
-        "#A76B1D",
         "#CF7628"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "puzzle",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/puzzle.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b004_r3_c3_plugin.png",
         "artifacts/icon-modernization/v3/reference-cells/b004_r3_c4_plugin@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/CaptureContext.cpp:770",
-        "qrenderdoc/Code/CaptureContext.cpp:805",
-        "qrenderdoc/Code/Resources.h:87",
+        "qrenderdoc/Code/CaptureContext.cpp:866",
+        "qrenderdoc/Code/CaptureContext.cpp:901",
+        "qrenderdoc/Code/Resources.h:146",
         "qrenderdoc/Windows/BufferViewer.ui:967",
         "qrenderdoc/Windows/EventBrowser.ui:187",
-        "qrenderdoc/Windows/MainWindow.cpp:1663",
+        "qrenderdoc/Windows/MainWindow.cpp:287",
+        "qrenderdoc/Windows/MainWindow.cpp:1724",
         "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:146",
         "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:146",
         "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:146",
         "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:149",
+        "qrenderdoc/Windows/PythonShell.cpp:477",
+        "qrenderdoc/Windows/PythonShell.cpp:482",
+        "qrenderdoc/Windows/PythonShell.cpp:1916",
         "qrenderdoc/Windows/TextureViewer.ui:546"
       ],
       "notes": "Preserve the legacy action semantics"
@@ -2707,12 +3212,18 @@
         "#A76B1D",
         "#CF7628"
       ],
+      "geometry_source": {
+        "kind": "local_redraw"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b004_r3_c5_plugin_add.png",
         "artifacts/icon-modernization/v3/reference-cells/b005_r0_c0_plugin_add@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:88",
+        "qrenderdoc/Code/Resources.h:147",
+        "qrenderdoc/Windows/PythonShell.cpp:482",
+        "qrenderdoc/Windows/PythonShell.cpp:1916",
         "qrenderdoc/Windows/ShaderViewer.ui:455"
       ],
       "notes": "Preserve the legacy action semantics"
@@ -2745,19 +3256,27 @@
       "color_variant_source_colors": [
         "#3C86B8"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "device-floppy",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/device-floppy.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b005_r0_c1_save.png",
         "artifacts/icon-modernization/v3/reference-cells/b005_r0_c2_save@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:89",
+        "qrenderdoc/Code/Resources.h:148",
         "qrenderdoc/Widgets/BufferFormatSpecifier.ui:199",
         "qrenderdoc/Windows/BufferViewer.cpp:2495",
         "qrenderdoc/Windows/BufferViewer.cpp:2497",
         "qrenderdoc/Windows/BufferViewer.ui:865",
-        "qrenderdoc/Windows/EventBrowser.cpp:4526",
-        "qrenderdoc/Windows/EventBrowser.cpp:4650",
-        "qrenderdoc/Windows/EventBrowser.cpp:6312",
+        "qrenderdoc/Windows/EventBrowser.cpp:4557",
+        "qrenderdoc/Windows/EventBrowser.cpp:4681",
         "qrenderdoc/Windows/EventBrowser.ui:176",
         "qrenderdoc/Windows/LogView.ui:96",
         "qrenderdoc/Windows/PerformanceCounterViewer.ui:124",
@@ -2784,8 +3303,8 @@
         "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:2226",
         "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:3713",
         "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:4737",
-        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.cpp:544",
-        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.cpp:546",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.cpp:534",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.cpp:536",
         "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:126",
         "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:628",
         "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:1055",
@@ -2795,7 +3314,8 @@
         "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:4415",
         "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:4934",
         "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:5361",
-        "qrenderdoc/Windows/PythonShell.ui:202",
+        "qrenderdoc/Windows/PythonShell.ui:223",
+        "qrenderdoc/Windows/PythonShell.ui:243",
         "qrenderdoc/Windows/ShaderMessageViewer.cpp:64",
         "qrenderdoc/Windows/ShaderMessageViewer.cpp:69",
         "qrenderdoc/Windows/ShaderMessageViewer.ui:53",
@@ -2810,7 +3330,7 @@
       "source_sha256": "3522393ea23e8fee41299b4f7c8d493aac36ea7c1e5f134a83cfed3f42545ced",
       "source_2x_sha256": "af68e3c287254b529d84c5dfe4b5b96341a9511b5e58abf95f1a05f130771b7a",
       "qrc_alias": ":/modern/text_add.svg",
-      "semantic": "Create a text or document item",
+      "semantic": "Show shader messages",
       "category": "files",
       "states": [
         "normal",
@@ -2830,15 +3350,25 @@
         "green"
       ],
       "color_variant_source_colors": [
-        "#20A76B",
         "#3C86B8"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "message-plus",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/message-plus.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b005_r0_c3_text_add.png",
         "artifacts/icon-modernization/v3/reference-cells/b005_r0_c4_text_add@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:90",
+        "qrenderdoc/Code/Resources.cpp:348",
+        "qrenderdoc/Code/Resources.cpp:366",
+        "qrenderdoc/Code/Resources.h:149",
         "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:648",
         "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:1075",
         "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:1502",
@@ -2879,25 +3409,33 @@
       "color_variant_source_colors": [
         "#20A76B"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "check",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/check.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b005_r0_c5_tick.png",
         "artifacts/icon-modernization/v3/reference-cells/b005_r1_c0_tick@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:91",
+        "qrenderdoc/Code/Resources.h:150",
         "qrenderdoc/Windows/EventBrowser.cpp:866",
-        "qrenderdoc/Windows/EventBrowser.cpp:6310",
-        "qrenderdoc/Windows/MainWindow.cpp:1871",
-        "qrenderdoc/Windows/MainWindow.cpp:2000",
-        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.cpp:1136",
-        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.cpp:1233",
-        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.cpp:1137",
-        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.cpp:1235",
-        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.cpp:1231",
-        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.cpp:1391",
+        "qrenderdoc/Windows/MainWindow.cpp:1932",
+        "qrenderdoc/Windows/MainWindow.cpp:2061",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.cpp:1144",
+        "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.cpp:1241",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.cpp:1140",
+        "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.cpp:1238",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.cpp:1221",
+        "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.cpp:1381",
         "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:2487",
-        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.cpp:1057",
-        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.cpp:1932"
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.cpp:1049",
+        "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.cpp:1924"
       ],
       "notes": "Preserve the legacy action semantics"
     },
@@ -2929,17 +3467,28 @@
         "orange"
       ],
       "color_variant_source_colors": [
-        "#000000",
-        "#3C86B8",
-        "#D0A12A"
+        "#3C86B8"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "clock",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/clock.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b005_r1_c1_time.png",
         "artifacts/icon-modernization/v3/reference-cells/b005_r1_c2_time@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:92",
-        "qrenderdoc/Windows/EventBrowser.cpp:6315",
+        "qrenderdoc/Code/Resources.cpp:337",
+        "qrenderdoc/Code/Resources.cpp:350",
+        "qrenderdoc/Code/Resources.cpp:353",
+        "qrenderdoc/Code/Resources.cpp:367",
+        "qrenderdoc/Code/Resources.cpp:382",
+        "qrenderdoc/Code/Resources.h:151",
         "qrenderdoc/Windows/EventBrowser.ui:131"
       ],
       "notes": "Preserve the legacy action semantics"
@@ -2951,7 +3500,7 @@
       "source_sha256": "e7548e173f08d57a4fc2ed70e4b27c175610ed0ce5151a823d810c50a182bf98",
       "source_2x_sha256": "a3d6fda9a3e7fd31214e6bbc08f04539908b4feb7d54bed811caa5a4b66d04e4",
       "qrc_alias": ":/modern/timeline_marker.svg",
-      "semantic": "Mark a position on the timeline",
+      "semantic": "Select visible columns",
       "category": "view",
       "states": [
         "normal",
@@ -2970,17 +3519,26 @@
         "blue"
       ],
       "color_variant_source_colors": [
-        "#000000",
-        "#3C86B8",
-        "#87929D"
+        "#3C86B8"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "columns-3",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/columns-3.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b005_r1_c3_timeline_marker.png",
         "artifacts/icon-modernization/v3/reference-cells/b005_r1_c4_timeline_marker@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:93",
-        "qrenderdoc/Windows/EventBrowser.cpp:6315",
+        "qrenderdoc/Code/Resources.cpp:337",
+        "qrenderdoc/Code/Resources.cpp:353",
+        "qrenderdoc/Code/Resources.cpp:382",
+        "qrenderdoc/Code/Resources.h:152",
         "qrenderdoc/Windows/EventBrowser.ui:145",
         "qrenderdoc/Windows/TextureViewer.ui:1318"
       ],
@@ -3012,16 +3570,26 @@
         "blue"
       ],
       "color_variant_source_colors": [
-        "#3C86B8",
-        "#62A9D2"
+        "#3C86B8"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "reload",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/reload.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b005_r3_c3_update.png",
         "artifacts/icon-modernization/v3/reference-cells/b005_r3_c4_update@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:95",
-        "qrenderdoc/Windows/MainWindow.cpp:391"
+        "qrenderdoc/Code/Resources.h:154",
+        "qrenderdoc/Windows/MainWindow.cpp:295",
+        "qrenderdoc/Windows/MainWindow.cpp:436",
+        "qrenderdoc/Windows/PythonShell.cpp:1904"
       ],
       "notes": "Two vertically split blue circulating arrows; intentionally distinct from the horizontal green refresh pair"
     },
@@ -3053,16 +3621,23 @@
         "green"
       ],
       "color_variant_source_colors": [
-        "#000000",
-        "#20A76B",
-        "#D0A12A"
+        "#20A76B"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "folder-up",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/folder-up.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b005_r3_c5_upfolder.png",
         "artifacts/icon-modernization/v3/reference-cells/b006_r0_c0_upfolder@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:94",
+        "qrenderdoc/Code/Resources.h:153",
         "qrenderdoc/Windows/Dialogs/VirtualFileDialog.ui:73"
       ],
       "notes": "Preserve the legacy action semantics"
@@ -3094,18 +3669,24 @@
         "blue"
       ],
       "color_variant_source_colors": [
-        "#000000",
-        "#3C86B8",
-        "#62A9D2",
-        "#CF7628",
-        "#66717D"
+        "#CF7628"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "wand",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/wand.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b006_r0_c1_wand.png",
         "artifacts/icon-modernization/v3/reference-cells/b006_r0_c2_wand@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:96",
+        "qrenderdoc/Code/Resources.cpp:359",
+        "qrenderdoc/Code/Resources.h:155",
         "qrenderdoc/Windows/BufferViewer.ui:257",
         "qrenderdoc/Windows/TextureViewer.ui:166"
       ],
@@ -3118,7 +3699,7 @@
       "source_sha256": "b60bb4e5e44b83cf76a4c154b58a495a9367a3ac6cc86dd3fa316d9852da74fb",
       "source_2x_sha256": "effee669b1f3f1b80895534c88e6709771ef3ad72676ae5442fb6711e97ec78c",
       "qrc_alias": ":/modern/wireframe_mesh.svg",
-      "semantic": "Toggle wireframe mesh display",
+      "semantic": "Open mesh input data",
       "category": "view",
       "states": [
         "normal",
@@ -3137,12 +3718,20 @@
       "color_variant_source_colors": [
         "#66717D"
       ],
+      "geometry_source": {
+        "kind": "local_redraw"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b006_r0_c3_wireframe_mesh.png",
         "artifacts/icon-modernization/v3/reference-cells/b006_r0_c4_wireframe_mesh@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:97",
+        "qrenderdoc/Code/Resources.cpp:341",
+        "qrenderdoc/Code/Resources.cpp:384",
+        "qrenderdoc/Code/Resources.cpp:386",
+        "qrenderdoc/Code/Resources.cpp:388",
+        "qrenderdoc/Code/Resources.h:156",
         "qrenderdoc/Windows/PipelineState/D3D11PipelineStateViewer.ui:514",
         "qrenderdoc/Windows/PipelineState/D3D12PipelineStateViewer.ui:397",
         "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:450",
@@ -3179,12 +3768,22 @@
       "color_variant_source_colors": [
         "#3C86B8"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "tool",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/tool.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b006_r0_c5_wrench.png",
         "artifacts/icon-modernization/v3/reference-cells/b006_r1_c0_wrench@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:98",
+        "qrenderdoc/Code/Resources.cpp:400",
+        "qrenderdoc/Code/Resources.h:157",
         "qrenderdoc/Widgets/ComputeDebugSelector.ui:106",
         "qrenderdoc/Windows/BufferViewer.cpp:2503",
         "qrenderdoc/Windows/BufferViewer.cpp:2506",
@@ -3193,6 +3792,7 @@
         "qrenderdoc/Windows/PipelineState/GLPipelineStateViewer.ui:4754",
         "qrenderdoc/Windows/PipelineState/VulkanPipelineStateViewer.ui:4452",
         "qrenderdoc/Windows/PixelHistoryView.cpp:917",
+        "qrenderdoc/Windows/PythonShell.ui:314",
         "qrenderdoc/Windows/ShaderMessageViewer.cpp:118",
         "qrenderdoc/Windows/ShaderMessageViewer.cpp:216",
         "qrenderdoc/Windows/TextureViewer.ui:1220"
@@ -3228,16 +3828,25 @@
         "cyan"
       ],
       "color_variant_source_colors": [
-        "#000000",
-        "#62A9D2",
-        "#CF7628"
+        "#3C86B8"
       ],
+      "geometry_source": {
+        "kind": "library",
+        "library": "Tabler Icons",
+        "version": "3.46.0",
+        "license": "MIT",
+        "icon": "zoom-in",
+        "source_svg": "qrenderdoc/Resources/modern/library/tabler-3.46.0/outline/zoom-in.svg"
+      },
+      "fallback_svg": null,
       "reference_cells": [
         "artifacts/icon-modernization/v3/reference-cells/b006_r1_c1_zoom.png",
         "artifacts/icon-modernization/v3/reference-cells/b006_r1_c2_zoom@2x.png"
       ],
       "code_references": [
-        "qrenderdoc/Code/Resources.h:99",
+        "qrenderdoc/Code/Resources.cpp:375",
+        "qrenderdoc/Code/Resources.cpp:384",
+        "qrenderdoc/Code/Resources.h:158",
         "qrenderdoc/Windows/TextureViewer.ui:143"
       ],
       "notes": "Preserve the legacy action semantics"

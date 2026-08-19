@@ -347,7 +347,7 @@
      </widget>
     </item>
     <item>
-     <widget class="QToolButton" name="fitToWindow">
+     <widget class="RDToolButton" name="fitToWindow">
       <property name="enabled">
        <bool>true</bool>
       </property>

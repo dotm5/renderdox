@@ -583,6 +583,11 @@ TextureViewer::TextureViewer(ICaptureContext &ctx, QWidget *parent)
   ui->outputThumbs->setWindowTitle(tr("Outputs"));
   ui->inputThumbs->setWindowTitle(tr("Inputs"));
   ui->textureListFrame->setWindowTitle(tr("Texture List"));
+  renderContainer->setWindowIcon(Icons::panel(PanelIcon::Texture));
+  ui->pixelContextLayout->setWindowIcon(Icons::panel(PanelIcon::PixelContext));
+  ui->outputThumbs->setWindowIcon(Icons::panel(PanelIcon::TextureOutputs));
+  ui->inputThumbs->setWindowIcon(Icons::panel(PanelIcon::TextureInputs));
+  ui->textureListFrame->setWindowIcon(Icons::panel(PanelIcon::TextureList));
 
   m_Goto = new TextureGoto(this, [this](QPoint p) { GotoLocation(p.x(), p.y()); });
 
@@ -677,6 +682,10 @@ TextureViewer::TextureViewer(ICaptureContext &ctx, QWidget *parent)
 
   ui->zoomOption->setCurrentText(QString());
   ui->fitToWindow->toggle();
+  ui->fitToWindow->setMorphIcon(
+      lit(":/modern/morph/fit-window/frame_%1.svg"), 49,
+      QIcon(lit(":/modern/fallback/arrow_out.svg")),
+      QIcon(lit(":/modern/fallback/arrow_in.svg")), -0.1, 1.1);
 
   m_Ctx.AddCaptureViewer(this);
 
@@ -2089,6 +2098,7 @@ void TextureViewer::ViewTexture(ResourceId ID, CompType typeCast, bool focus)
   {
     QWidget *lockedContainer = new QWidget(this);
     lockedContainer->setWindowTitle(m_Ctx.GetResourceName(ID));
+    lockedContainer->setWindowIcon(Icons::panel(PanelIcon::Texture));
     lockedContainer->setProperty("id", QVariant::fromValue(ID));
 
     ToolWindowManagerArea *textureTabs = ui->dockarea->areaOf(ui->renderContainer);

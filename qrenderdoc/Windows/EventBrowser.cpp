@@ -3912,6 +3912,35 @@ EventBrowser::EventBrowser(ICaptureContext &ctx, QWidget *parent)
 {
   ui->setupUi(this);
 
+  // The designer file retains the classic resources for non-modern themes.
+  // In Modern Light, assign reviewed semantics directly so no toolbar or
+  // pixmap-only QLabel can bypass the scalable icon pipeline.
+  if(qApp->property("RDModernLight").toBool())
+  {
+    ui->stepPrev->setIcon(Icons::library("arrow-left"));
+    ui->stepNext->setIcon(Icons::library("arrow-right"));
+    ui->find->setIcon(Icons::library("search"));
+    ui->timeActions->setIcon(Icons::library("timer"));
+    ui->colSelect->setIcon(Icons::library("columns-3-cog"));
+    ui->bookmark->setIcon(Icons::library("bookmark"));
+    ui->exportActions->setIcon(Icons::library("file-down"));
+    ui->extensions->setIcon(Icons::library("puzzle"));
+    ui->findPrev->setIcon(Icons::library("arrow-left"));
+    ui->findNext->setIcon(Icons::library("arrow-right"));
+    ui->filterSettings->setIcon(Icons::library("sliders-horizontal"));
+
+    const QSize toolbarIconSize(18, 18);
+    for(QToolButton *button : {ui->stepPrev, ui->stepNext, ui->find, ui->timeActions,
+                               ui->colSelect, ui->bookmark, ui->exportActions, ui->extensions,
+                               ui->findPrev, ui->findNext, ui->filterSettings})
+      button->setIconSize(toolbarIconSize);
+
+    ui->label_4->setPixmap(Pixmaps::library("search", ui->label_4, 18));
+    ui->label_6->setPixmap(Pixmaps::library("funnel", ui->label_6, 18));
+    ui->bookmarkStripIcon->setPixmap(
+        Pixmaps::library("bookmark", ui->bookmarkStripIcon, 18));
+  }
+
   m_ParseError = new ParseErrorTipLabel(ui->filterExpression);
   m_ParseTrace = new ParseTrace;
 
@@ -4003,7 +4032,9 @@ EventBrowser::EventBrowser(ICaptureContext &ctx, QWidget *parent)
     m_BreadcrumbLocationText = new RDLineEdit();
 
     m_BreadcrumbLocationEditButton = new RDToolButton();
-    m_BreadcrumbLocationEditButton->setIcon(Icons::page_white_edit());
+    m_BreadcrumbLocationEditButton->setIcon(qApp->property("RDModernLight").toBool()
+                                                ? Icons::library("pencil")
+                                                : Icons::page_white_edit());
     m_BreadcrumbLocationEditButton->setToolTip(tr("Edit marker location as text"));
     box->addWidget(m_BreadcrumbLocationText);
     box->addWidget(m_BreadcrumbLocationEditButton);
@@ -6303,16 +6334,16 @@ void EventBrowser::events_contextMenu(const QPoint &pos)
   visibilityMenu.addAction(&loadPreset);
   visibilityMenu.addAction(&exportDisabled);
 
-  expandAll.setIcon(Icons::arrow_out());
-  collapseAll.setIcon(Icons::arrow_in());
-  toggleBookmark.setIcon(Icons::asterisk_orange());
-  disableSelected.setIcon(Icons::cross());
-  enableSelected.setIcon(Icons::tick());
-  clearDisabled.setIcon(Icons::arrow_undo());
-  savePreset.setIcon(Icons::save());
-  loadPreset.setIcon(Icons::folder_page_white());
-  exportDisabled.setIcon(Icons::page_go());
-  selectCols.setIcon(Icons::timeline_marker());
+  expandAll.setIcon(Icons::library("unfold-vertical"));
+  collapseAll.setIcon(Icons::library("fold-vertical"));
+  toggleBookmark.setIcon(Icons::library("bookmark"));
+  disableSelected.setIcon(Icons::library("circle-x"));
+  enableSelected.setIcon(Icons::library("circle-check"));
+  clearDisabled.setIcon(Icons::library("rotate-ccw"));
+  savePreset.setIcon(Icons::library("save"));
+  loadPreset.setIcon(Icons::library("folder-open"));
+  exportDisabled.setIcon(Icons::library("file-up"));
+  selectCols.setIcon(Icons::library("columns-3-cog"));
 
   expandAll.setEnabled(index.isValid() && ui->events->model()->rowCount(index) > 0);
   collapseAll.setEnabled(expandAll.isEnabled());
@@ -6468,8 +6499,8 @@ void EventBrowser::bookmarkContextMenu(QRClickToolButton *button, uint32_t EID)
   QAction renameBookmark(tr("&Rename"), this);
   QAction deleteBookmark(tr("&Delete"), this);
 
-  renameBookmark.setIcon(Icons::page_white_edit());
-  deleteBookmark.setIcon(Icons::del());
+  renameBookmark.setIcon(Icons::library("pencil"));
+  deleteBookmark.setIcon(Icons::library("trash-2"));
 
   contextMenu.addAction(&renameBookmark);
   contextMenu.addAction(&deleteBookmark);

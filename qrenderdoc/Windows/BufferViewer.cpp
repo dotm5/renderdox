@@ -2859,6 +2859,10 @@ void BufferViewer::SetupMeshView()
   ui->maxBoundsLabel->setText(lit("---"));
 
   ui->outputTabs->setWindowTitle(tr("Preview"));
+  ui->outputTabs->setWindowIcon(Icons::panel(PanelIcon::Preview));
+  m_Containers[0]->setWindowIcon(Icons::panel(PanelIcon::MeshInput));
+  m_Containers[1]->setWindowIcon(Icons::panel(PanelIcon::MeshOutput));
+  m_Containers[2]->setWindowIcon(Icons::panel(PanelIcon::MeshOutput));
   ui->dockarea->addToolWindow(ui->outputTabs, ToolWindowManager::EmptySpace);
   ui->dockarea->setToolWindowProperties(ui->outputTabs, ToolWindowManager::HideCloseButton);
 
@@ -5465,6 +5469,9 @@ void BufferViewer::updateLabelsAndLayout()
         m_Containers[2]->setWindowTitle(tr("Mesh Input"));
         m_Containers[0]->setWindowTitle(IsD3D(pipeType) ? tr("Amp. Out") : tr("Task Out"));
         m_Containers[1]->setWindowTitle(tr("Mesh Output"));
+        m_Containers[2]->setWindowIcon(Icons::panel(PanelIcon::MeshInput));
+        m_Containers[0]->setWindowIcon(Icons::panel(PanelIcon::MeshOutput));
+        m_Containers[1]->setWindowIcon(Icons::panel(PanelIcon::MeshOutput));
 
         if(ui->outputTabs->indexOf(ui->out1Tab) == 1)
           ui->outputTabs->removeTab(1);
@@ -5492,6 +5499,9 @@ void BufferViewer::updateLabelsAndLayout()
         m_Containers[0]->setWindowTitle(tr("VS Input"));
         m_Containers[1]->setWindowTitle(tr("VS Output"));
         m_Containers[2]->setWindowTitle(tr("GS/DS Output"));
+        m_Containers[0]->setWindowIcon(Icons::panel(PanelIcon::MeshInput));
+        m_Containers[1]->setWindowIcon(Icons::panel(PanelIcon::MeshOutput));
+        m_Containers[2]->setWindowIcon(Icons::panel(PanelIcon::MeshOutput));
 
         ui->outputTabs->setTabText(0, tr("VS In"));
         if(ui->outputTabs->indexOf(ui->out1Tab) < 0)
@@ -5521,6 +5531,9 @@ void BufferViewer::updateLabelsAndLayout()
       m_Containers[0]->setWindowTitle(tr("VS Input"));
       m_Containers[1]->setWindowTitle(tr("VS Output"));
       m_Containers[2]->setWindowTitle(tr("GS/DS Output"));
+      m_Containers[0]->setWindowIcon(Icons::panel(PanelIcon::MeshInput));
+      m_Containers[1]->setWindowIcon(Icons::panel(PanelIcon::MeshOutput));
+      m_Containers[2]->setWindowIcon(Icons::panel(PanelIcon::MeshOutput));
 
       ui->outputTabs->setTabText(0, tr("VS In"));
       if(ui->outputTabs->indexOf(ui->out1Tab) < 0)

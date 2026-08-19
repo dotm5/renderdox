@@ -232,6 +232,10 @@ ResourceInspector::ResourceInspector(ICaptureContext &ctx, QWidget *parent)
   ui->initChunks->setWindowTitle(tr("Resource Initialisation Parameters"));
   ui->resourceUsage->setWindowTitle(tr("Usage in Frame"));
   ui->resourceListWidget->setWindowTitle(tr("Resource List"));
+  ui->relatedResources->setWindowIcon(Icons::panel(PanelIcon::RelatedResources));
+  ui->initChunks->setWindowIcon(Icons::panel(PanelIcon::ResourceInitialisation));
+  ui->resourceUsage->setWindowIcon(Icons::panel(PanelIcon::ResourceUsage));
+  ui->resourceListWidget->setWindowIcon(Icons::panel(PanelIcon::ResourceList));
 
   QVBoxLayout *vertical = new QVBoxLayout(this);
 
@@ -489,6 +493,7 @@ void ResourceInspector::OnCaptureLoaded()
   {
     m_AnnotationView = new AnnotationDisplay(m_Ctx, false, this);
     m_AnnotationView->setWindowTitle(tr("Resource Annotations"));
+    m_AnnotationView->setWindowIcon(Icons::panel(PanelIcon::Annotation));
 
     ui->dockarea->addToolWindow(
         m_AnnotationView,

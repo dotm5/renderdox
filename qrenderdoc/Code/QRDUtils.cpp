@@ -2854,15 +2854,22 @@ void Formatter::setParams(const PersistentConfig &config)
 
 #if defined(DCOMP_PLATFORM_WIN32)
   // Qt 5 can resolve its empty Windows UI font to a legacy bitmap-oriented family on some
-  // locales. Keep explicit user choices untouched, but use the standard Windows UI face for the
-  // default so the whole widget hierarchy gets modern ClearType rendering from one place.
-  if(!m_Font && config.Font_Family.isEmpty())
+  // locales. Prefer Microsoft YaHei UI for its hinted CJK glyphs, with Segoe UI as the fallback.
+  // An explicit user choice is still applied below after this platform default is established.
+  if(!m_Font)
   {
     QFontDatabase fontdb;
-    if(fontdb.families().contains(lit("Segoe UI")))
+    QString defaultFamily;
+
+    if(fontdb.families().contains(lit("Microsoft YaHei UI")))
+      defaultFamily = lit("Microsoft YaHei UI");
+    else if(fontdb.families().contains(lit("Segoe UI")))
+      defaultFamily = lit("Segoe UI");
+
+    if(!defaultFamily.isEmpty())
     {
       QFont appFont = QApplication::font();
-      appFont.setFamily(lit("Segoe UI"));
+      appFont.setFamily(defaultFamily);
       QApplication::setFont(appFont);
     }
   }

@@ -34,6 +34,8 @@ class SettingsDialog;
 class QTableWidgetItem;
 class QListWidgetItem;
 class QComboBox;
+class QResizeEvent;
+class QShowEvent;
 struct ShaderProcessingTool;
 class ReplayOptionsSelector;
 
@@ -48,6 +50,10 @@ public:
   ~SettingsDialog();
 
   void focusItem(QString item);
+
+protected:
+  void resizeEvent(QResizeEvent *event) override;
+  void showEvent(QShowEvent *event) override;
 
 private slots:
   // automatic slots
@@ -138,8 +144,10 @@ private:
 
   void addProcessor(const ShaderProcessingTool &disasm);
   bool editTool(int existing, ShaderProcessingTool &disasm);
+  void fitToAvailableScreen();
   void setupModernGeneralPage();
   void setupNavigationIcons();
+  void updateResponsiveLayout();
 
   ReplayOptionsSelector *m_ReplayOptions;
   QComboBox *m_UILanguage = NULL;
@@ -147,4 +155,6 @@ private:
   ICaptureContext &m_Ctx;
   bool m_NeedRefresh = false;
   bool m_Init = false;
+  bool m_ResponsiveLayoutReady = false;
+  bool m_FittedToScreen = false;
 };

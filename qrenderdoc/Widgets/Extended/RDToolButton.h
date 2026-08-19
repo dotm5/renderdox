@@ -23,7 +23,12 @@
  ******************************************************************************/
 
 #pragma once
+#include <QElapsedTimer>
+#include <QIcon>
 #include <QToolButton>
+#include <QVector>
+
+class QTimer;
 
 class RDToolButton : public QToolButton
 {
@@ -33,6 +38,12 @@ public:
   explicit RDToolButton(QWidget *parent = 0);
   ~RDToolButton();
 
+  // Configures an opt-in, precomputed Morphicons transition for a checkable
+  // button. Static local SVGs remain the reduced-motion/missing-frame fallback.
+  void setMorphIcon(const QString &framePattern, int frameCount,
+                    const QIcon &uncheckedFallback, const QIcon &checkedFallback,
+                    qreal minProgress = -0.1, qreal maxProgress = 1.1);
+
 signals:
   void mouseClicked(QMouseEvent *event);
   void doubleClicked(QMouseEvent *event);
@@ -40,8 +51,29 @@ signals:
 
 public slots:
 
+private slots:
+  void morphIconToggled(bool checked);
+  void morphIconTick();
+
 protected:
   void mousePressEvent(QMouseEvent *event) override;
   void mouseMoveEvent(QMouseEvent *event) override;
   void mouseDoubleClickEvent(QMouseEvent *event) override;
+
+private:
+  void updateMorphIcon();
+  bool morphAnimationEnabled() const;
+
+  QVector<QIcon> m_MorphFrames;
+  QIcon m_PreMorphIcon;
+  QIcon m_MorphUncheckedFallback;
+  QIcon m_MorphCheckedFallback;
+  QTimer *m_MorphTimer = NULL;
+  QElapsedTimer m_MorphElapsed;
+  qreal m_MorphPosition = 0.0;
+  qreal m_MorphVelocity = 0.0;
+  qreal m_MorphTarget = 0.0;
+  qreal m_MorphMinProgress = -0.1;
+  qreal m_MorphMaxProgress = 1.1;
+  bool m_MorphConfigured = false;
 };

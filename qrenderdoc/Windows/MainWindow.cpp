@@ -31,9 +31,11 @@
 #include <QDir>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QGuiApplication>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QKeyEvent>
+#include <QLayout>
 #include <QMimeData>
 #include <QMouseEvent>
 #include <QNetworkAccessManager>
@@ -44,11 +46,16 @@
 #include <QProgressBar>
 #include <QProgressDialog>
 #include <QSaveFile>
+#include <QScreen>
 #include <QShortcut>
+#include <QShowEvent>
+#include <QResizeEvent>
+#include <QTabBar>
 #include <QTimer>
 #include <QToolButton>
 #include <QToolTip>
 #include <QUuid>
+#include <QWindow>
 #include "Code/QRDUtils.h"
 #include "Code/Resources.h"
 #include "Code/pyrenderdoc/PythonContext.h"
@@ -130,6 +137,7 @@ MainWindow::MainWindow(ICaptureContext &ctx) : QMainWindow(NULL), ui(new Ui::Mai
   ui->setupUi(this);
 
   setProperty("ICaptureContext", QVariant::fromValue((void *)&ctx));
+  setProperty("RDCompactDensity", false);
 
 #if defined(Q_OS_WIN32)
   // remove inject menu item when it's not enabled in the settings
@@ -636,6 +644,9 @@ MainWindow::MainWindow(ICaptureContext &ctx) : QMainWindow(NULL), ui(new Ui::Mai
   ui->extension_dummy_Help->setVisible(false);
 
   RegisterShortcut("ALT+R", this, [this](QWidget *) { contextChooser->click(); });
+
+  m_ResponsiveDensityReady = true;
+  updateResponsiveDensity();
 }
 
 MainWindow::~MainWindow()
@@ -1265,34 +1276,10 @@ bool MainWindow::PromptCloseCapture()
 
 void MainWindow::SetTitle(const QString &filename)
 {
-  QString prefix;
+  QString text = lit(RDOC_PRODUCT_DISPLAY_NAME);
 
   if(m_Ctx.IsCaptureLoaded() && !filename.isEmpty())
-  {
-    prefix = QFileInfo(filename).fileName();
-    if(m_Ctx.APIProps().degraded)
-      prefix += tr(" !DEGRADED PERFORMANCE!");
-    prefix += lit(" - ");
-  }
-
-  if(m_Ctx.Replay().CurrentRemote().IsValid())
-    prefix += tr("Remote: %1 - ").arg(m_Ctx.Replay().CurrentRemote().Name());
-
-  QString text = prefix + lit(RDOC_PRODUCT_DISPLAY_NAME " ");
-
-  if(RENDERDOC_STABLE_BUILD)
-    text += lit(FULL_VERSION_STRING);
-  else
-    text += tr("Unstable %1 Build (%2 - %3)")
-                .arg(DCOMP_IsReleaseBuild() ? lit("Release") : lit("Development"))
-                .arg(lit(FULL_VERSION_STRING))
-                .arg(QString::fromLatin1(DCOMP_GetCommitHash()));
-
-  if(IsRunningAsAdmin())
-    text += tr(" (Administrator)");
-
-  if(QString::fromLatin1(DCOMP_GetVersionString()) != lit(MAJOR_MINOR_VERSION_STRING))
-    text += tr(" - !! VERSION MISMATCH DETECTED !!");
+    text = QFileInfo(filename).fileName() + lit(" - ") + text;
 
   setWindowTitle(text);
 }
@@ -3605,6 +3592,87 @@ void MainWindow::changeEvent(QEvent *event)
 {
   if(event->type() == QEvent::PaletteChange || event->type() == QEvent::StyleChange)
     QPixmapCache::clear();
+}
+
+void MainWindow::resizeEvent(QResizeEvent *event)
+{
+  QMainWindow::resizeEvent(event);
+  updateResponsiveDensity();
+}
+
+void MainWindow::showEvent(QShowEvent *event)
+{
+  QMainWindow::showEvent(event);
+
+  if(!m_InitialGeometryFitted)
+  {
+    m_InitialGeometryFitted = true;
+    QTimer::singleShot(0, this, [this]() {
+      fitRestoredWindowToScreen();
+      updateResponsiveDensity();
+    });
+  }
+}
+
+void MainWindow::fitRestoredWindowToScreen()
+{
+  if(windowState() & (Qt::WindowMaximized | Qt::WindowFullScreen))
+    return;
+
+  QScreen *screen = windowHandle() ? windowHandle()->screen() : NULL;
+  if(!screen)
+    screen = QGuiApplication::primaryScreen();
+  if(!screen)
+    return;
+
+  const QRect available = screen->availableGeometry();
+  const QRect current = frameGeometry();
+  const QRect visible = current.intersected(available);
+  const bool mostlyOffscreen = visible.width() < qMin(160, current.width() / 3) ||
+                               visible.height() < qMin(120, current.height() / 3);
+  const bool oversized = current.width() > available.width() - 16 ||
+                         current.height() > available.height() - 16;
+
+  if(!mostlyOffscreen && !oversized)
+    return;
+
+  const int maximumWidth = qMax(1, available.width() - 32);
+  const int maximumHeight = qMax(1, available.height() - 48);
+  QSize target = size().boundedTo(QSize(maximumWidth, maximumHeight));
+  if(oversized)
+    target = target.boundedTo(QSize(qMin(1200, maximumWidth), qMin(800, maximumHeight)));
+
+  resize(target);
+  move(available.center() - QPoint(width() / 2, height() / 2));
+}
+
+void MainWindow::updateResponsiveDensity()
+{
+  if(!m_ResponsiveDensityReady)
+    return;
+
+  const bool compact = width() < 1100 || height() < 700;
+  if(compact == m_CompactDensity && property("RDCompactDensity").toBool() == compact)
+    return;
+
+  m_CompactDensity = compact;
+  setProperty("RDCompactDensity", compact);
+
+  const int tabIconSize = compact ? 14 : 16;
+  for(QTabBar *tabBar : findChildren<QTabBar *>())
+  {
+    tabBar->setIconSize(QSize(tabIconSize, tabIconSize));
+    tabBar->updateGeometry();
+  }
+
+  const QList<QWidget *> widgets = findChildren<QWidget *>();
+  for(QWidget *widget : widgets)
+  {
+    if(widget->layout())
+      widget->layout()->invalidate();
+    widget->updateGeometry();
+    widget->update();
+  }
 }
 
 QString MainWindow::dragFilename(const QMimeData *mimeData)

@@ -117,6 +117,7 @@ void ToolWindowManagerWrapper::updateTitle()
       if(ToolWindowManagerArea *area = qobject_cast<ToolWindowManagerArea *>(child))
       {
         setWindowTitle(area->tabText(area->currentIndex()));
+        setWindowIcon(area->tabIcon(area->currentIndex()));
         return;
       }
       // otherwise we should have a splitter
@@ -153,6 +154,7 @@ void ToolWindowManagerWrapper::updateTitle()
 
       // if not, use this object's window title
       setWindowTitle(child->windowTitle());
+      setWindowIcon(child->windowIcon());
       return;
     }
   }

@@ -29,6 +29,7 @@
 #include <QCommonStyle>
 #include <QDebug>
 #include <QFrame>
+#include <QLabel>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPen>
@@ -86,6 +87,12 @@ static const int TabMaxWidth = 250;
 static const int ItemHeaderMargin = 4;
 static const int ItemHeaderIconSize = 16;
 };
+
+static bool compactWindowDensity(const QWidget *widget)
+{
+  return widget && widget->window() &&
+         widget->window()->property("RDCompactDensity").toBool();
+}
 
 namespace ModernLight
 {
@@ -373,6 +380,25 @@ void RDStyle::polish(QWidget *widget)
     else
       sidebarPalette.setColor(QPalette::Base, sidebarPalette.color(QPalette::Window));
     widget->setPalette(sidebarPalette);
+  }
+
+  // QLabel pixmaps are painted outside the QIcon/style-control path. Upgrade
+  // any known classic resource here and render it directly at this monitor's
+  // physical pixel density instead of letting Qt interpolate a 1x bitmap.
+  if(m_Scheme == LightModern)
+  {
+    QLabel *label = qobject_cast<QLabel *>(widget);
+    const QPixmap *source = label ? label->pixmap() : NULL;
+    if(source && !source->isNull())
+    {
+      const qreal sourceDpr = qMax<qreal>(1.0, source->devicePixelRatioF());
+      const int logicalSize =
+          qMax(1, qRound(qMax(source->width(), source->height()) / sourceDpr));
+      const QPixmap modern =
+          Resources::ModernisePixmap(*source, logicalSize, widget->devicePixelRatioF());
+      if(modern.cacheKey() != source->cacheKey())
+        label->setPixmap(modern);
+    }
   }
 
   if(qobject_cast<QAbstractSlider *>(widget) || qobject_cast<QTabBar *>(widget) ||
@@ -791,20 +817,23 @@ QSize RDStyle::sizeFromContents(ContentsType type, const QStyleOption *opt, cons
       ret = adjustToolButtonSize(toolbutton, size, widget);
     }
 
-    // add margin and border
-    ret.setHeight(ret.height() + Constants::ButtonMargin + Constants::ButtonBorder * 2);
-    ret.setWidth(ret.width() + Constants::ButtonMargin + Constants::ButtonBorder * 2);
+    // Reclaim a little space only when the main window crosses its compact breakpoint. Dialogs
+    // retain the normal touch target size regardless of their parent window dimensions.
+    const int buttonMargin = compactWindowDensity(widget) ? 4 : Constants::ButtonMargin;
+    ret.setHeight(ret.height() + buttonMargin + Constants::ButtonBorder * 2);
+    ret.setWidth(ret.width() + buttonMargin + Constants::ButtonBorder * 2);
 
     return ret;
   }
   else if(type == CT_TabBarTab)
   {
+    const bool compact = compactWindowDensity(widget);
     // have a maximum size for tabs
     QSize ret = size.boundedTo(QSize(Constants::TabMaxWidth, INT_MAX))
-                    .expandedTo(QSize(Constants::TabMinWidth, 0)) +
-                QSize(Constants::TabMargin * 2, 0);
+                    .expandedTo(QSize(compact ? 64 : Constants::TabMinWidth, 0)) +
+                QSize((compact ? 3 : Constants::TabMargin) * 2, 0);
     if(m_Scheme == LightModern)
-      ret.setHeight(qMax(ret.height(), 29));
+      ret.setHeight(qMax(ret.height(), compact ? 26 : 29));
     return ret;
   }
   else if(type == CT_CheckBox || type == CT_RadioButton)
@@ -925,7 +954,7 @@ QSize RDStyle::sizeFromContents(ContentsType type, const QStyleOption *opt, cons
     sz += QSize(Constants::ItemHeaderMargin * 2, Constants::ItemHeaderMargin);
 
     if(m_Scheme == LightModern)
-      sz.setHeight(qMax(sz.height(), 24));
+      sz.setHeight(qMax(sz.height(), compactWindowDensity(widget) ? 22 : 24));
 
     return sz;
   }
@@ -935,6 +964,8 @@ QSize RDStyle::sizeFromContents(ContentsType type, const QStyleOption *opt, cons
 
 int RDStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt, const QWidget *widget) const
 {
+  const bool compact = m_Scheme == LightModern && compactWindowDensity(widget);
+
   if(metric == PM_DefaultFrameWidth && m_Scheme == LightModern &&
      qobject_cast<const QAbstractItemView *>(widget))
     return 0;
@@ -946,13 +977,22 @@ int RDStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt, const QWid
   }
 
   if(metric == PM_ScrollBarExtent)
-    return m_Scheme == LightModern ? 13 : Constants::ScrollButtonDim + 2;
+    return m_Scheme == LightModern ? (compact ? 11 : 13) : Constants::ScrollButtonDim + 2;
   // not used for rendering but just as an estimate of how small a progress bar can get
   if(metric == PM_ProgressBarChunkWidth)
     return 10;
 
   if(metric == PM_SplitterWidth)
-    return m_Scheme == LightModern ? 6 : 5;
+    return m_Scheme == LightModern ? (compact ? 4 : 6) : 5;
+
+  if(compact && metric == PM_SmallIconSize)
+    return 14;
+
+  if(compact && metric == PM_TabBarIconSize)
+    return 14;
+
+  if(compact && metric == PM_ToolBarIconSize)
+    return 16;
 
   if(metric == PM_MenuBarHMargin || metric == PM_MenuBarVMargin)
     return 1;
@@ -979,7 +1019,7 @@ int RDStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt, const QWid
     return 0;
 
   if(metric == PM_TabBarTabHSpace)
-    return Constants::TabMargin;
+    return compact ? 2 : Constants::TabMargin;
 
   if(metric == PM_IndicatorWidth)
     return Constants::CheckWidth + Constants::CheckMargin;
@@ -1719,6 +1759,11 @@ void RDStyle::drawPrimitive(PrimitiveElement element, const QStyleOption *opt, Q
   }
   else if(element == QStyle::PE_FrameFocusRect)
   {
+    // The settings sidebar already exposes focus through its selected row surface. A second
+    // text-sized focus frame clips through the label and visually detaches the icon.
+    if(widget && widget->property("uiRole").toString() == lit("settingsSidebar"))
+      return;
+
     if(m_Scheme == LightModern)
     {
       p->save();
@@ -1877,26 +1922,14 @@ void RDStyle::drawPrimitive(PrimitiveElement element, const QStyleOption *opt, Q
         if(m_Scheme == LightModern)
           fill = selected ? ModernLight::GreenSurface : ModernLight::HoverSurface;
 
-        // Keep the selection surface behind the label only. Extending it under the 18 DIP icon
-        // reduces the icon to a low-contrast silhouette on the green selected surface.
-        QRectF itemRect = QRectF(viewitem->rect).adjusted(28.0, 2.0, -10.0, -2.0);
+        // Paint one row-sized surface behind both decoration and label. The delegate paints the
+        // icon and text afterwards, so neither can be obscured by the hover/selection treatment.
+        QRectF itemRect = QRectF(viewitem->rect).adjusted(4.0, 2.0, -4.0, -2.0);
         p->save();
         p->setRenderHint(QPainter::Antialiasing);
         QPainterPath itemBackground;
         itemBackground.addRoundedRect(itemRect, 7.0, 7.0);
         p->fillPath(itemBackground, fill);
-
-        if(selected)
-        {
-          const QColor indicator = m_Scheme == LightModern
-                                       ? ModernLight::ProductGreen
-                                       : viewitem->palette.color(QPalette::Highlight);
-          QRectF indicatorRect(itemRect.left(), itemRect.top() + 8.0, 3.0,
-                               qMax(8.0, itemRect.height() - 16.0));
-          QPainterPath indicatorPath;
-          indicatorPath.addRoundedRect(indicatorRect, 1.5, 1.5);
-          p->fillPath(indicatorPath, indicator);
-        }
 
         p->restore();
       }
@@ -1964,7 +1997,18 @@ const QBrush &RDStyle::outlineBrush(const QPalette &pal, QPalette::ColorRole rol
 void RDStyle::drawControl(ControlElement control, const QStyleOption *opt, QPainter *p,
                           const QWidget *widget) const
 {
-  if(control == CE_ToolButtonLabel && m_Scheme == LightModern)
+  if(control == CE_ItemViewItem && m_Scheme == LightModern)
+  {
+    const QStyleOptionViewItem *viewitem = qstyleoption_cast<const QStyleOptionViewItem *>(opt);
+    if(viewitem)
+    {
+      QStyleOptionViewItem modern = *viewitem;
+      modern.icon = Resources::ModerniseIcon(viewitem->icon);
+      RDTweakedNativeStyle::drawControl(control, &modern, p, widget);
+      return;
+    }
+  }
+  else if(control == CE_ToolButtonLabel && m_Scheme == LightModern)
   {
     const QStyleOptionToolButton *toolbutton = qstyleoption_cast<const QStyleOptionToolButton *>(opt);
     if(toolbutton)

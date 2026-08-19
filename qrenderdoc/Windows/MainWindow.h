@@ -49,7 +49,9 @@ class QAbstractItemView;
 class QAction;
 class QMenu;
 class QProgressBar;
+class QResizeEvent;
 class QShortcut;
+class QShowEvent;
 class QToolButton;
 class CaptureDialog;
 class LiveCapture;
@@ -220,6 +222,8 @@ signals:
 private:
   void closeEvent(QCloseEvent *event) override;
   void changeEvent(QEvent *event) override;
+  void resizeEvent(QResizeEvent *event) override;
+  void showEvent(QShowEvent *event) override;
 
   void dragEnterEvent(QDragEnterEvent *event) override;
   void dropEvent(QDropEvent *event) override;
@@ -230,6 +234,9 @@ private:
   void exportCapture(const CaptureFileFormat &fmt);
 
   QString dragFilename(const QMimeData *mimeData);
+
+  void fitRestoredWindowToScreen();
+  void updateResponsiveDensity();
 
   void MakeNetworkRequest(QUrl url, std::function<void(QByteArray)> success,
                           std::function<void(QString)> failure = {});
@@ -297,6 +304,9 @@ private:
   QMap<QUrl, std::function<void(QByteArray)>> m_NetworkCompleteCallbacks;
 
   bool m_messageAlternate = false;
+  bool m_ResponsiveDensityReady = false;
+  bool m_CompactDensity = false;
+  bool m_InitialGeometryFitted = false;
 
   bool m_OwnTempCapture = false;
 

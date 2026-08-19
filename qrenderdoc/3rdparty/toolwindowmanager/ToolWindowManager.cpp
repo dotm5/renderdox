@@ -171,6 +171,8 @@ void ToolWindowManager::addToolWindows(QList<QWidget *> toolWindows,
     m_toolWindowProperties[toolWindow] = properties;
     QObject::connect(toolWindow, &QWidget::windowTitleChanged, this,
                      &ToolWindowManager::windowTitleChanged);
+    QObject::connect(toolWindow, &QWidget::windowIconChanged, this,
+                     &ToolWindowManager::windowIconChanged);
   }
   moveToolWindows(toolWindows, area);
 }
@@ -579,6 +581,8 @@ QWidget *ToolWindowManager::createToolWindow(const QString &objectName)
       m_toolWindowProperties[toolWindow] = ToolWindowProperty(0);
       QObject::connect(toolWindow, &QWidget::windowTitleChanged, this,
                        &ToolWindowManager::windowTitleChanged);
+      QObject::connect(toolWindow, &QWidget::windowIconChanged, this,
+                       &ToolWindowManager::windowIconChanged);
       return toolWindow;
     }
   }
@@ -1533,6 +1537,20 @@ void ToolWindowManager::tabCloseRequested(int index)
 }
 
 void ToolWindowManager::windowTitleChanged(const QString &)
+{
+  QWidget *toolWindow = qobject_cast<QWidget *>(sender());
+  if(!toolWindow)
+  {
+    return;
+  }
+  ToolWindowManagerArea *area = areaOf(toolWindow);
+  if(area)
+  {
+    area->updateToolWindow(toolWindow);
+  }
+}
+
+void ToolWindowManager::windowIconChanged(const QIcon &)
 {
   QWidget *toolWindow = qobject_cast<QWidget *>(sender());
   if(!toolWindow)

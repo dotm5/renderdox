@@ -112,6 +112,7 @@ void ToolWindowManagerArea::updateToolWindow(QWidget *toolWindow)
       showCloseButton(tabBar(), index, false);
     else
       showCloseButton(tabBar(), index, true);
+    tabBar()->setTabIcon(index, toolWindow->windowIcon());
     tabBar()->setTabText(index, toolWindow->windowTitle());
     tabBar()->setTabToolTip(index, toolWindow->windowTitle());
   }

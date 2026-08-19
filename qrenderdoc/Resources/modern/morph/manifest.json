@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "component": "RDToolButton",
+  "application": "TextureViewer.fitToWindow",
+  "framePattern": ":/modern/morph/fit-window/frame_%1.svg",
+  "frameCount": 49,
+  "progressRange": [
+    -0.1,
+    1.1
+  ],
+  "generator": {
+    "package": "morphicons",
+    "version": "1.7.0",
+    "license": "MIT",
+    "preset": "snappy",
+    "spring": {
+      "stiffness": 420,
+      "damping": 30
+    }
+  },
+  "icons": {
+    "library": "Lucide",
+    "version": "1.28.0",
+    "license": "ISC and MIT (Feather-derived endpoints)",
+    "source": "maximize",
+    "target": "minimize"
+  },
+  "fallback": {
+    "unchecked": ":/modern/fallback/arrow_out.svg",
+    "checked": ":/modern/fallback/arrow_in.svg"
+  },
+  "selectionPolicy": "Animate only a single control whose meaning changes between two visible states; keep separate navigation, one-shot actions, passive status, and specialised playback icons static"
+}

@@ -78,6 +78,7 @@ EditorWrapper::EditorWrapper(PythonShell *parent) : QFrame(parent), m_PyShell(pa
   layout()->setContentsMargins(0, 0, 0, 0);
 
   m_Title = tr("Untitled Script");
+  setWindowIcon(Icons::panel(PanelIcon::SourceEditor));
 }
 
 EditorWrapper::~EditorWrapper()
@@ -196,6 +197,7 @@ PythonShell::PythonShell(ICaptureContext &ctx, QWidget *parent)
 
   // we create this up front so its state stays persistent as much as possible.
   m_FindReplace = new FindReplace(m_Scintillas, this);
+  m_FindReplace->setWindowIcon(Icons::panel(PanelIcon::Find));
   m_FindReplace->allowFindAll(false);
   m_FindReplace->setDockManager(ui->docking);
 
@@ -214,6 +216,7 @@ PythonShell::PythonShell(ICaptureContext &ctx, QWidget *parent)
     m_FindResults->setWrapMode(SC_WRAP_WORD);
     m_FindResults->setReadOnly(true);
     m_FindResults->setWindowTitle(lit("Find Results"));
+    m_FindResults->setWindowIcon(Icons::panel(PanelIcon::FindResults));
   }
 
   m_FindReplace->setFindIndicator(2);
@@ -227,6 +230,9 @@ PythonShell::PythonShell(ICaptureContext &ctx, QWidget *parent)
   ui->outputGroup->setWindowTitle(tr("Output"));
   ui->helpGroup->setWindowTitle(tr("Help"));
   ui->replGroup->setWindowTitle(tr("Interactive REPL"));
+  ui->outputGroup->setWindowIcon(Icons::panel(PanelIcon::Output));
+  ui->helpGroup->setWindowIcon(Icons::panel(PanelIcon::Help));
+  ui->replGroup->setWindowIcon(Icons::panel(PanelIcon::InteractiveConsole));
 
   ui->lineInput->setAcceptTabCharacters(true);
 
@@ -376,6 +382,7 @@ PythonShell::PythonShell(ICaptureContext &ctx, QWidget *parent)
       ui->replGroup, ToolWindowManager::HideCloseButton | ToolWindowManager::DisallowFloatWindow);
 
   ui->projectExplorer->setWindowTitle(tr("Project Explorer"));
+  ui->projectExplorer->setWindowIcon(Icons::panel(PanelIcon::ProjectExplorer));
   ui->projectExplorer->setColumns({tr("Name")});
   ui->projectExplorer->hideGridLines();
 

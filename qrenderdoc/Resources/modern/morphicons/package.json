@@ -1,0 +1,16 @@
+{
+  "name": "renderdoc-modern-morphicons-assets",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "node generate_fit_frames.mjs && node generate_ui_icons.mjs",
+    "generate:motion": "node generate_fit_frames.mjs",
+    "generate:ui": "node generate_ui_icons.mjs",
+    "audit:ui": "node audit_ui_icons.mjs"
+  },
+  "devDependencies": {
+    "lucide": "1.28.0",
+    "morphicons": "1.7.0"
+  }
+}

@@ -8,13 +8,17 @@ The native MSVC/Qt build does not execute Python.
 from __future__ import annotations
 
 import hashlib
+import html
 import json
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 
 HERE = Path(__file__).resolve().parent
 MONO_DIR = HERE / "mono"
 COLOR_DIR = HERE / "color"
+FALLBACK_DIR = HERE / "fallback"
+TABLER_DIR = HERE / "library" / "tabler-3.46.0" / "outline"
 REPO = HERE.parents[2]
 QRENDERDOC = REPO / "qrenderdoc"
 ARTIFACTS = REPO / "artifacts" / "icon-modernization" / "v3"
@@ -48,6 +52,18 @@ LEGACY_COLOR_PALETTE = {
     "chart_grid": GRID,
 }
 SOURCE_COLORS = tuple(LEGACY_COLOR_PALETTE.values())
+
+
+def write_text_if_changed(path: Path, text: str) -> bool:
+    """Avoid touching generated build inputs when their content is unchanged."""
+    try:
+        if path.read_text(encoding="utf-8") == text:
+            return False
+    except FileNotFoundError:
+        pass
+
+    path.write_text(text, encoding="utf-8", newline="\n")
+    return True
 
 
 def svg(body: str, root_stroke: str = "#000000") -> str:
@@ -260,6 +276,97 @@ ICONS: dict[str, str] = {
 }
 
 
+# Same-semantic replacements selected after reviewing the existing UI usage,
+# not from legacy filenames alone. Tabler is the primary geometry library
+# because its 24x24 outline grammar is closest to RenderDoc's compact toolbars.
+TABLER_VERSION = "3.46.0"
+TABLER_ICONS = {
+    "action": "arrow-big-right",
+    "action_hover": "arrow-big-right",
+    "add": "circle-plus",
+    "arrow_in": "arrows-minimize",
+    "arrow_join": "arrows-exchange",
+    "arrow_left": "arrow-left",
+    "arrow_out": "arrows-maximize",
+    "arrow_refresh": "refresh",
+    "arrow_right": "arrow-right",
+    "arrow_undo": "arrow-back-up",
+    "asterisk_orange": "asterisk",
+    "bookmark_blue": "bookmark",
+    "bug": "bug",
+    "chart_curve": "chart-histogram",
+    "cog": "settings",
+    "connect": "plug-connected",
+    "copy": "copy",
+    "cross": "x",
+    "cut": "cut",
+    "del": "circle-minus",
+    "disconnect": "plug-connected-x",
+    "draw_vertex": "vector-triangle",
+    "filter": "filter",
+    "find": "search",
+    "flag_green": "flag",
+    "flip_y": "flip-vertical",
+    "folder": "folder",
+    "folder_page_white": "folder-open",
+    "help": "help-circle",
+    "hourglass": "hourglass",
+    "house": "home",
+    "information": "info-circle",
+    "link": "link",
+    "page_white_code": "file-code",
+    "page_white_edit": "file-pencil",
+    "page_white_link": "file-symlink",
+    "page_white_stack": "files",
+    "paste": "clipboard",
+    "pixel_history": "history",
+    "plugin": "puzzle",
+    "save": "device-floppy",
+    "text_add": "message-plus",
+    "tick": "check",
+    "time": "clock",
+    "timeline_marker": "columns-3",
+    "update": "reload",
+    "upfolder": "folder-up",
+    "wand": "wand",
+    "wrench": "tool",
+    "zoom": "zoom-in",
+}
+
+
+def serialize_library_node(node: ET.Element, indent: str = "  ") -> str:
+    tag = node.tag.rsplit("}", 1)[-1]
+    if node.attrib.get("stroke") == "none" and node.attrib.get("fill") == "none":
+        return ""
+
+    attrs = " ".join(
+        f'{key.rsplit("}", 1)[-1]}="{html.escape(value, quote=True)}"'
+        for key, value in node.attrib.items()
+    )
+    if len(node):
+        children = "\n".join(
+            child for child in (serialize_library_node(item, indent + "  ") for item in node) if child
+        )
+        return f"{indent}<{tag} {attrs}>\n{children}\n{indent}</{tag}>"
+    return f"{indent}<{tag}{(' ' + attrs) if attrs else ''}/>"
+
+
+def tabler_body(icon_name: str) -> str:
+    source = TABLER_DIR / f"{icon_name}.svg"
+    if not source.exists():
+        raise SystemExit(f"Missing vendored Tabler {TABLER_VERSION} icon: {source}")
+    root = ET.fromstring(source.read_text(encoding="utf-8"))
+    nodes = [serialize_library_node(node) for node in root]
+    body = "\n".join(node for node in nodes if node)
+    if not body:
+        raise SystemExit(f"Tabler icon has no visible outline geometry: {icon_name}")
+    return body
+
+
+LOCAL_REDRAW_ICONS = dict(ICONS)
+ICONS.update({logical_name: tabler_body(icon_name) for logical_name, icon_name in TABLER_ICONS.items()})
+
+
 COLOR_PRIMARY = {
     "action": NEUTRAL_LIGHT,
     "action_hover": GREEN,
@@ -271,32 +378,50 @@ COLOR_PRIMARY = {
     "arrow_refresh": GREEN,
     "arrow_right": GREEN,
     "arrow_undo": GREEN,
+    "asterisk_orange": ORANGE,
     "bookmark_blue": BLUE,
+    "bug": ORANGE,
+    "chart_curve": BLUE,
     "cog": NEUTRAL_LIGHT,
+    "connect": GREEN,
     "copy": BLUE,
     "cross": RED,
+    "cut": BLUE,
     "del": RED,
+    "disconnect": RED,
+    "draw_vertex": BLUE,
+    "filter": BLUE,
     "find": NEUTRAL_LIGHT,
+    "flag_green": GREEN,
     "flip_y": GREEN,
     "folder": YELLOW,
+    "folder_page_white": YELLOW,
     "help": BLUE,
+    "hourglass": ORANGE,
     "information": BLUE,
     "link": NEUTRAL_LIGHT,
     "page_go": BLUE,
     "page_white_code": NEUTRAL_LIGHT,
     "page_white_database": NEUTRAL_LIGHT,
     "page_white_delete": NEUTRAL_LIGHT,
-    "page_white_edit": NEUTRAL_LIGHT,
+    "page_white_edit": AMBER,
     "page_white_link": NEUTRAL_LIGHT,
     "page_white_stack": NEUTRAL_LIGHT,
+    "paste": ORANGE,
+    "pixel_history": GREEN,
     "plugin": ORANGE,
     "plugin_add": ORANGE,
     "save": BLUE,
     "text_add": BLUE,
     "tick": GREEN,
+    "time": BLUE,
+    "timeline_marker": BLUE,
     "update": BLUE,
+    "upfolder": GREEN,
+    "wand": ORANGE,
     "wireframe_mesh": NEUTRAL,
     "wrench": BLUE,
+    "zoom": BLUE,
 }
 COLOR_PRIMARY.update({name: BLUE for name in ICONS if name.startswith("control_")})
 
@@ -321,18 +446,18 @@ SEMANTICS = {
     "action": "Execute or open the selected action",
     "action_hover": "Hovered execute/open action state",
     "add": "Add a new item",
-    "align": "Align data or columns",
-    "arrow_in": "Collapse or move four directions inward",
-    "arrow_join": "Join branches into the forward path",
+    "align": "Show visible padding in tabular views",
+    "arrow_in": "Collapse a hierarchy or fit inward",
+    "arrow_join": "Synchronize views or jump to related mesh data",
     "arrow_left": "Move to the previous item",
-    "arrow_out": "Expand or move four directions outward",
+    "arrow_out": "Expand a hierarchy or fit outward",
     "arrow_refresh": "Refresh the current view",
     "arrow_right": "Move to the next item",
     "arrow_undo": "Undo the most recent operation",
-    "asterisk_orange": "Attention or modified marker",
+    "asterisk_orange": "Bookmark, highlight, or modified marker",
     "bookmark_blue": "Bookmark the current item",
     "bug": "Debug a shader or event",
-    "chart_curve": "Open the curve or chart view",
+    "chart_curve": "Show a histogram over the visible range",
     "checkerboard": "Toggle transparency checkerboard",
     "cog": "Open settings",
     "color_wheel": "Choose or inspect a color",
@@ -342,7 +467,7 @@ SEMANTICS = {
     "cut": "Cut the selected data",
     "del": "Delete or remove an item",
     "disconnect": "Disconnect from a target",
-    "draw_vertex": "Display or highlight mesh vertices",
+    "draw_vertex": "Open the mesh input view",
     "filter": "Filter the current data set",
     "filter_reapply": "Reapply the active filter",
     "find": "Find a resource or event",
@@ -355,10 +480,10 @@ SEMANTICS = {
     "house": "Return to the home/default location",
     "information": "Show information",
     "link": "Create or follow a link",
-    "page_go": "Open or export a document",
+    "page_go": "Export a list or identify a pinned texture tab",
     "page_white_code": "Open source code",
-    "page_white_database": "Open structured or database data",
-    "page_white_delete": "Remove a document",
+    "page_white_database": "Show empty pipeline bindings",
+    "page_white_delete": "Show unused pipeline bindings",
     "page_white_edit": "Edit a document",
     "page_white_link": "Link a document",
     "page_white_stack": "View a stack of documents",
@@ -367,14 +492,14 @@ SEMANTICS = {
     "plugin": "Manage a plugin",
     "plugin_add": "Add a plugin",
     "save": "Save the current data",
-    "text_add": "Create a text or document item",
+    "text_add": "Show shader messages",
     "tick": "Confirm or indicate success",
     "time": "Show timing information",
-    "timeline_marker": "Mark a position on the timeline",
+    "timeline_marker": "Select visible columns",
     "update": "Update or reload data",
     "upfolder": "Move to the parent folder",
     "wand": "Run an automatic helper operation",
-    "wireframe_mesh": "Toggle wireframe mesh display",
+    "wireframe_mesh": "Open mesh input data",
     "wrench": "Open tools or configuration",
     "zoom": "Zoom or inspect closely",
 }
@@ -466,6 +591,7 @@ NOTES = {
 
 
 INTENTIONAL_BODY_EQUIVALENCES = {
+    frozenset({"action", "action_hover"}),
     frozenset({"control_base_blue", "control_play_blue"}),
     frozenset({"control_reverse_base_blue", "control_reverse_blue"}),
 }
@@ -584,15 +710,23 @@ def main() -> int:
 
     MONO_DIR.mkdir(parents=True, exist_ok=True)
     COLOR_DIR.mkdir(parents=True, exist_ok=True)
+    FALLBACK_DIR.mkdir(parents=True, exist_ok=True)
 
     for name, body in sorted(ICONS.items()):
         color_svg = svg(body, COLOR_PRIMARY.get(name, "#000000"))
         mono_body = MONO_OVERRIDES.get(name, monochrome(body))
         mono_svg = svg(mono_body)
         # Keep the compatibility path on the restrained semantic-color variant.
-        (HERE / f"{name}.svg").write_text(color_svg, encoding="utf-8", newline="\n")
-        (COLOR_DIR / f"{name}.svg").write_text(color_svg, encoding="utf-8", newline="\n")
-        (MONO_DIR / f"{name}.svg").write_text(mono_svg, encoding="utf-8", newline="\n")
+        write_text_if_changed(HERE / f"{name}.svg", color_svg)
+        write_text_if_changed(COLOR_DIR / f"{name}.svg", color_svg)
+        write_text_if_changed(MONO_DIR / f"{name}.svg", mono_svg)
+
+    # The first native morph uses the library maximize/minimize pair. Keep the
+    # previously redrawn endpoints in the resource bundle as a no-animation or
+    # missing-frame fallback, instead of making the dynamic asset mandatory.
+    for name in ("arrow_in", "arrow_out"):
+        fallback_svg = svg(LOCAL_REDRAW_ICONS[name], COLOR_PRIMARY.get(name, "#000000"))
+        write_text_if_changed(FALLBACK_DIR / f"{name}.svg", fallback_svg)
 
     reference_index = build_code_reference_index(sorted(ICONS))
     family_index = legacy_color_families()
@@ -600,6 +734,18 @@ def main() -> int:
     for name in sorted(ICONS):
         normal = QRENDERDOC / "Resources" / f"{name}.png"
         high_dpi = QRENDERDOC / "Resources" / f"{name}@2x.png"
+        geometry_source = (
+            {
+                "kind": "library",
+                "library": "Tabler Icons",
+                "version": TABLER_VERSION,
+                "license": "MIT",
+                "icon": TABLER_ICONS[name],
+                "source_svg": f"qrenderdoc/Resources/modern/library/tabler-{TABLER_VERSION}/outline/{TABLER_ICONS[name]}.svg",
+            }
+            if name in TABLER_ICONS
+            else {"kind": "local_redraw"}
+        )
         entries.append(
             {
                 "id": name,
@@ -621,6 +767,12 @@ def main() -> int:
                 "color_strategy": "legacy palette reconstruction" if COLOR_PRIMARY.get(name) or len(svg_source_colors(svg(ICONS[name]))) > 1 else "runtime tint mask",
                 "legacy_color_families": family_index.get(name, []),
                 "color_variant_source_colors": svg_source_colors(svg(ICONS[name], COLOR_PRIMARY.get(name, "#000000"))),
+                "geometry_source": geometry_source,
+                "fallback_svg": (
+                    f"qrenderdoc/Resources/modern/fallback/{name}.svg"
+                    if name in {"arrow_in", "arrow_out"}
+                    else None
+                ),
                 "reference_cells": reference_cells(name),
                 "code_references": reference_index[name],
                 "notes": NOTES.get(name, "Preserve the legacy action semantics"),
@@ -629,13 +781,27 @@ def main() -> int:
 
     manifest = {
         "schema": 2,
-        "design_source": "DComp Modern Light UI asset bundle v3, legacy PNG palette audit, seven ImageGen art-direction sheets, and the focused connector corrective reference",
+        "design_source": "DComp Modern Light UI asset bundle v4, usage-driven semantic audit, and reviewed stroke-icon libraries",
         "canonical_viewbox": [0, 0, 24, 24],
         "display_sizes_px": [16, 20, 24, 32, 48],
         "legacy_png_records": 142,
         "logical_icons": len(entries),
         "variants": ["mono", "legacy_color"],
         "default_variant": "legacy_color",
+        "library_selection": {
+            "policy": "Prefer same-semantic 24x24 outline geometry; keep RenderDoc-specific or mixed-use semantics locally redrawn",
+            "primary": {
+                "name": "Tabler Icons",
+                "version": TABLER_VERSION,
+                "license": "MIT",
+                "replacement_count": len(TABLER_ICONS),
+            },
+            "reviewed": [
+                {"name": "Tabler Icons", "version": TABLER_VERSION},
+                {"name": "Lucide", "version": "1.28.0"},
+                {"name": "Heroicons", "version": "2.2.0"},
+            ],
+        },
         "legacy_color_palette": LEGACY_COLOR_PALETTE,
         "palette_policy": "Preserve legacy functional hue families with flat modern colours; colour is never the only state cue",
         "small_size_strategy": "Prefer solid silhouettes, integer-aligned geometry, the maximum permitted 2 px detail stroke, two-unit semantic gaps, and direct rendering at each target size over smoothing a single raster",
@@ -644,9 +810,9 @@ def main() -> int:
         "icons": entries,
     }
     text = json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"
-    (HERE / "icon-manifest.json").write_text(text, encoding="utf-8", newline="\n")
+    write_text_if_changed(HERE / "icon-manifest.json", text)
     ARTIFACTS.mkdir(parents=True, exist_ok=True)
-    (ARTIFACTS / "icon_inventory.json").write_text(text, encoding="utf-8", newline="\n")
+    write_text_if_changed(ARTIFACTS / "icon_inventory.json", text)
     print(f"generated {len(entries)} logical icons in mono and semantic-color variants")
     return 0
 

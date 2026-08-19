@@ -26,6 +26,7 @@
 #define TOOLWINDOWMANAGER_H
 
 #include <QHash>
+#include <QIcon>
 #include <QLabel>
 #include <QPointer>
 #include <QVariant>
@@ -355,6 +356,7 @@ protected:
 private slots:
   void tabCloseRequested(int index);
   void windowTitleChanged(const QString &title);
+  void windowIconChanged(const QIcon &icon);
 };
 
 inline ToolWindowManager::ToolWindowProperty operator|(ToolWindowManager::ToolWindowProperty a,

@@ -238,9 +238,11 @@ ShaderViewer::ShaderViewer(ICaptureContext &ctx, QWidget *parent)
   m_FindResults = MakeEditor(lit("findresults"), QString(), SCLEX_NULL);
   m_FindResults->setReadOnly(true);
   m_FindResults->setWindowTitle(lit("Find Results"));
+  m_FindResults->setWindowIcon(Icons::panel(PanelIcon::FindResults));
 
   // we create this up front so its state stays persistent as much as possible.
   m_FindReplace = new FindReplace(m_Scintillas, this);
+  m_FindReplace->setWindowIcon(Icons::panel(PanelIcon::Find));
   m_FindReplace->setFindIndicator(1);
   m_FindReplace->setDockManager(ui->docking);
 
@@ -272,6 +274,7 @@ ShaderViewer::ShaderViewer(ICaptureContext &ctx, QWidget *parent)
 
     m_DisassemblyFrame = new QWidget(this);
     m_DisassemblyFrame->setWindowTitle(tr("Disassembly"));
+    m_DisassemblyFrame->setWindowIcon(Icons::panel(PanelIcon::Disassembly));
 
     m_DisassemblyToolbar = new QFrame(this);
     m_DisassemblyToolbar->setFrameShape(QFrame::Panel);
@@ -496,6 +499,7 @@ void ShaderViewer::editShader(ResourceId id, ShaderStage stage, const QString &e
   m_Errors = MakeEditor(lit("errors"), QString(), SCLEX_NULL);
   m_Errors->setReadOnly(true);
   m_Errors->setWindowTitle(lit("Errors"));
+  m_Errors->setWindowIcon(Icons::panel(PanelIcon::Errors));
 
   // remove margins
   m_Errors->setMarginWidthN(0, 0);
@@ -514,6 +518,7 @@ void ShaderViewer::editShader(ResourceId id, ShaderStage stage, const QString &e
   if(!m_CustomShader)
   {
     ui->compilationGroup->setWindowTitle(tr("Compilation Settings"));
+    ui->compilationGroup->setWindowIcon(Icons::panel(PanelIcon::Compilation));
     ui->docking->addToolWindow(ui->compilationGroup,
                                ToolWindowManager::AreaReference(
                                    ToolWindowManager::LeftOf, ui->docking->areaOf(m_Errors), 0.5f));
@@ -763,24 +768,28 @@ void ShaderViewer::debugShader(const ShaderReflection *shader, ResourceId pipeli
     ToolWindowManager::ToolWindowProperty windowProps =
         ToolWindowManager::HideCloseButton | ToolWindowManager::DisallowFloatWindow;
     ui->watch->setWindowTitle(tr("Watch"));
+    ui->watch->setWindowIcon(Icons::panel(PanelIcon::Watch));
     ui->docking->addToolWindow(
         ui->watch, ToolWindowManager::AreaReference(ToolWindowManager::BottomOf,
                                                     ui->docking->areaOf(m_DisassemblyFrame), 0.25f));
     ui->docking->setToolWindowProperties(ui->watch, windowProps);
 
     ui->debugVars->setWindowTitle(tr("Variable Values"));
+    ui->debugVars->setWindowIcon(Icons::panel(PanelIcon::Variables));
     ui->docking->addToolWindow(
         ui->debugVars,
         ToolWindowManager::AreaReference(ToolWindowManager::AddTo, ui->docking->areaOf(ui->watch)));
     ui->docking->setToolWindowProperties(ui->debugVars, windowProps);
 
     ui->constants->setWindowTitle(tr("Constants && Resources"));
+    ui->constants->setWindowIcon(Icons::panel(PanelIcon::ConstantsResources));
     ui->docking->addToolWindow(
         ui->constants, ToolWindowManager::AreaReference(ToolWindowManager::LeftOf,
                                                         ui->docking->areaOf(ui->debugVars), 0.5f));
     ui->docking->setToolWindowProperties(ui->constants, windowProps);
 
     ui->resourcesPanel->setWindowTitle(tr("Accessed Resources"));
+    ui->resourcesPanel->setWindowIcon(Icons::panel(PanelIcon::AccessedResources));
     ui->docking->addToolWindow(
         ui->resourcesPanel, ToolWindowManager::AreaReference(ToolWindowManager::AddTo,
                                                              ui->docking->areaOf(ui->constants)));
@@ -788,12 +797,14 @@ void ShaderViewer::debugShader(const ShaderReflection *shader, ResourceId pipeli
     ui->docking->raiseToolWindow(ui->constants);
 
     ui->callstack->setWindowTitle(tr("Callstack"));
+    ui->callstack->setWindowIcon(Icons::panel(PanelIcon::Callstack));
     ui->docking->addToolWindow(
         ui->callstack, ToolWindowManager::AreaReference(ToolWindowManager::RightOf,
                                                         ui->docking->areaOf(ui->debugVars), 0.2f));
     ui->docking->setToolWindowProperties(ui->callstack, windowProps);
 
     ui->sourceVars->setWindowTitle(tr("High-level Variables"));
+    ui->sourceVars->setWindowIcon(Icons::panel(PanelIcon::Variables));
     ui->docking->addToolWindow(
         ui->sourceVars, ToolWindowManager::AreaReference(ToolWindowManager::AddTo,
                                                          ui->docking->areaOf(ui->debugVars)));
@@ -1269,6 +1280,7 @@ void ShaderViewer::debugShader(const ShaderReflection *shader, ResourceId pipeli
     }
 
     ui->inputSig->setWindowTitle(tr("Input Signature"));
+    ui->inputSig->setWindowIcon(Icons::panel(PanelIcon::InputSignature));
     ui->docking->addToolWindow(ui->inputSig, ToolWindowManager::AreaReference(
                                                  ToolWindowManager::BottomOf,
                                                  ui->docking->areaOf(m_DisassemblyFrame), 0.2f));
@@ -1276,6 +1288,7 @@ void ShaderViewer::debugShader(const ShaderReflection *shader, ResourceId pipeli
         ui->inputSig, ToolWindowManager::HideCloseButton | ToolWindowManager::DisallowFloatWindow);
 
     ui->outputSig->setWindowTitle(tr("Output Signature"));
+    ui->outputSig->setWindowIcon(Icons::panel(PanelIcon::OutputSignature));
     ui->docking->addToolWindow(
         ui->outputSig, ToolWindowManager::AreaReference(ToolWindowManager::RightOf,
                                                         ui->docking->areaOf(ui->inputSig), 0.5f));
@@ -1647,6 +1660,7 @@ ScintillaEdit *ShaderViewer::AddFileScintilla(const QString &name, const QString
                                                                                        : SCLEX_GLSL);
   scintilla->setReadOnly(true);
   scintilla->setWindowTitle(name);
+  scintilla->setWindowIcon(Icons::panel(PanelIcon::SourceEditor));
   ((QWidget *)scintilla)->setProperty("name", name);
 
   QObject::connect(scintilla, &ScintillaEdit::keyPressed, [this, scintilla](QKeyEvent *ev) {
@@ -3036,6 +3050,7 @@ void ShaderViewer::addFileList()
     ToolWindowManager::raiseToolWindow(raiseWidget);
   });
   list->setWindowTitle(tr("File List"));
+  list->setWindowIcon(Icons::panel(PanelIcon::FileList));
 
   for(ScintillaEdit *s : m_Scintillas)
   {
@@ -6616,6 +6631,7 @@ void ShaderViewer::on_toggleLog_clicked()
   debugInfoLog = new QTextEdit(this);
   debugInfoLog->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
   debugInfoLog->setWindowTitle(tr("Debug Info Loading Logging"));
+  debugInfoLog->setWindowIcon(Icons::panel(PanelIcon::DebugLog));
   debugInfoLog->setFont(Formatter::FixedFont());
 
   QString qText;

@@ -2437,7 +2437,7 @@ ICaptureDialog *CaptureContext::GetCaptureDialog()
       },
       m_MainWindow, m_MainWindow);
   m_CaptureDialog->setObjectName(lit("capDialog"));
-  m_CaptureDialog->setWindowIcon(*m_Icon);
+  m_CaptureDialog->setWindowIcon(Icons::panel(PanelIcon::Capture));
 
   return m_CaptureDialog;
 }
@@ -2895,7 +2895,56 @@ void CaptureContext::BuiltinWindowClosed(QWidget *window)
 
 void CaptureContext::setupDockWindow(QWidget *shad, bool hide)
 {
-  shad->setWindowIcon(*m_Icon);
+  const QString name = shad->objectName();
+  PanelIcon panel = PanelIcon::EventBrowser;
+  bool hasSemanticIcon = true;
+
+  if(name == lit("eventBrowser"))
+    panel = PanelIcon::EventBrowser;
+  else if(name == lit("apiInspector"))
+    panel = PanelIcon::APIInspector;
+  else if(name == lit("annotationViewer"))
+    panel = PanelIcon::Annotation;
+  else if(name == lit("textureViewer"))
+    panel = PanelIcon::Texture;
+  else if(name == lit("meshPreview"))
+    panel = PanelIcon::Mesh;
+  else if(name == lit("pipelineViewer"))
+    panel = PanelIcon::Pipeline;
+  else if(name == lit("capDialog"))
+    panel = PanelIcon::Capture;
+  else if(name == lit("debugMessageView"))
+    panel = PanelIcon::DebugMessages;
+  else if(name == lit("diagnosticLogView"))
+    panel = PanelIcon::DiagnosticLog;
+  else if(name == lit("commentView"))
+    panel = PanelIcon::Comments;
+  else if(name == lit("performanceCounterViewer"))
+    panel = PanelIcon::PerformanceCounters;
+  else if(name == lit("statisticsViewer"))
+    panel = PanelIcon::Statistics;
+  else if(name == lit("timelineBar"))
+    panel = PanelIcon::Timeline;
+  else if(name == lit("pythonShell"))
+    panel = PanelIcon::Python;
+  else if(name == lit("resourceInspector"))
+    panel = PanelIcon::ResourceInspector;
+  else if(qobject_cast<ShaderViewer *>(shad))
+    panel = PanelIcon::Shader;
+  else if(qobject_cast<BufferViewer *>(shad))
+    panel = PanelIcon::Buffer;
+  else if(qobject_cast<PixelHistoryView *>(shad))
+    panel = PanelIcon::PixelHistory;
+  else if(qobject_cast<DescriptorViewer *>(shad))
+    panel = PanelIcon::Descriptors;
+  else if(qobject_cast<ShaderMessageViewer *>(shad))
+    panel = PanelIcon::ShaderMessages;
+  else if(qobject_cast<LiveCapture *>(shad))
+    panel = PanelIcon::LiveCapture;
+  else
+    hasSemanticIcon = false;
+
+  shad->setWindowIcon(hasSemanticIcon ? Icons::panel(panel) : *m_Icon);
   if(hide)
     shad->hide();
 }
