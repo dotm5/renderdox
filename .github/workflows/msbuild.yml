@@ -94,7 +94,7 @@ jobs:
           $output = Join-Path $env:RUNNER_TEMP 'dcomp-release'
           ./util/buildscripts/build_windows_release_matrix.ps1 `
             -Target Rebuild `
-            -ChildPropagation OneGeneration `
+            -ChildPropagation AllGenerations `
             -MaxCpuCount 4 `
             -OutputDirectory $output `
             -IncludeBootstrap

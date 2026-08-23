@@ -108,12 +108,12 @@ $commonProperties = [ordered]@{
 $variants = @(
   [ordered]@{
     Name = 'recursive-one-generation'
-    Description = 'Inject direct children, then disable propagation in the injected child.'
+    Description = 'Inject one direct child, then disable propagation in that child.'
     DCompSingleGenerationChildHook = '1'
   },
   [ordered]@{
     Name = 'recursive-all-generations'
-    Description = 'Keep child propagation enabled in every injected generation.'
+    Description = 'Keep propagation enabled for multi-stage launcher descendants.'
     DCompSingleGenerationChildHook = '0'
   }
 )
@@ -225,9 +225,9 @@ $readme = @'
 
 Source commit: {SOURCE_COMMIT}
 
-- `recursive-one-generation`: preferred launcher -> Shipping route. It injects
-  direct children and disables further propagation in the injected child.
-- `recursive-all-generations`: keeps propagation enabled for all descendants.
+- `recursive-all-generations`: release-default route for multi-stage launchers.
+- `recursive-one-generation`: bounded route when the direct child is the final
+  rendering process.
 
 Both DLLs are x64 Release `/MT` builds with native graphics entry hooks enabled.
 Use the already validated injector. Do not combine these production builds with

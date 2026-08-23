@@ -10,7 +10,7 @@ param(
   [string]$Platform = 'x64',
 
   [ValidateSet('OneGeneration', 'AllGenerations')]
-  [string]$ChildPropagation = 'OneGeneration',
+  [string]$ChildPropagation = 'AllGenerations',
 
   [ValidateRange(1, 64)]
   [int]$MaxCpuCount = 8,

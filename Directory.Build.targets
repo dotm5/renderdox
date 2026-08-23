@@ -3,7 +3,7 @@
   <!--
     Keep an ordinary Release build aligned with the shipped Windows runtime.
     Command-line properties can still override any of these defaults for
-    diagnostics or an all-generations child-propagation build.
+    diagnostics or a one-generation child-propagation build.
   -->
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
     <DCompHookIntoChildrenDefault
@@ -12,7 +12,7 @@
     <DCompInlineGraphicsHooks
         Condition="'$(DCompInlineGraphicsHooks)'==''">1</DCompInlineGraphicsHooks>
     <DCompSingleGenerationChildHook
-        Condition="'$(DCompSingleGenerationChildHook)'==''">1</DCompSingleGenerationChildHook>
+        Condition="'$(DCompSingleGenerationChildHook)'==''">0</DCompSingleGenerationChildHook>
   </PropertyGroup>
 
   <!--
@@ -45,9 +45,9 @@
     -->
     <DCompInlineGraphicsHooks Condition="'$(DCompInlineGraphicsHooks)'==''">0</DCompInlineGraphicsHooks>
     <!--
-      A manually injected launcher still needs to inject the real game, but the
-      game should not propagate the Core into login/helper descendants by
-      default. Release builds clear hookIntoChildren in the injected child.
+      Multi-stage launchers can create an intermediate shell before the real
+      renderer. Release builds therefore keep propagation enabled in injected
+      children; set this property to 1 for an explicitly bounded single hop.
     -->
     <DCompSingleGenerationChildHook Condition="'$(DCompSingleGenerationChildHook)'==''">0</DCompSingleGenerationChildHook>
     <!--

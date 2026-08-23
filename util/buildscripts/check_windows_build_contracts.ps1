@@ -480,17 +480,24 @@ if($releaseDefaultGroups.Count -ne 1)
 }
 else
 {
-  foreach($releaseDefaultName in @('DCompHookIntoChildrenDefault', 'DCompStaticRuntime',
-                                    'DCompInlineGraphicsHooks',
-                                    'DCompSingleGenerationChildHook'))
+  $expectedReleaseDefaults = [ordered]@{
+    DCompHookIntoChildrenDefault = '1'
+    DCompStaticRuntime = '1'
+    DCompInlineGraphicsHooks = '1'
+    DCompSingleGenerationChildHook = '0'
+  }
+  foreach($releaseDefaultEntry in $expectedReleaseDefaults.GetEnumerator())
   {
+    $releaseDefaultName = $releaseDefaultEntry.Key
+    $expectedValue = $releaseDefaultEntry.Value
     $releaseDefault = $releaseDefaultGroups[0].SelectSingleNode(
       "*[local-name()='$releaseDefaultName']")
     $propertyReference = '$(' + $releaseDefaultName + ')'
-    if($null -eq $releaseDefault -or $releaseDefault.InnerText -ne '1' -or
+    if($null -eq $releaseDefault -or $releaseDefault.InnerText -ne $expectedValue -or
        -not $releaseDefault.GetAttribute('Condition').Contains($propertyReference))
     {
-      $errors.Add("Release default contract is missing or not overrideable: $releaseDefaultName=1")
+      $errors.Add("Release default contract is missing or not overrideable: " +
+                  "$releaseDefaultName=$expectedValue")
     }
   }
 }

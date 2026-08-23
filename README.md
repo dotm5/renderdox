@@ -42,7 +42,7 @@ The graphics capture and replay implementation remains upstream-derived. The mai
 | Windows releases | Upstream build and installer layouts | Complete x64 MSVC and ClangCL portable packages from one source commit, with manifests and contract checks |
 | Injected runtime | Upstream configuration | Static MSVC runtime for `dgcore.dll`, the injection shim, and optional bootstrap DLLs |
 | Early capture | Standard launch, inject, and attach paths | Standard paths plus an opt-in DXGI/D3D import bootstrap and tool-agnostic direct DLL injection |
-| Child processes | Standard capture option | Reproducible one-generation default or all-generation propagation selected at build time |
+| Child processes | Standard capture option | All-generation propagation by default, with a bounded one-generation build option |
 | Desktop UI | Upstream QRenderDoc interface | DComp identity, Modern Light styling, modern icon states, Chinese localisation, and compact pipeline/capture summaries |
 | Analysis extensions | Built-in replay UI and APIs | Read-only capture health/pass analysis, structured table export, action visibility, and evidence-package tooling |
 
@@ -62,7 +62,7 @@ Build a package with the bootstrap projects:
 ```powershell
 pwsh -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass `
   -File .\util\buildscripts\build_windows_release_matrix.ps1 `
-  -Target Rebuild -ChildPropagation OneGeneration -IncludeBootstrap
+  -Target Rebuild -ChildPropagation AllGenerations -IncludeBootstrap
 ```
 
 Copy matching-architecture files from one package next to the application executable:
@@ -96,12 +96,12 @@ This route loads `dgcore.dll` into the real rendering process with an existing u
 4. Start `dgcoreui.exe` from the same package and attach to the running instance.
 5. Confirm an active API or overlay and a working control connection before requesting a capture.
 
-For a launcher that creates one rendering child, the default `OneGeneration` build propagates capture once and stops there. Use `AllGenerations` only for an owned process tree that genuinely requires recursive propagation:
+The default `AllGenerations` build supports launchers that create an intermediate shell before the rendering process. Use `OneGeneration` only when the direct child is known to be the final renderer:
 
 ```powershell
 pwsh -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass `
   -File .\util\buildscripts\build_windows_release_matrix.ps1 `
-  -Target Rebuild -ChildPropagation AllGenerations
+  -Target Rebuild -ChildPropagation OneGeneration
 ```
 
 A loaded module is not proof that capture is ready: the graphics hooks, target-control channel, active API registration, and replayable `.rdc` output are separate checkpoints. Cross-bitness child injection also requires the matching 32-bit components.
@@ -114,7 +114,7 @@ The supported downstream Windows release boundary is the complete x64 MSVC/Clang
 ```powershell
 pwsh -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass `
   -File .\util\buildscripts\build_windows_release_matrix.ps1 `
-  -Target Rebuild -ChildPropagation OneGeneration
+  -Target Rebuild -ChildPropagation AllGenerations
 ```
 
 Unless `-OutputDirectory` is supplied, the script creates a timestamped directory under the sibling `artifacts` directory. It produces:
