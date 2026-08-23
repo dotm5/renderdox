@@ -90,11 +90,11 @@ extern "C" const char GitVersionHash[41];
 // this is an official build e.g. that should send crash reports.
 #define RENDERDOC_OFFICIAL_BUILD 0
 
-// The major and minor version that describe this build. These numbers are modified linearly
-// upstream and should not be modified downstream. You can set DISTRIBUTION_VERSION to include any
-// arbitrary release marker or package version you wish.
+// The major and minor version that describe this build. DComp exposes the latest stable upstream
+// compatibility version here; reviewed maintenance patches do not claim the next upstream release.
+// DISTRIBUTION_VERSION can still include an arbitrary package-specific release marker.
 #define RENDERDOC_VERSION_MAJOR 1
-#define RENDERDOC_VERSION_MINOR 46
+#define RENDERDOC_VERSION_MINOR 45
 
 #define RDOC_INTERNAL_VERSION_STRINGIZE2(a) #a
 #define RDOC_INTERNAL_VERSION_STRINGIZE(a) RDOC_INTERNAL_VERSION_STRINGIZE2(a)

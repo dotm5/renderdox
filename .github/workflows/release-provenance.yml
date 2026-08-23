@@ -109,7 +109,7 @@ jobs:
           set -euo pipefail
           short_sha="${HEAD_SHA:0:12}"
           tag="continuous-${short_sha}"
-          title="RenderDox development build ${short_sha}"
+          title="RenderDox v1.45 development build ${short_sha}"
           asset_root="${RUNNER_TEMP}/release-assets"
           notes="${RUNNER_TEMP}/release-notes.md"
 
@@ -120,10 +120,10 @@ jobs:
           )"
 
           {
-            printf '# RenderDox development build %s\n\n' "${short_sha}"
+            printf '# RenderDox v1.45 development build %s\n\n' "${short_sha}"
             printf 'This build contains changes from `dgcore-main` through [%s](https://github.com/%s/commit/%s).\n\n' \
               "${short_sha}" "${GITHUB_REPOSITORY}" "${HEAD_SHA}"
-            printf '**NOTE**: This is an automated development snapshot and may be less stable than a versioned release. It is maintained by the RenderDox project and is not an upstream RenderDoc release.\n\n'
+            printf '**NOTE**: This downstream snapshot reports RenderDoc v1.45 compatibility and includes reviewed maintenance fixes. It is maintained by the RenderDox project and is not an upstream RenderDoc release.\n\n'
             printf 'Windows x64 binaries built with MSVC and ClangCL are available below.\n\n'
             printf '# Changes\n\n'
             if [[ -n "${previous_tag}" ]]; then
