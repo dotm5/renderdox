@@ -94,6 +94,8 @@ if(Test-Path -LiteralPath $OutputDirectory)
 }
 New-Item -ItemType Directory -Path $OutputDirectory | Out-Null
 
+# Version-independent runtime.  Every entry here must exist in the package; the
+# Python runtime and the Python Qt bindings are resolved per build below.
 $runtimeFiles = @(
   $coreFilename,
   $uiFilename,
@@ -111,14 +113,46 @@ $runtimeFiles = @(
   'Qt5Network.dll',
   'Qt5Svg.dll',
   'Qt5Widgets.dll',
-  'python36.dll',
-  'python36.zip',
-  '_ctypes.pyd',
   'pymodules\d3dcompiler_47.dll',
   'pymodules\renderdoc.pyd',
   'pymodules\qrenderdoc.pyd'
 )
 $runtimeDirectories = @('qtplugins')
+
+# PySide2/Shiboken2 is the binding the embedded Python shell uses for Qt.  The
+# UI project links shiboken2.lib whenever the dependency set provides it, which
+# makes shiboken2.dll a static import of the GUI executable: a package without
+# it fails to start with "shiboken2.dll was not found" instead of degrading.
+$pysideRuntimeFiles = @(
+  'shiboken2.dll',
+  'PySide2\pyside2.dll',
+  'PySide2\QtCore.pyd',
+  'PySide2\QtGui.pyd',
+  'PySide2\QtWidgets.pyd',
+  'PySide2\__init__.py',
+  'PySide2\_utils.py'
+)
+# Older PySide2 packages also ship a shiboken2 module directory, newer ones
+# only the flat DLL.  Copy it when the build produced it.
+$pysideOptionalRuntimeFiles = @(
+  'shiboken2\shiboken2.pyd',
+  'shiboken2\__init__.py'
+)
+# Qt resolves its TLS backend at runtime, so the import closure cannot see it.
+$qtTlsRuntimeFiles = @('libcrypto-1_1-x64.dll', 'libssl-1_1-x64.dll')
+$pysideRoot = Join-Path $repositoryRoot 'qrenderdoc\3rdparty\pyside'
+$pysideEnabled = (Test-Path -LiteralPath `
+    (Join-Path $pysideRoot 'include\PySide2\pyside.h') -PathType Leaf) -and
+  (Test-Path -LiteralPath (Join-Path $pysideRoot 'x64\shiboken2.dll') -PathType Leaf)
+$qtTlsAvailable = @($qtTlsRuntimeFiles | Where-Object {
+    Test-Path -LiteralPath `
+      (Join-Path $repositoryRoot "qrenderdoc\3rdparty\qt\x64\bin\$_") -PathType Leaf
+  }).Count -eq $qtTlsRuntimeFiles.Count
+$closureCheck = Join-Path $PSScriptRoot 'check_windows_runtime_closure.py'
+if(-not (Test-Path -LiteralPath $closureCheck -PathType Leaf))
+{
+  throw "Runtime closure checker is missing: $closureCheck"
+}
 if($IncludeBootstrap)
 {
   $runtimeFiles += @(
@@ -153,12 +187,81 @@ foreach($toolchain in @('MSVC', 'ClangCL'))
       -Destination (Join-Path $bootstrapPackageRoot 'README.md')
   }
 
-  foreach($relativeFile in $runtimeFiles)
+  # Resolve the Python runtime from the build output instead of pinning a
+  # version.  The interpreter DLL carries the ABI version (python36.dll today,
+  # python38.dll once the dependency set moves on) and the stdlib archive plus
+  # the extension modules that ship beside it belong to exactly that version.
+  $pythonInterpreters = @(Get-ChildItem -LiteralPath $sourceRoot -File |
+    Where-Object { $_.Name -match '^python3[0-9]+\.dll$' })
+  if($pythonInterpreters.Count -ne 1)
+  {
+    throw ("$toolchain build output must contain exactly one Python interpreter " +
+           "DLL, found $($pythonInterpreters.Count)")
+  }
+  $pythonAbiFilename = $pythonInterpreters[0].Name
+  $pythonMajorMinor = $pythonAbiFilename -replace '^python(3[0-9]+)\.dll$', '$1'
+  $pythonRuntimeFiles = @($pythonAbiFilename, "python$pythonMajorMinor.zip")
+  foreach($pythonSupportName in @(
+      'python3.dll',
+      '_ctypes.pyd',
+      '_hashlib.pyd',
+      '_queue.pyd',
+      '_socket.pyd',
+      '_ssl.pyd',
+      'pyexpat.pyd',
+      'select.pyd',
+      'unicodedata.pyd',
+      'libffi-7.dll',
+      'libffi-8.dll',
+      'libcrypto-3.dll',
+      'libcrypto-3-x64.dll',
+      'libssl-3.dll',
+      'libssl-3-x64.dll'))
+  {
+    if(Test-Path -LiteralPath (Join-Path $sourceRoot $pythonSupportName) -PathType Leaf)
+    {
+      $pythonRuntimeFiles += $pythonSupportName
+    }
+  }
+  foreach($pythonRequiredFile in @("python$pythonMajorMinor.zip", '_ctypes.pyd'))
+  {
+    if($pythonRuntimeFiles -notcontains $pythonRequiredFile)
+    {
+      throw "$toolchain Python runtime is incomplete: $pythonRequiredFile is not in the build output"
+    }
+  }
+
+  $requiredRuntimeFiles = @($runtimeFiles) + $pythonRuntimeFiles
+  if($pysideEnabled)
+  {
+    $requiredRuntimeFiles += $pysideRuntimeFiles
+  }
+  if($qtTlsAvailable)
+  {
+    $requiredRuntimeFiles += $qtTlsRuntimeFiles
+  }
+
+  foreach($relativeFile in $requiredRuntimeFiles)
   {
     $source = Join-Path $sourceRoot $relativeFile
     if(-not (Test-Path -LiteralPath $source -PathType Leaf))
     {
       throw "$toolchain runtime file is missing: $source"
+    }
+    $destination = Join-Path $packageRoot $relativeFile
+    $destinationDirectory = Split-Path -Parent $destination
+    if(-not (Test-Path -LiteralPath $destinationDirectory -PathType Container))
+    {
+      New-Item -ItemType Directory -Path $destinationDirectory -Force | Out-Null
+    }
+    Copy-Item -LiteralPath $source -Destination $destination
+  }
+  foreach($relativeFile in $pysideOptionalRuntimeFiles)
+  {
+    $source = Join-Path $sourceRoot $relativeFile
+    if(-not (Test-Path -LiteralPath $source -PathType Leaf))
+    {
+      continue
     }
     $destination = Join-Path $packageRoot $relativeFile
     $destinationDirectory = Split-Path -Parent $destination
@@ -183,6 +286,22 @@ foreach($toolchain in @('MSVC', 'ClangCL'))
       -Destination (Join-Path $packageRoot $crtFileName)
   }
 
+  # A package is only complete when every binary inside it can resolve its own
+  # imports, and when the runtime the binaries load dynamically is present.  The
+  # whitelist above drifts as soon as the UI links another library (shiboken2.dll
+  # is the most recent example), so validate the assembled package instead of
+  # trusting the copy list.
+  $closureArguments = @($closureCheck, $packageRoot)
+  foreach($expectedRuntimeFile in $requiredRuntimeFiles)
+  {
+    $closureArguments += @('--expect-runtime', $expectedRuntimeFile)
+  }
+  & python @closureArguments
+  if($LASTEXITCODE -ne 0)
+  {
+    throw "$toolchain package failed the runtime dependency closure check"
+  }
+
   $files = @(Get-ChildItem -Recurse -File -LiteralPath $packageRoot | Sort-Object FullName |
     ForEach-Object {
       [ordered]@{
@@ -197,6 +316,10 @@ foreach($toolchain in @('MSVC', 'ClangCL'))
     vc_runtime = $crtDirectory.FullName
     source_output = $sourceRoot
     package = $packageName
+    python_abi = $pythonAbiFilename
+    python_major_minor = $pythonMajorMinor
+    pyside2 = $pysideEnabled
+    runtime_closure_verified = $true
     files = $files
   }
   $toolchainManifest | ConvertTo-Json -Depth 6 | Set-Content `
@@ -229,9 +352,17 @@ the same source commit:
   frontend fallback only for source files that require MSVC-compatible parsing.
 
 Both packages contain the GUI, CLI, capture DLL, shim, UI stub, embedded Python
-modules, Qt runtime/plugins, Python runtime, and symbol helper runtime files.
+modules, the versioned CPython runtime (interpreter DLL, stdlib archive and the
+extension modules built beside it), the PySide2/Shiboken2 Qt bindings, the Qt
+runtime with its TLS libraries and plugins, and the symbol helper runtime files.
 The capture DLL uses a static MSVC runtime and the selected child propagation
 policy. Qt and Python filenames remain upstream-compatible runtime contracts.
+
+The Python runtime version follows the build: the interpreter that the GUI links
+against is discovered from the build output together with the files that belong
+to it, so a dependency update to another Python does not silently drop runtime
+files. Each package is then verified for a complete DLL import closure before it
+is published, and `manifest.json` records the interpreter and binding state.
 '@
 $readme = $readme.Replace('{PRODUCT_NAME}', $identity.productDisplayName)
 $readme | Set-Content -LiteralPath (Join-Path $OutputDirectory 'README.md') -Encoding utf8

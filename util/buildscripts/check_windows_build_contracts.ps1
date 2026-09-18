@@ -526,6 +526,41 @@ if($qtUiProjectText.Contains(
 {
   $errors.Add("$qtUiProject still requires lrelease.exe as a custom-build input")
 }
+
+# The portable packages have to carry the runtime the GUI actually loads.  A
+# missing entry here only surfaces as a "DLL was not found" dialog on machines
+# that never took part in the build, so keep the packaging contract explicit:
+# the PySide2/Shiboken2 binding, the versioned CPython runtime and Qt's runtime
+# loaded TLS backend.
+if(-not $qtUiProjectText.Contains('shiboken2.lib'))
+{
+  $errors.Add("$qtUiProject no longer links the PySide2 binding runtime")
+}
+$releaseMatrixScript = 'util\buildscripts\build_windows_release_matrix.ps1'
+$releaseMatrixText = Get-Content -LiteralPath `
+  (Join-Path $repositoryRoot $releaseMatrixScript) -Raw
+foreach($requiredPackagedRuntime in @(
+    'shiboken2.dll',
+    'PySide2\pyside2.dll',
+    'PySide2\QtCore.pyd',
+    'libcrypto-1_1-x64.dll',
+    '^python3[0-9]+\.dll$',
+    'check_windows_runtime_closure.py',
+    '--expect-runtime'))
+{
+  if(-not $releaseMatrixText.Contains($requiredPackagedRuntime))
+  {
+    $errors.Add("$releaseMatrixScript no longer packages the runtime: " +
+                $requiredPackagedRuntime)
+  }
+}
+$runtimeClosureChecker = Join-Path $repositoryRoot `
+  'util\buildscripts\check_windows_runtime_closure.py'
+if(-not (Test-Path -LiteralPath $runtimeClosureChecker -PathType Leaf))
+{
+  $errors.Add('The runtime dependency closure checker is missing: ' +
+              'util\buildscripts\check_windows_runtime_closure.py')
+}
 $trackedTranslationCatalog = Join-Path $repositoryRoot `
   'qrenderdoc\Translations\qrenderdoc_zh_CN.qm'
 if(-not (Test-Path -LiteralPath $trackedTranslationCatalog -PathType Leaf))

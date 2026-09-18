@@ -42,8 +42,6 @@ $requiredDependencies = @(
   "qrenderdoc\3rdparty\qt\$Platform\bin\moc.exe",
   "qrenderdoc\3rdparty\qt\$Platform\bin\rcc.exe",
   "qrenderdoc\3rdparty\qt\$Platform\bin\uic.exe",
-  "qrenderdoc\3rdparty\python\$Platform\python36.lib",
-  "qrenderdoc\3rdparty\python\$Platform\python36.dll",
   "renderdoc\3rdparty\dbghelp\$Platform\dbghelp.dll"
 )
 foreach($relativeDependency in $requiredDependencies)
@@ -53,6 +51,24 @@ foreach($relativeDependency in $requiredDependencies)
   {
     throw "Full-solution dependency is missing: $dependency"
   }
+}
+
+# The bundled CPython that the UI links against when no VSPythonOverridePath is
+# set.  Resolve the ABI version from the dependency set so a Python update does
+# not have to be mirrored in this script.
+$bundledPythonRoot = Join-Path $repositoryRoot "qrenderdoc\3rdparty\python\$Platform"
+$bundledPythonLibs = @(Get-ChildItem -LiteralPath $bundledPythonRoot -File `
+    -ErrorAction SilentlyContinue |
+  Where-Object { $_.Name -match '^python3[0-9]+\.lib$' })
+if($bundledPythonLibs.Count -ne 1)
+{
+  throw "The bundled Python import library is missing below $bundledPythonRoot"
+}
+$bundledPythonInterpreter = $bundledPythonLibs[0].Name -replace '\.lib$', '.dll'
+if(-not (Test-Path -LiteralPath `
+    (Join-Path $bundledPythonRoot $bundledPythonInterpreter) -PathType Leaf))
+{
+  throw "The bundled Python interpreter is missing: $bundledPythonInterpreter"
 }
 
 $pathBytes = [Text.Encoding]::UTF8.GetBytes($repositoryRoot.ToUpperInvariant())
@@ -234,6 +250,17 @@ try
   $vulkanDisableVar = & $readIdentity 'RDocVulkanDisableVar'
   $outputRoot = Join-Path $repositoryRoot "$Platform\$configurationDirectory"
   $shimSuffix = if($Platform -eq 'x64') { '64' } else { '32' }
+  # The interpreter and its stdlib archive are versioned; resolve them from the
+  # build output so the contract follows the Python the build used.
+  $pythonInterpreters = @(Get-ChildItem -LiteralPath $outputRoot -File |
+    Where-Object { $_.Name -match '^python3[0-9]+\.dll$' })
+  if($pythonInterpreters.Count -ne 1)
+  {
+    throw ("The $Platform Release output must contain exactly one Python " +
+           "interpreter DLL, found $($pythonInterpreters.Count)")
+  }
+  $pythonAbiFilename = $pythonInterpreters[0].Name
+  $pythonMajorMinor = $pythonAbiFilename -replace '^python(3[0-9]+)\.dll$', '$1'
   $requiredOutputs = @(
     "$coreBaseName.dll",
     "$uiBaseName.exe",
@@ -246,10 +273,44 @@ try
     'Qt5Core.dll',
     'Qt5Gui.dll',
     'Qt5Widgets.dll',
-    'python36.dll',
-    'python36.zip',
+    $pythonAbiFilename,
+    "python$pythonMajorMinor.zip",
+    '_ctypes.pyd',
     'qtplugins\platforms\qwindows.dll'
   )
+  $pysideRoot = Join-Path $repositoryRoot 'qrenderdoc\3rdparty\pyside'
+  $pysideEnabled = (Test-Path -LiteralPath `
+      (Join-Path $pysideRoot 'include\PySide2\pyside.h') -PathType Leaf) -and
+    (Test-Path -LiteralPath (Join-Path $pysideRoot "$Platform\shiboken2.dll") -PathType Leaf)
+  if($pysideEnabled)
+  {
+    # PySide2 is available, so the UI project links shiboken2.lib and the
+    # executable imports the binding runtime at load time.
+    $requiredOutputs += @(
+      'shiboken2.dll',
+      'PySide2\pyside2.dll',
+      'PySide2\QtCore.pyd',
+      'PySide2\QtGui.pyd',
+      'PySide2\QtWidgets.pyd'
+    )
+  }
+  $qtTlsNames = if($Platform -eq 'x64') {
+    @('libcrypto-1_1-x64.dll', 'libssl-1_1-x64.dll')
+  }
+  else
+  {
+    @('libcrypto-1_1.dll', 'libssl-1_1.dll')
+  }
+  $qtBinRoot = Join-Path $repositoryRoot "qrenderdoc\3rdparty\qt\$Platform\bin"
+  foreach($qtTlsName in $qtTlsNames)
+  {
+    if(Test-Path -LiteralPath (Join-Path $qtBinRoot $qtTlsName) -PathType Leaf)
+    {
+      # The UI project copies Qt's TLS backend next to the executable, and Qt
+      # loads it at runtime for HTTPS.
+      $requiredOutputs += $qtTlsName
+    }
+  }
   if($IncludeBootstrap)
   {
     $requiredOutputs += $bootstrapOutputs
