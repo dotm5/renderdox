@@ -94,7 +94,7 @@ extern "C" const char GitVersionHash[41];
 // compatibility version here; reviewed maintenance patches do not claim the next upstream release.
 // DISTRIBUTION_VERSION can still include an arbitrary package-specific release marker.
 #define RENDERDOC_VERSION_MAJOR 1
-#define RENDERDOC_VERSION_MINOR 45
+#define RENDERDOC_VERSION_MINOR 46
 
 #define RDOC_INTERNAL_VERSION_STRINGIZE2(a) #a
 #define RDOC_INTERNAL_VERSION_STRINGIZE(a) RDOC_INTERNAL_VERSION_STRINGIZE2(a)

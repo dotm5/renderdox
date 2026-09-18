@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="LICENSE.md"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT licensed"></a>
-  <a href="https://github.com/baldurk/renderdoc/tree/v1.45"><img src="https://img.shields.io/badge/upstream-RenderDoc%20v1.45-blue.svg" alt="RenderDoc v1.45 upstream"></a>
+  <a href="https://github.com/baldurk/renderdoc/tree/v1.46"><img src="https://img.shields.io/badge/upstream-RenderDoc%20v1.46-blue.svg" alt="RenderDoc v1.46 upstream"></a>
   <a href="https://github.com/dotm5/renderdox/actions/workflows/cmake.yml"><img src="https://github.com/dotm5/renderdox/actions/workflows/cmake.yml/badge.svg?branch=dgcore-main" alt="CMake status"></a>
   <a href="https://github.com/dotm5/renderdox/actions/workflows/msbuild.yml"><img src="https://github.com/dotm5/renderdox/actions/workflows/msbuild.yml/badge.svg?branch=dgcore-main" alt="MSBuild status"></a>
   <a href="https://github.com/dotm5/renderdox/releases"><img src="https://img.shields.io/badge/releases-continuous-orange.svg" alt="Continuous releases"></a>
@@ -14,7 +14,7 @@
 
 RenderDox is a downstream branch of [RenderDoc](https://github.com/baldurk/renderdoc), the frame-capture graphics debugger for Vulkan, D3D11, D3D12, OpenGL, and OpenGL ES. The repository name is **RenderDox**; its isolated Windows runtime and desktop application are branded **DComp** and **DCompUI**.
 
-The current public compatibility version is **v1.45**. Reviewed maintenance fixes taken after the upstream v1.45 tag do not change that compatibility label or imply an upstream v1.46 release.
+The current public compatibility version is **v1.46**, taken from the upstream v1.46 release tag. Reviewed maintenance patches taken after that tag do not claim the next upstream release.
 
 The project keeps RenderDoc's capture-and-replay architecture and `.rdc` workflow while adding a reproducible Windows release matrix, an isolated runtime identity, two early-capture deployment paths, controlled child-process propagation, and a modern localized desktop interface. It is independently maintained and is not supported by the upstream RenderDoc maintainers.
 
@@ -38,7 +38,7 @@ The graphics capture and replay implementation remains upstream-derived. The mai
 
 | Area | Upstream RenderDoc | RenderDox / DComp |
 | --- | --- | --- |
-| Baseline | General-purpose upstream project | RenderDoc v1.45 compatibility with reviewed `v1.x` maintenance fixes |
+| Baseline | General-purpose upstream project | RenderDoc v1.46 compatibility with reviewed post-release maintenance fixes |
 | Runtime identity | `renderdoc.dll`, `qrenderdoc.exe`, `renderdoccmd.exe` | `dgcore.dll`, `dgcoreui.exe`, `dgcorecmd.exe`, `dgcorestub.exe`, and `dgcoreshim32/64.dll` |
 | Runtime API | `RENDERDOC_GetAPI` | Isolated `DCOMP_GetAPI` entry point; the upstream runtime export is intentionally absent |
 | Windows releases | Upstream build and installer layouts | Complete x64 MSVC and ClangCL portable packages from one source commit, with manifests and contract checks |
