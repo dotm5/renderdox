@@ -3013,6 +3013,11 @@ ResourceId VulkanReplay::RenderOverlay(ResourceId texid, FloatVector clearCol, D
           clearDepthAtt.clearValue.depthStencil.depth = depthClear;
           clearDepthAtt.clearValue.depthStencil.stencil = 0;
 
+          if(IsDepthOnlyFormat(iminfo.format))
+            clearDepthAtt.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+          else if(IsStencilOnlyFormat(iminfo.format))
+            clearDepthAtt.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
+
           atts.push_back(clearDepthAtt);
         }
       }

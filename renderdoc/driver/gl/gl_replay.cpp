@@ -106,7 +106,8 @@ IReplayDriver *GLReplay::MakeDummyDriver()
     shaders.push_back(it->second.StealReflection());
   }
 
-  IReplayDriver *dummy = new DummyDriver(this, shaders, m_pDriver->DetachStructuredFile());
+  IReplayDriver *dummy = new DummyDriver(this, shaders, m_pDriver->DetachStructuredFile(),
+                                         m_pDriver->DetachAnnotations());
 
   return dummy;
 }

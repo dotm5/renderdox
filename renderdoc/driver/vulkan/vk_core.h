@@ -1383,6 +1383,16 @@ public:
     m_StoredStructuredData = m_StructuredFile = NULL;
     return ret;
   }
+  rdcarray<SDObject *> DetachAnnotations()
+  {
+    rdcarray<SDObject *> ret;
+    ret.swap(m_EventAnnotations);
+    for(auto it = m_Annotations.begin(); it != m_Annotations.end(); ++it)
+      ret.push_back(it->second);
+    m_Annotations.clear();
+    return ret;
+  }
+
   const APIEvent &GetEvent(uint32_t eventId);
   uint32_t GetMaxEID() { return m_Events.back().eventId; }
   const ActionDescription *GetAction(uint32_t eventId);

@@ -72,7 +72,11 @@ public:
   // widget manipulation
 
   void SetWidgetText(QWidget *widget, const rdcstr &text) override;
+  void AppendText(QWidget *widget, const rdcstr &text) override;
   rdcstr GetWidgetText(QWidget *widget) override;
+
+  void ScrollToTop(QWidget *widget) override;
+  void ScrollToBottom(QWidget *widget) override;
 
   void SetWidgetFont(QWidget *widget, const rdcstr &font, int32_t fontSize, bool bold,
                      bool italic) override;

@@ -294,7 +294,11 @@ void ReplayManager::BlockInvoke(ReplayManager::ReplayInvokeCallback m)
 
   PushInvoke(cmd);
 
+  void *ctx = PythonContext::PausePythonThreading();
+
   cmd->processed.acquire();
+
+  PythonContext::ResumePythonThreading(ctx);
 
   delete cmd;
 }
@@ -315,6 +319,8 @@ void ReplayManager::CloseThread()
   if(m_Thread == NULL)
     return;
 
+  void *ctx = PythonContext::PausePythonThreading();
+
   // wait for the thread to close and clean up
   while(m_Thread->isRunning())
   {
@@ -322,6 +328,8 @@ void ReplayManager::CloseThread()
 
   m_Thread->deleteLater();
   m_Thread = NULL;
+
+  PythonContext::ResumePythonThreading(ctx);
 }
 
 ResultDetails ReplayManager::ConnectToRemoteServer(RemoteHost host)

@@ -2410,7 +2410,7 @@ void D3D12CommandData::BakeEventNodes(ActionDescription &rootAction)
       {
         if(actionStack.count() == 0)
         {
-          RDCERR("Pop but the action stack is empty");
+          RDCWARN("Pop but the action stack is empty");
           parentAction = &rootAction;
         }
         else

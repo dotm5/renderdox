@@ -286,6 +286,17 @@ This may not be possible on all OSs, so the function is not guaranteed to succee
 )");
   virtual void BringToFront() = 0;
 
+  DOCUMENT(R"(Prompt the user to close the currently open capture file. This will go through the
+normal workflow and ask the user to save any unsaved capture.
+
+If no capture is open, this function returns True immediately.
+
+:return: True if no capture was open, or if it was successfully closed. False if the capture is
+  still open due to user interactions.
+:rtype: bool
+)");
+  virtual bool PromptCloseCapture() = 0;
+
 protected:
   IMainWindow() = default;
   ~IMainWindow() = default;

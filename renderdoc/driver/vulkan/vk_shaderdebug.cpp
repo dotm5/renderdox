@@ -408,8 +408,8 @@ public:
       if(data.width == 0)
         return rdcspv::DeviceOpResult::Failed;
 
-      uint32_t coords[4];
-      for(int i = 0; i < 4; i++)
+      uint32_t coords[4] = {};
+      for(int i = 0; i < coord.columns; i++)
         coords[i] = uintComp(coord, i);
 
       if(coords[0] >= data.width || coords[1] >= data.height || coords[2] >= data.depth)
@@ -551,8 +551,8 @@ public:
       if(data.width == 0)
         return rdcspv::DeviceOpResult::Failed;
 
-      uint32_t coords[4];
-      for(int i = 0; i < 4; i++)
+      uint32_t coords[4] = {};
+      for(int i = 0; i < coord.columns; i++)
         coords[i] = uintComp(coord, i);
 
       if(coords[0] >= data.width || coords[1] >= data.height || coords[2] >= data.depth)

@@ -110,7 +110,7 @@ class VK_Indirect(rdtest.TestCase):
         if overlay == rd.DebugOverlay.ClearBeforePass:
             overlayTex = col_tex
 
-        picked = self.controller.PickPixel(overlayTex, x, y, rd.Subresource(), rd.CompType.UNorm)
+        picked = self.controller.PickPixel(overlayTex, x, y, rd.Subresource(), rd.CompType.Typeless)
         out.Shutdown()
         return picked
 
@@ -303,7 +303,7 @@ class VK_Indirect(rdtest.TestCase):
                         for s in self.samples:
                             x = s[0]
                             y = s[1]
-                            picked = self.controller.PickPixel(overlayTex, x, y, rd.Subresource(), rd.CompType.Float)
+                            picked = self.controller.PickPixel(overlayTex, x, y, rd.Subresource(), rd.CompType.Typeless)
                             if picked.floatValue != emptyPixel:
                                 empty = False
                             if expectEmpty and not empty:

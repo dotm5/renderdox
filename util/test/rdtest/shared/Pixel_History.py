@@ -703,7 +703,7 @@ class Pixel_History(rdtest.TestCase):
                 'event_name': 'Depth Equal Setup',
                 'passed': True,
                 'shader_out_col': fmt_adjusted(0.1, 0.1, 0.1, alpha_value),
-                'shader_out_depth': 0.1,
+                'shader_out_depth': 0.5,
                 with_depth('post_mod_col'): fmt_clamped(0.1, 0.1, 0.1, alpha_value),
             },
             {
@@ -716,14 +716,14 @@ class Pixel_History(rdtest.TestCase):
                 with_depth('passed'): False,
                 'depth_test_failed': True,
                 'shader_out_col': fmt_adjusted(0, 0, 0, alpha_value),
-                'shader_out_depth': 0.1 + 5.0e-4,
+                'shader_out_depth': 0.5 + 5.0e-4,
                 with_depth('post_mod_col'): fmt_clamped(0.1, 0.1, 0.1, alpha_value),
             },
             {
                 'event_name': 'Depth Equal Pass',
                 'passed': True,
                 'shader_out_col': fmt_adjusted(1, 1, 1, alpha_value),
-                'shader_out_depth': 0.1 + 1e-8,
+                'shader_out_depth': 0.5 + 1e-8,
                 'post_mod_col': fmt_clamped(1, 1, 1, alpha_value),
             },
         ]

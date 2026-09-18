@@ -169,7 +169,8 @@ IReplayDriver *D3D12Replay::MakeDummyDriver()
   rdcarray<const ShaderReflection *> shaders;
   WrappedID3D12Shader::GetReflections(shaders);
 
-  IReplayDriver *dummy = new DummyDriver(this, shaders, m_pDevice->DetachStructuredFile());
+  IReplayDriver *dummy = new DummyDriver(this, shaders, m_pDevice->DetachStructuredFile(),
+                                         m_pDevice->DetachAnnotations());
 
   return dummy;
 }

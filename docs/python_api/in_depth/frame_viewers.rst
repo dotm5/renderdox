@@ -34,6 +34,9 @@ An interface (:class:`~qrenderdoc.CaptureViewer`) is provided which can be inher
     def unregister():
         pyrenderdoc.RemoveCaptureViewer(view)
 
+.. warning::
+    If you implement an `__init__` function to construct your object, it is important that you explicitly call the parent class constructor with `super().__init__()` otherwise the interface will be left partially initialised and will likely crash when passing the object to C++.
+
 Within a UI extension this will add a new viewer when the extension is initialised. Note that it is important to remove the viewer when the extension is unregistered - when reloading an extension if this isn't done the old viewers will remain alive and will continue to get callbacks.
 
 The object will receive callbacks both when a capture is loaded (via ``OnCaptureLoaded``) and closed (via ``OnCaptureClosed``). These are both called *while the capture is open*, so immediately inside ``OnCaptureLoaded`` it is safe to call replay functions and in ``OnCaptureClosed`` queries will still include the capture status. It is not recommended that you perform any replay calls during capture closing as they may not all be safe and there is no guaranteed that all :ref:`asynchronous replay invokes <pythreading>` will be processed.

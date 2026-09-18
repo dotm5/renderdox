@@ -800,8 +800,6 @@ int main(int argc, char *argv[])
 
         ANALYTIC_SET(UIFeatures.PythonInterop, true);
 
-        py.ctx().setGlobal("pyrenderdoc", (ICaptureContext *)&ctx);
-
         QObject::connect(&py.ctx(), &PythonContext::exception,
                          [&pythonExited](const QString &, const QString &type, const QString &value,
                                          int, QList<QString> frames) {

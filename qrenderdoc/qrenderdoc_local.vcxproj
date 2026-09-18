@@ -589,7 +589,9 @@
     </ClCompile>
     <ClCompile Include="Code\qprocessinfo.cpp" />
     <ClCompile Include="Code\pyrenderdoc\PythonContext.cpp" />
-    <ClCompile Include="Code\pyrenderdoc\PythonInvokers.cpp" />
+    <ClCompile Include="Code\pyrenderdoc\PythonInvokers.cpp">
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
     <ClCompile Include="Code\QRDUtils.cpp" />
     <ClCompile Include="Code\MiniQtHelper.cpp" />
     <ClCompile Include="Code\Resources.cpp" />

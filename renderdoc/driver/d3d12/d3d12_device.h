@@ -1188,6 +1188,7 @@ public:
     m_StoredStructuredData = m_StructuredFile = NULL;
     return ret;
   }
+  rdcarray<SDObject *> DetachAnnotations();
   uint64_t GetTimeBase() { return m_TimeBase; }
   double GetTimeFrequency() { return m_TimeFrequency; }
   // interface for DXGI

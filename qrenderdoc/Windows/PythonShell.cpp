@@ -77,7 +77,7 @@ EditorWrapper::EditorWrapper(PythonShell *parent) : QFrame(parent), m_PyShell(pa
   layout()->setMargin(0);
   layout()->setContentsMargins(0, 0, 0, 0);
 
-  m_Title = tr("Untitled Script");
+  setTitle(QString());
   setWindowIcon(Icons::panel(PanelIcon::SourceEditor));
 }
 
@@ -98,7 +98,10 @@ void EditorWrapper::setTitle(QString title)
 {
   if(!m_Filename.isEmpty())
     return;
-  m_Title = title;
+  if(title.isEmpty())
+    m_Title = tr("Untitled Script");
+  else
+    m_Title = title;
   updateTitle();
 }
 
@@ -156,7 +159,7 @@ bool EditorWrapper::checkAllowClose()
     if(filename.isEmpty())
     {
       untitled = true;
-      filename = lit("Untitled Script");
+      filename = m_Title;
     }
     QMessageBox::StandardButton res = RDDialog::question(this, tr("Python script is modified"),
                                                          tr("You have unsaved changes to '%1'.\n"
@@ -179,21 +182,16 @@ bool EditorWrapper::checkAllowClose()
   return true;
 }
 
-// See PythonInvokers.cpp
-ICaptureContext *MakeCaptureContextInvoker(PythonShell *shell, ICaptureContext &ctx);
-void FreeCaptureContextInvoker(ICaptureContext *ctx);
-
 PythonShell::PythonShell(ICaptureContext &ctx, QWidget *parent)
     : QFrame(parent), ui(new Ui::PythonShell), m_Ctx(ctx)
 {
   ui->setupUi(this);
 
-  m_ThreadCtx = MakeCaptureContextInvoker(this, m_Ctx);
-
   QObject::connect(ui->lineInput, &RDLineEdit::keyPress, this, &PythonShell::interactive_keypress);
-  QObject::connect(ui->helpSearch, &RDLineEdit::keyPress, this, &PythonShell::helpSearch_keypress);
+  QObject::connect(ui->helpSearch, &RDLineEdit::keyPress, this, &PythonShell::interactive_keypress);
 
   QObject::connect(ui->lineInput, &RDLineEdit::leave, [this]() { hideFunccompleteTooltip(); });
+  QObject::connect(ui->helpSearch, &RDLineEdit::leave, [this]() { hideFunccompleteTooltip(); });
 
   // we create this up front so its state stays persistent as much as possible.
   m_FindReplace = new FindReplace(m_Scintillas, this);
@@ -223,6 +221,7 @@ PythonShell::PythonShell(ICaptureContext &ctx, QWidget *parent)
   m_FindReplace->setFindAllResultsDisplay(m_FindResults);
 
   ui->lineInput->setFont(Formatter::FixedFont());
+  ui->helpSearch->setFont(Formatter::FixedFont());
   ui->interactiveOutput->setFont(Formatter::FixedFont());
   ui->scriptOutput->setFont(Formatter::FixedFont());
   ui->helpText->setFont(Formatter::FixedFont());
@@ -235,6 +234,7 @@ PythonShell::PythonShell(ICaptureContext &ctx, QWidget *parent)
   ui->replGroup->setWindowIcon(Icons::panel(PanelIcon::InteractiveConsole));
 
   ui->lineInput->setAcceptTabCharacters(true);
+  ui->helpSearch->setAcceptTabCharacters(true);
 
   // don't repeatedly re-parse for errors. Have a reasonable timeout
   m_SyntaxCheckTimer = new QTimer(this);
@@ -290,14 +290,6 @@ PythonShell::PythonShell(ICaptureContext &ctx, QWidget *parent)
   });
 
   completionContext = new PythonContext();
-  setGlobals(completionContext);
-
-  // if we're help printing in the completion context, append it to the help text
-  QObject::connect(completionContext, &PythonContext::textOutput,
-                   [this](const QString &, bool isStdError, const QString &output) {
-                     if(m_HelpPrinting)
-                       appendText(ui->helpText, output);
-                   });
 
   QObject::connect(m_SyntaxCheckTimer, &QTimer::timeout, this, &PythonShell::doSyntaxCheck);
 
@@ -323,7 +315,6 @@ PythonShell::PythonShell(ICaptureContext &ctx, QWidget *parent)
   m_InteractiveCompleter->popup()->setFont(Formatter::FixedFont());
   m_InteractiveCompleter->popup()->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Preferred);
   m_InteractiveCompleter->popup()->setTextElideMode(Qt::ElideNone);
-  m_InteractiveCompleter->setWidget(ui->lineInput);
   m_InteractiveCompleter->setCompletionMode(QCompleter::UnfilteredPopupCompletion);
   m_InteractiveCompleter->setWrapAround(false);
   m_InteractiveCompletionModel = new QStringListModel(this);
@@ -348,15 +339,18 @@ PythonShell::PythonShell(ICaptureContext &ctx, QWidget *parent)
   QObject::connect(m_InteractiveCompleter,
                    OverloadedSlot<const QModelIndex &>::of(&QCompleter::activated),
                    [this](const QModelIndex &idx) {
+                     RDLineEdit *edit = qobject_cast<RDLineEdit *>(m_InteractiveCompleter->widget());
+                     if(!edit)
+                       return;
                      int i = idx.row();
                      if(i >= 0 && i < m_InteractiveCompletionModel->rowCount())
                      {
-                       QString curText = ui->lineInput->text();
+                       QString curText = edit->text();
                        curText.resize(curText.size() - m_InteractiveCompletionPrefix);
                        curText += m_InteractiveCompletionModel->stringList()[i];
-                       ui->lineInput->setText(curText);
+                       edit->setText(curText);
 
-                       ui->lineInput->setCursorPosition(curText.size());
+                       edit->setCursorPosition(curText.size());
                      }
                    });
 
@@ -476,11 +470,6 @@ PythonShell::PythonShell(ICaptureContext &ctx, QWidget *parent)
   m_UIExtensions->setBold(true);
   m_UIExtensions->setIcon(0, Icons::plugin());
 
-  m_NewExtension = new RDTreeWidgetItem({tr("Create new...")});
-  m_NewExtension->setData(0, Qt::UserRole + 1, m_NewExtension->text(0));
-  m_NewExtension->setItalic(true);
-  m_NewExtension->setIcon(0, Icons::plugin_add());
-
   m_RecentFiles = new RDTreeWidgetItem({lit("Recent files")});
   m_RecentFiles->setData(0, Qt::UserRole + 1, m_UIExtensions->text(0));
   m_RecentFiles->setSelectable(false);
@@ -493,6 +482,11 @@ PythonShell::PythonShell(ICaptureContext &ctx, QWidget *parent)
 
   updateRecentFiles(false);
   updateExtensionProjects();
+
+  // on first launch we could be creating the python shell before extensions are loaded while
+  // initialising the UI. Refresh the extension projects after a short delay to pick up any
+  // additional information on loading status.
+  QTimer::singleShot(200, [this]() { updateExtensionProjects(); });
 
   ui->projectExplorer->endUpdate();
 
@@ -549,6 +543,15 @@ PythonShell::PythonShell(ICaptureContext &ctx, QWidget *parent)
   QObject::connect(PythonContext::GetExtensionContext(), &PythonContext::extensionLoaded, this,
                    &PythonShell::extensionLoaded);
 
+  helpContext = newContext();
+
+  helpContext->makeHelpContext();
+
+  QObject::connect(helpContext, &PythonContext::textOutput,
+                   [this](const QString &, bool isStdError, const QString &output) {
+                     appendText(ui->helpText, output);
+                   });
+
   m_Ctx.GetMainWindow()->RegisterShortcut("CTRL+S", this,
                                           [this](QWidget *) { this->on_saveScript_clicked(); });
 
@@ -582,8 +585,7 @@ PythonShell::~PythonShell()
 
   completionContext->Finish();
   interactiveContext->Finish();
-
-  FreeCaptureContextInvoker(m_ThreadCtx);
+  helpContext->Finish();
 
   delete ui;
 }
@@ -739,16 +741,27 @@ void PythonShell::updateExtensionProjects()
     if(ext.hasChanges)
       name += tr(" (Reload required)");
 
+    if(ext.failedLoad)
+      name += tr(" (Failed to load)");
+
     RDTreeWidgetItem *root = new RDTreeWidgetItem({name});
     root->setData(0, Qt::UserRole + 1, ext.package);
 
     if(ext.hasChanges)
       root->setItalic(true);
 
+    if(m_Ctx.Config().AlwaysLoad_Extensions.contains(ext.package))
+      root->setBold(true);
+
     addExtensionDirItems(root, QDir(ext.filePath));
 
     m_UIExtensions->addChild(root);
   }
+
+  m_NewExtension = new RDTreeWidgetItem({tr("Create new...")});
+  m_NewExtension->setData(0, Qt::UserRole + 1, m_NewExtension->text(0));
+  m_NewExtension->setItalic(true);
+  m_NewExtension->setIcon(0, Icons::plugin_add());
 
   m_UIExtensions->addChild(m_NewExtension);
 
@@ -803,7 +816,7 @@ EditorWrapper *PythonShell::curEditor()
   return NULL;
 }
 
-void PythonShell::makeEditor(rdcstr filename, rdcstr text)
+EditorWrapper *PythonShell::makeEditor(rdcstr filename, rdcstr text)
 {
   EditorWrapper *editor = new EditorWrapper(this);
   editor->setObjectName(lit("scriptEditor"));
@@ -1012,6 +1025,8 @@ void PythonShell::makeEditor(rdcstr filename, rdcstr text)
   sc->setText(text.c_str());
   sc->emptyUndoBuffer();
   editor->markModified(false);
+
+  return editor;
 }
 
 void PythonShell::updateEditorCloseButton()
@@ -1248,7 +1263,13 @@ bool PythonShell::LoadScriptFromFilename(rdcstr filename)
 
 void PythonShell::CreateNewScriptEditor(rdcstr name, rdcstr text)
 {
-  makeEditor(name, text);
+  EditorWrapper *ed = makeEditor("", text);
+
+  QFileInfo info(name);
+  if(info.isAbsolute() && (info.exists() || info.absoluteDir().exists()))
+    ed->setFilename(name);
+  else
+    ed->setTitle(name);
 
   ui->saveScript->setEnabled(false);
   updateNonDebugWarning();
@@ -1782,7 +1803,8 @@ bool PythonShell::saveEditor(EditorWrapper *editor, QString filename)
 void PythonShell::removeEditor(EditorWrapper *editor)
 {
   hideFunccompleteTooltip();
-  m_Watcher->removePath(editor->filename());
+  if(!editor->filename().isEmpty())
+    m_Watcher->removePath(editor->filename());
   m_Editors.removeOne(editor);
   m_Scintillas.removeOne(editor->scintilla());
   updateEditorCloseButton();
@@ -1790,8 +1812,11 @@ void PythonShell::removeEditor(EditorWrapper *editor)
 
 void PythonShell::extensionLoaded(const QString &extension)
 {
-  ui->outputContext->addItem(tr("Extension %1").arg(extension));
-  loadedExtensions.push_back(extension);
+  if(!loadedExtensions.contains(extension))
+  {
+    ui->outputContext->addItem(tr("Extension %1").arg(extension));
+    loadedExtensions.push_back(extension);
+  }
 }
 
 void PythonShell::editor_contextMenu(const QPoint &pos)
@@ -1945,7 +1970,7 @@ void PythonShell::projectExplorer_contextMenu(const QPoint &pos)
       {
         if(m.package == rdcstr(itemPath))
         {
-          reloadExtension.setEnabled(m.hasChanges);
+          reloadExtension.setEnabled(m.hasChanges || m.failedLoad);
           diskLocation = QFileInfo(m.filePath).absoluteFilePath();
           break;
         }
@@ -2199,9 +2224,7 @@ void PythonShell::refreshCurrentHelp()
 
   ui->helpText->clear();
 
-  m_HelpPrinting = true;
-
-  completionContext->executeString(lit(R"(
+  helpContext->executeString(lit(R"(
 try:
   import keyword
   if keyword.iskeyword("%1"):
@@ -2211,15 +2234,17 @@ try:
 except ImportError:
   help(%1)
 )")
-                                       .arg(ui->helpSearch->text()));
+                                 .arg(ui->helpSearch->text()));
 
   ui->helpText->verticalScrollBar()->setValue(0);
-
-  m_HelpPrinting = false;
 }
 
 void PythonShell::interactive_keypress(QKeyEvent *event)
 {
+  RDLineEdit *edit = qobject_cast<RDLineEdit *>(QObject::sender());
+  if(!edit)
+    return;
+
   bool triggerCompletion = false;
 
   if(m_InteractiveCompleter->popup()->isVisible())
@@ -2228,9 +2253,18 @@ void PythonShell::interactive_keypress(QKeyEvent *event)
     {
       // manually trigger a completion with tab
       case Qt::Key_Tab:
-        m_InteractiveCompleter->activated(
-            m_InteractiveCompleter->popup()->selectionModel()->currentIndex());
-        m_InteractiveCompleter->popup()->hide();
+        // allow prefixed tabs to be inserted
+        if(edit->text().trimmed().isEmpty())
+        {
+          edit->insert(lit("\t"));
+        }
+        else
+        {
+          m_InteractiveCompleter->setWidget(edit);
+          m_InteractiveCompleter->activated(
+              m_InteractiveCompleter->popup()->selectionModel()->currentIndex());
+          m_InteractiveCompleter->popup()->hide();
+        }
         return;
       // if a completion is in progress ignore any events the completer will process
       case Qt::Key_Return:
@@ -2256,7 +2290,7 @@ void PythonShell::interactive_keypress(QKeyEvent *event)
 
   if(triggerCompletion)
   {
-    QString base = ui->lineInput->text();
+    QString base = edit->text();
 
     QStringList completions;
     int oldCount = m_CompletionTipList.count();
@@ -2264,8 +2298,10 @@ void PythonShell::interactive_keypress(QKeyEvent *event)
 
     if(base.trimmed() != QString())
     {
-      m_CompletionTipList =
-          interactiveContext->completionOptions(0, base, m_InteractiveCompletionPrefix);
+      PythonContext *ctx = interactiveContext;
+      if(edit == ui->helpSearch)
+        ctx = helpContext;
+      m_CompletionTipList = ctx->completionOptions(0, base, m_InteractiveCompletionPrefix);
 
       for(const QPair<QString, QString> &item : m_CompletionTipList)
         completions << item.first;
@@ -2277,7 +2313,7 @@ void PythonShell::interactive_keypress(QKeyEvent *event)
     if(completions.isEmpty())
     {
       if(event->key() == Qt::Key_Tab)
-        ui->lineInput->insert(lit("\t"));
+        edit->insert(lit("\t"));
       m_InteractiveCompleter->popup()->hide();
 
       QString prompt = interactiveContext->tryFunctionCompletion(0, base);
@@ -2286,13 +2322,13 @@ void PythonShell::interactive_keypress(QKeyEvent *event)
       {
         m_ToolTip->configureTip(this, prompt);
 
-        QPoint p = ui->lineInput->fontMetrics().boundingRect(base).bottomRight();
-        p.setY(ui->lineInput->geometry().height());
-        p = ui->lineInput->mapToGlobal(p);
+        QPoint p = edit->fontMetrics().boundingRect(base).bottomRight();
+        p.setY(edit->geometry().height());
+        p = edit->mapToGlobal(p);
         if(!m_ToolTip->isVisible())
           m_ToolTip->showTipAtPos(p);
         m_FuncTip = true;
-        m_FuncTipWidget = ui->lineInput;
+        m_FuncTipWidget = edit;
       }
       else
       {
@@ -2306,8 +2342,8 @@ void PythonShell::interactive_keypress(QKeyEvent *event)
 
     m_InteractiveCompletionModel->setStringList(completions);
 
-    QRect r = ui->lineInput->rect();
-    QFontMetrics fm = ui->lineInput->fontMetrics();
+    QRect r = edit->rect();
+    QFontMetrics fm = edit->fontMetrics();
 
 #if(QT_VERSION < QT_VERSION_CHECK(5, 11, 0))
 #define horizontalAdvance width
@@ -2322,9 +2358,10 @@ void PythonShell::interactive_keypress(QKeyEvent *event)
     base.resize(base.size() - m_InteractiveCompletionPrefix);
 
     r.setLeft(r.left() + fm.horizontalAdvance(base));
-    r.setWidth(longestWidth + ui->lineInput->style()->pixelMetric(QStyle::PM_ScrollBarExtent) +
-               ui->lineInput->style()->pixelMetric(QStyle::PM_ButtonMargin));
+    r.setWidth(longestWidth + edit->style()->pixelMetric(QStyle::PM_ScrollBarExtent) +
+               edit->style()->pixelMetric(QStyle::PM_ButtonMargin));
 
+    m_InteractiveCompleter->setWidget(edit);
     m_InteractiveCompleter->complete(r);
     m_InteractiveCompleter->popup()->selectionModel()->setCurrentIndex(
         m_InteractiveCompletionModel->index(0), QItemSelectionModel::ClearAndSelect);
@@ -2334,45 +2371,46 @@ void PythonShell::interactive_keypress(QKeyEvent *event)
 
   if(event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter)
   {
-    on_execute_clicked();
+    if(edit == ui->lineInput)
+      on_execute_clicked();
+    else if(edit == ui->helpSearch)
+      refreshCurrentHelp();
   }
 
-  bool moved = false;
-
-  if(event->key() == Qt::Key_Down && historyidx > -1)
+  // only line input has history
+  if(edit == ui->lineInput)
   {
-    historyidx--;
+    bool moved = false;
 
-    moved = true;
+    if(event->key() == Qt::Key_Down && historyidx > -1)
+    {
+      historyidx--;
+
+      moved = true;
+    }
+
+    QString workingtext;
+
+    if(event->key() == Qt::Key_Up && historyidx + 1 < history.count())
+    {
+      if(historyidx == -1)
+        workingtext = ui->lineInput->text();
+
+      historyidx++;
+
+      moved = true;
+    }
+
+    if(moved)
+    {
+      if(historyidx == -1)
+        ui->lineInput->setText(workingtext);
+      else
+        ui->lineInput->setText(history[historyidx]);
+
+      ui->lineInput->deselect();
+    }
   }
-
-  QString workingtext;
-
-  if(event->key() == Qt::Key_Up && historyidx + 1 < history.count())
-  {
-    if(historyidx == -1)
-      workingtext = ui->lineInput->text();
-
-    historyidx++;
-
-    moved = true;
-  }
-
-  if(moved)
-  {
-    if(historyidx == -1)
-      ui->lineInput->setText(workingtext);
-    else
-      ui->lineInput->setText(history[historyidx]);
-
-    ui->lineInput->deselect();
-  }
-}
-
-void PythonShell::helpSearch_keypress(QKeyEvent *e)
-{
-  if(e->key() == Qt::Key_Return || e->key() == Qt::Key_Enter)
-    refreshCurrentHelp();
 }
 
 QString PythonShell::scriptHeader()
@@ -2381,7 +2419,7 @@ QString PythonShell::scriptHeader()
 The 'pyrenderdoc' object is the current CaptureContext instance.
 The 'renderdoc' and 'qrenderdoc' modules are available.
 Documentation is available: https://renderdoc.org/docs/python_api/index.html)")
-      .arg(interactiveContext->versionString());
+      .arg(PythonContext::versionString());
 }
 
 void PythonShell::appendText(QTextEdit *output, const QString &text)
@@ -2552,12 +2590,5 @@ PythonContext *PythonShell::newContext()
   QObject::connect(ret, &PythonContext::exception, this, &PythonShell::exception);
   QObject::connect(ret, &PythonContext::textOutput, this, &PythonShell::textOutput);
 
-  setGlobals(ret);
-
   return ret;
-}
-
-void PythonShell::setGlobals(PythonContext *ret)
-{
-  ret->setGlobal("pyrenderdoc", m_ThreadCtx);
 }

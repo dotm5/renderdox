@@ -148,10 +148,18 @@ PyObject *PythonContext::main_dict = NULL;
 PyObject *PythonContext::m_DebugPy = NULL;
 PyObject *PythonContext::m_CallWrapper = NULL;
 PyObject *PythonContext::m_Reflector = NULL;
+PyObject *PythonContext::m_StubRD = NULL;
+PyObject *PythonContext::m_StubQRD = NULL;
+PyObject *PythonContext::m_pyrenderdoc = NULL;
+ICaptureContext *PythonContext::m_CtxWrapper = NULL;
 QAtomicInt PythonContext::m_DeferredInit = 0;
 PyObject *PythonContext::m_CallWrapperGlobals = NULL;
 PythonContext *PythonContext::m_ExtensionContext = NULL;
 QMap<rdcstr, PyObject *> PythonContext::extensions;
+
+// defined in PythonInvokers.cpp
+ICaptureContext *MakeCaptureContextInvoker(ICaptureContext &ctx);
+void FreeCaptureContextInvoker(ICaptureContext *ctx);
 
 static PyObject *current_global_handle = NULL;
 
@@ -944,25 +952,25 @@ except:
 
         Py_XDECREF(syspath);
 
-        PyObject *stub_rd = PyImport_ImportModule(QFormatStr("v%1_%2.renderdoc")
-                                                      .arg(RENDERDOC_VERSION_MAJOR)
-                                                      .arg(RENDERDOC_VERSION_MINOR)
-                                                      .toUtf8()
-                                                      .data());
+        m_StubRD = PyImport_ImportModule(QFormatStr("v%1_%2.renderdoc")
+                                             .arg(RENDERDOC_VERSION_MAJOR)
+                                             .arg(RENDERDOC_VERSION_MINOR)
+                                             .toUtf8()
+                                             .data());
 
-        if(!stub_rd)
+        if(!m_StubRD)
         {
           qCritical() << "Failed importing stubs for renderdoc";
           HandleException(NULL);
         }
 
-        PyObject *stub_qrd = PyImport_ImportModule(QFormatStr("v%1_%2.qrenderdoc")
-                                                       .arg(RENDERDOC_VERSION_MAJOR)
-                                                       .arg(RENDERDOC_VERSION_MINOR)
-                                                       .toUtf8()
-                                                       .data());
+        m_StubQRD = PyImport_ImportModule(QFormatStr("v%1_%2.qrenderdoc")
+                                              .arg(RENDERDOC_VERSION_MAJOR)
+                                              .arg(RENDERDOC_VERSION_MINOR)
+                                              .toUtf8()
+                                              .data());
 
-        if(!stub_qrd)
+        if(!m_StubQRD)
         {
           qCritical() << "Failed importing stubs for qrenderdoc";
           HandleException(NULL);
@@ -970,14 +978,12 @@ except:
 
         PyObject *alias_modules = PyObject_SafeGetAttrString(m_Reflector, "alias_modules");
 
-        if(stub_rd)
-          PyDict_SetItemString(alias_modules, "renderdoc", stub_rd);
+        if(m_StubRD)
+          PyDict_SetItemString(alias_modules, "renderdoc", m_StubRD);
 
-        if(stub_qrd)
-          PyDict_SetItemString(alias_modules, "qrenderdoc", stub_qrd);
+        if(m_StubQRD)
+          PyDict_SetItemString(alias_modules, "qrenderdoc", m_StubQRD);
 
-        Py_XDECREF(stub_rd);
-        Py_XDECREF(stub_qrd);
         Py_XDECREF(alias_modules);
 
         break;
@@ -1000,6 +1006,18 @@ except:
 
   // this will leak effectively
   m_ExtensionContext = new PythonContext(true, NULL);
+}
+
+void PythonContext::setCtxGlobal(ICaptureContext &ctx)
+{
+  m_CtxWrapper = MakeCaptureContextInvoker(ctx);
+
+  PyGILState_STATE gil = PyGILState_Ensure();
+
+  m_pyrenderdoc =
+      PassObjectToPython((rdcstr(TypeName<ICaptureContext>()) + " *").c_str(), m_CtxWrapper);
+
+  PyGILState_Release(gil);
 }
 
 bool PythonContext::initialised()
@@ -1033,6 +1051,11 @@ PythonContext::PythonContext(bool extensionContext, QObject *parent) : QObject(p
     output->selfDeleting = !extensionContext;
     output->block = false;
     Py_XDECREF(redirector);
+  }
+
+  if(m_pyrenderdoc)
+  {
+    PyDict_SetItemString(context_namespace, "pyrenderdoc", m_pyrenderdoc);
   }
 
   // release the GIL again
@@ -1121,15 +1144,15 @@ void PythonContext::Finish()
   PyGILState_Release(gil);
 }
 
-void PythonContext::PausePythonThreading()
+void *PythonContext::PausePythonThreading()
 {
-  m_SavedThread = PyEval_SaveThread();
+  return PyGILState_Check() == 0 ? NULL : PyEval_SaveThread();
 }
 
-void PythonContext::ResumePythonThreading()
+void PythonContext::ResumePythonThreading(void *ctx)
 {
-  PyEval_RestoreThread((PyThreadState *)m_SavedThread);
-  m_SavedThread = NULL;
+  if(ctx)
+    PyEval_RestoreThread((PyThreadState *)ctx);
 }
 
 void PythonContext::GlobalShutdown()
@@ -1148,6 +1171,8 @@ void PythonContext::GlobalShutdown()
   PyGILState_Ensure();
 
   Py_Finalize();
+
+  FreeCaptureContextInvoker(m_CtxWrapper);
 }
 
 QStringList PythonContext::GetApplicationExtensionsPaths()
@@ -1300,7 +1325,8 @@ QString PythonContext::LoadExtension(ICaptureContext &ctx, const rdcstr &extensi
       ext = PyImport_ReloadModule(extensions[extension]);
   }
 
-  PyObject *pyctx = PassObjectToPython((rdcstr(TypeName<ICaptureContext>()) + " *").c_str(), &ctx);
+  if(!m_pyrenderdoc)
+    qCritical() << "pyrenderdoc variable is NULL";
 
   // if import succeeded, store this extension module in our map. If import failed, we might have
   // failed a reimport in which case the original module is still there and valid, so don't
@@ -1323,13 +1349,13 @@ QString PythonContext::LoadExtension(ICaptureContext &ctx, const rdcstr &extensi
 
     PyModule_AddObject(ext, "_renderdoc_internal", ext_context);
 
-    Py_XINCREF(pyctx);
+    Py_XINCREF(m_pyrenderdoc);
 
-    int pyret = PyModule_AddObject(ext, "pyrenderdoc", pyctx);
+    int pyret = PyModule_AddObject(ext, "pyrenderdoc", m_pyrenderdoc);
 
     if(pyret != 0)
     {
-      Py_XDECREF(pyctx);
+      Py_XDECREF(m_pyrenderdoc);
 
       qCritical() << "Couldn't set pyrenderdoc global in loaded module";
       ret += tr("Couldn't set pyrenderdoc global in loaded module\n");
@@ -1347,9 +1373,10 @@ QString PythonContext::LoadExtension(ICaptureContext &ctx, const rdcstr &extensi
     if(register_func)
     {
       PyObject *retval = NULL;
-      if(pyctx)
+      if(m_pyrenderdoc)
       {
-        retval = PyObject_CallFunction(register_func, "sO", MAJOR_MINOR_VERSION_STRING, pyctx);
+        retval =
+            PyObject_CallFunction(register_func, "sO", MAJOR_MINOR_VERSION_STRING, m_pyrenderdoc);
       }
       else
       {
@@ -1380,7 +1407,7 @@ QString PythonContext::LoadExtension(ICaptureContext &ctx, const rdcstr &extensi
     ext = NULL;
   }
 
-  Py_XDECREF(pyctx);
+  Py_XDECREF(m_pyrenderdoc);
 
   if(ext)
   {
@@ -1397,9 +1424,10 @@ QString PythonContext::LoadExtension(ICaptureContext &ctx, const rdcstr &extensi
 
     if(!valueStr.isEmpty())
     {
-      qCritical("Error importing extension module. %s: %s", typeStr.toUtf8().data(),
-                valueStr.toUtf8().data());
-      ret += tr("Error importing extension module. %1: %2\n\n").arg(typeStr).arg(valueStr);
+      qCritical("Error importing extension module '%s'. %s: %s", extension.c_str(),
+                typeStr.toUtf8().data(), valueStr.toUtf8().data());
+      ret +=
+          tr("Error importing extension module '%1'. %2: %3\n\n").arg(extension).arg(typeStr).arg(valueStr);
 
       if(!frames.isEmpty())
       {
@@ -1417,7 +1445,7 @@ QString PythonContext::LoadExtension(ICaptureContext &ctx, const rdcstr &extensi
       }
     }
 
-    if(!ret.isEmpty() && reload)
+    if(!ret.isEmpty())
       m_ExtensionContext->addText(extension, true, ret);
   }
 
@@ -1603,6 +1631,11 @@ void PythonContext::executeString(const QString &filename, const QString &source
     Py_XDECREF(settrace);
     Py_XDECREF(gettrace);
   }
+  else
+  {
+    caughtException = true;
+    FetchException(typeStr, valueStr, finalLine, frames);
+  }
 
   Py_XDECREF(compiled);
 
@@ -1750,6 +1783,59 @@ void PythonContext::reflectSource(QString src)
   }
 
   PyGILState_Release(gil);
+}
+
+void PythonContext::makeHelpContext()
+{
+  // expand out members of renderdoc and qrenderdoc using the stubs
+  if(!m_StubRD || !m_StubQRD)
+  {
+    for(int i = 0; i < 50 && m_DeferredInit == 0; i++)
+      QThread::msleep(20);
+
+    m_DeferredInit = 1;
+
+    if(!m_StubRD || !m_StubQRD)
+      return;
+  }
+
+  PyGILState_STATE gil = PyGILState_Ensure();
+
+  PyDict_SetItemString(context_namespace, "stub_rd", m_StubRD);
+  PyDict_SetItemString(context_namespace, "stub_qrd", m_StubQRD);
+
+  PyGILState_Release(gil);
+
+  executeString(lit(R"(
+def publicise_module(mod):
+  for name in dir(mod):
+    if name[0] == '_' or '_circular' in name:
+      continue
+    obj = getattr(mod, name)
+    if hasattr(obj, '__module__') and mod.__name__ not in getattr(obj, '__module__'):
+      continue
+    globals()[name] = obj
+
+publicise_module(stub_rd)
+publicise_module(stub_qrd)
+
+del publicise_module
+
+)"));
+
+  gil = PyGILState_Ensure();
+
+  PyDict_DelItemString(context_namespace, "stub_rd");
+  PyDict_DelItemString(context_namespace, "stub_qrd");
+
+  if(PyDict_ContainsString(context_namespace, "pyrenderdoc"))
+    PyDict_DelItemString(context_namespace, "pyrenderdoc");
+  if(PyDict_ContainsString(context_namespace, "sys"))
+    PyDict_DelItemString(context_namespace, "sys");
+
+  PyGILState_Release(gil);
+
+  reflectSource(QString());
 }
 
 QString PythonContext::tooltipForLoc(int line, int col)

@@ -149,7 +149,6 @@ private slots:
 
   // manual slots
   void interactive_keypress(QKeyEvent *e);
-  void helpSearch_keypress(QKeyEvent *e);
   void traceLine(const QString &file, int line);
   void exception(const QString &extension, const QString &type, const QString &value, int finalLine,
                  QList<QString> frames);
@@ -168,7 +167,6 @@ private slots:
 private:
   Ui::PythonShell *ui;
   ICaptureContext &m_Ctx;
-  ICaptureContext *m_ThreadCtx = NULL;
 
   ScintillaEdit *runningScriptEditor = NULL;
 
@@ -177,7 +175,6 @@ private:
   QWidget *m_FuncTipWidget = NULL;
   intptr_t m_FuncTipLine = 0;
   bool m_ContextMenuVisible = false;
-  bool m_HelpPrinting = false;
 
   bool m_IgnoreRecovered = false;
 
@@ -206,7 +203,8 @@ private:
   int m_CurLine = 0;
   QTimer *m_CurLineTimer = NULL;
 
-  PythonContext *interactiveContext = NULL, *scriptContext = NULL, *completionContext = NULL;
+  PythonContext *interactiveContext = NULL, *scriptContext = NULL, *completionContext = NULL,
+                *helpContext = NULL;
 
   QList<QString> history;
   int historyidx = -1;
@@ -232,7 +230,7 @@ private:
   void setupTabs();
 
   EditorWrapper *curEditor();
-  void makeEditor(rdcstr filename, rdcstr text);
+  EditorWrapper *makeEditor(rdcstr filename, rdcstr text);
 
   void updateEditorCloseButton();
   void updateNonDebugWarning();
@@ -248,7 +246,6 @@ private:
   void updateScriptOutput(bool fullRefresh);
 
   PythonContext *newContext();
-  void setGlobals(PythonContext *ret);
 
   void doAutocomplete(ScintillaEdit *editor);
   void doFunccomplete(ScintillaEdit *editor);

@@ -3113,7 +3113,7 @@ IReplayDriver *ReplayProxy::MakeDummyDriver()
     shaders.push_back(it.second);
   m_PointerReflectionCache.clear();
 
-  IReplayDriver *dummy = new DummyDriver(this, shaders, m_StructuredFile);
+  IReplayDriver *dummy = new DummyDriver(this, shaders, m_StructuredFile, {});
 
   // the dummy driver now owns the file, remove our reference
   m_StructuredFile = NULL;

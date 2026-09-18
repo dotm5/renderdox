@@ -178,9 +178,80 @@ void AddXFBAnnotations(const ShaderReflection &refl, const SPIRVPatchData &patch
 
       outpatch.insert(0, outpatch[i]);
       outpatch.erase(i + 1);
+
+      // extra unused gl_PerVertex members not in the signature can bite us now, delete them
+      rdcspv::Id structID = outpatch[i].structID;
+      if(structID)
+      {
+        rdcarray<uint32_t> usedMembers = {outpatch[i].structMemberIndex};
+        uint32_t maxMember = outpatch[i].structMemberIndex;
+        for(size_t j = 0; j < outsig.size(); j++)
+        {
+          if(i != j && structID == outpatch[j].structID)
+          {
+            usedMembers.push_back(outpatch[i].structMemberIndex);
+            maxMember = RDCMAX(maxMember, outpatch[i].structMemberIndex);
+          }
+        }
+
+        if(maxMember + 1 != usedMembers.size())
+        {
+          RDCERR("Not a clean subset of builtin block used");
+          break;
+        }
+
+        rdcspv::Iter strIt = editor.GetID(structID);
+        rdcspv::OpTypeStruct str(strIt);
+
+        if(str.members.size() > usedMembers.size())
+        {
+          RDCDEBUG("Truncating builtin block from %zu members to %zu", str.members.size(),
+                   usedMembers.size());
+          str.members.resize(usedMembers.size());
+
+          strIt = str;
+        }
+
+        // remove any MemberDecoration or MemberName
+        for(rdcspv::Iter it = editor.Begin(rdcspv::Section::DebugNames);
+            it < editor.End(rdcspv::Section::Annotations); ++it)
+        {
+          if(it.opcode() == rdcspv::Op::MemberDecorate)
+          {
+            rdcspv::OpMemberDecorate mem(it);
+
+            if(mem.structureType == structID && mem.member > maxMember)
+              it.nopRemove();
+          }
+          else if(it.opcode() == rdcspv::Op::MemberDecorateIdEXT)
+          {
+            rdcspv::OpMemberDecorateIdEXT mem(it);
+
+            if(mem.structureType == structID && mem.member > maxMember)
+              it.nopRemove();
+          }
+          else if(it.opcode() == rdcspv::Op::MemberDecorateString)
+          {
+            rdcspv::OpMemberDecorateString mem(it);
+
+            if(mem.structType == structID && mem.member > maxMember)
+              it.nopRemove();
+          }
+          else if(it.opcode() == rdcspv::Op::MemberName)
+          {
+            rdcspv::OpMemberName mem(it);
+
+            if(mem.type == structID && mem.member > maxMember)
+              it.nopRemove();
+          }
+        }
+      }
+
       break;
     }
   }
+
+  rdcarray<rdcspv::Id> structVars;
 
   for(size_t i = 0; i < outsig.size(); i++)
   {
@@ -192,16 +263,22 @@ void AddXFBAnnotations(const ShaderReflection &refl, const SPIRVPatchData &patch
     {
       // do not patch anything as we only patch the base array, but reserve space in the stride
     }
-    else if(outpatch[i].structID && !outpatch[i].accessChain.empty())
-    {
-      editor.AddDecoration(
-          rdcspv::OpMemberDecorate(outpatch[i].structID, outpatch[i].structMemberIndex,
-                                   rdcspv::DecorationParam<rdcspv::Decoration::Offset>(xfbStride)));
-    }
     else if(outpatch[i].ID)
     {
-      editor.AddDecoration(rdcspv::OpDecorate(
-          outpatch[i].ID, rdcspv::DecorationParam<rdcspv::Decoration::Offset>(xfbStride)));
+      if(!outpatch[i].accessChain.empty())
+      {
+        if(!structVars.contains(outpatch[i].ID))
+        {
+          editor.AddDecoration(rdcspv::OpDecorate(
+              outpatch[i].ID, rdcspv::DecorationParam<rdcspv::Decoration::Offset>(xfbStride)));
+          structVars.push_back(outpatch[i].ID);
+        }
+      }
+      else
+      {
+        editor.AddDecoration(rdcspv::OpDecorate(
+            outpatch[i].ID, rdcspv::DecorationParam<rdcspv::Decoration::Offset>(xfbStride)));
+      }
     }
 
     // components always get promoted to at least 32-bit
@@ -210,7 +287,7 @@ void AddXFBAnnotations(const ShaderReflection &refl, const SPIRVPatchData &patch
     xfbStride += outsig[i].compCount * compByteSize;
   }
 
-  std::set<rdcspv::Id> vars;
+  rdcarray<rdcspv::Id> vars;
 
   for(size_t i = 0; i < outpatch.size(); i++)
   {
@@ -218,14 +295,13 @@ void AddXFBAnnotations(const ShaderReflection &refl, const SPIRVPatchData &patch
     if(outsig[i].stream != rastStream)
       continue;
 
-    if(outpatch[i].ID && !outpatch[i].isArraySubsequentElement &&
-       vars.find(outpatch[i].ID) == vars.end())
+    if(outpatch[i].ID && !outpatch[i].isArraySubsequentElement && !vars.contains(outpatch[i].ID))
     {
       editor.AddDecoration(rdcspv::OpDecorate(
           outpatch[i].ID, rdcspv::DecorationParam<rdcspv::Decoration::XfbBuffer>(0)));
       editor.AddDecoration(rdcspv::OpDecorate(
           outpatch[i].ID, rdcspv::DecorationParam<rdcspv::Decoration::XfbStride>(xfbStride)));
-      vars.insert(outpatch[i].ID);
+      vars.push_back(outpatch[i].ID);
     }
   }
 

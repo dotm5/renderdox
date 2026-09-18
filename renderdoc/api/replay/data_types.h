@@ -3230,12 +3230,12 @@ This is primarily used internally and should not be needed to be called external
     if(depthBits == 24)
     {
       shadDepth = float(uint32_t(float(shadDepth * 0xffffff))) / float(0xffffff);
-      eps = float(1.0f) / float(0xffffff);
+      eps = float(1.5f) / float(0xffffff);
     }
     else if(depthBits == 16)
     {
       shadDepth = float(uint32_t(float(shadDepth * 0xffff))) / float(0xffff);
-      eps = float(1.0f) / float(0xffff);
+      eps = float(1.5f) / float(0xffff);
     }
 
     bool passed = true;

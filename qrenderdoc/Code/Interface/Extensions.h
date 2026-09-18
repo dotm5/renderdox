@@ -370,6 +370,14 @@ This will always be false if the extension is unloaded.
 :type: bool
 )");
   bool hasChanges = false;
+
+  DOCUMENT(R"(A flag indicating that the extension failed to load properly.
+
+This will always be false if the extension is unloaded.
+
+:type: bool
+)");
+  bool failedLoad = false;
 };
 
 DECLARE_REFLECTION_STRUCT(ExtensionMetadata);
@@ -679,6 +687,17 @@ add text next to it.
 )");
   virtual void SetWidgetText(QWidget *widget, const rdcstr &text) = 0;
 
+  DOCUMENT(R"(Appends to the 'text' of a widget. For most widgets this will not be different from
+getting the text with :meth:`GetWidgetText`, appending to the string, and setting with :meth:`SetWidgetText`
+but for multi-line widgets like text edits this can give a better experience with better scrolling.
+
+This will also scroll to and move the cursor to the end of the text.
+
+:param QWidget widget: The widget to append text for.
+:param str text: The text to append to the widget's text.
+)");
+  virtual void AppendText(QWidget *widget, const rdcstr &text) = 0;
+
   DOCUMENT(R"(Return the current text of a widget. See :meth:`SetWidgetText`.
 
 :param QWidget widget: The widget to query.
@@ -687,7 +706,24 @@ add text next to it.
 )");
   virtual rdcstr GetWidgetText(QWidget *widget) = 0;
 
+  DOCUMENT(R"(Scroll the widget's vertical scrollbar to the top. If the widget has no scrollbar
+this will do nothing
+
+:param QWidget widget: The widget to scroll in.
+)");
+  virtual void ScrollToTop(QWidget *widget) = 0;
+
+  DOCUMENT(R"(Scroll the widget's vertical scrollbar to the bottom. If the widget has no scrollbar
+this will do nothing
+
+:param QWidget widget: The widget to scroll in.
+)");
+  virtual void ScrollToBottom(QWidget *widget) = 0;
+
   DOCUMENT(R"(Change the font properties of a widget.
+
+The font string can be set either to '_default' or '_fixed' to choose the user-selected default
+font or monospaced fonts respectively.
 
 :param QWidget widget: The widget to change font of.
 :param str font: The new font family to use, or an empty string to leave the font family the same.

@@ -668,6 +668,15 @@ public:
     m_StoredStructuredData = m_StructuredFile = NULL;
     return ret;
   }
+  rdcarray<SDObject *> DetachAnnotations()
+  {
+    rdcarray<SDObject *> ret;
+    ret.swap(m_EventAnnotations);
+    for(auto it = m_Annotations.begin(); it != m_Annotations.end(); ++it)
+      ret.push_back(it->second);
+    m_Annotations.clear();
+    return ret;
+  }
   void SetFetchCounters(bool in) { m_FetchCounters = in; };
   void SetDebugMsgContext(const rdcstr &context) { m_DebugMsgContext = context; }
   void AddDebugMessage(DebugMessage msg)

@@ -4934,6 +4934,17 @@ void WrappedID3D12Device::DataUploadSync()
   }
 }
 
+rdcarray<SDObject *> WrappedID3D12Device::DetachAnnotations()
+{
+  rdcarray<SDObject *> ret;
+  if(m_Queue)
+    ret.swap(m_Queue->GetCommandData()->m_EventAnnotations);
+  for(auto it = m_Annotations.begin(); it != m_Annotations.end(); ++it)
+    ret.push_back(it->second);
+  m_Annotations.clear();
+  return ret;
+}
+
 void WrappedID3D12Device::InternalQueueWaitForIdle()
 {
   QueueWaitForIdle(GetQueue(), m_WFIFence);
