@@ -31,6 +31,13 @@
 #include "strings/string_utils.h"
 
 #include <string>
+#include <set>
+#include <vector>
+#include <mutex>
+#include <atomic>
+#include <MinHook.h>
+
+extern uintptr_t FindRemoteDLL(HANDLE hProcess, DWORD pid, rdcstr libName);
 
 typedef int(WSAAPI *PFN_WSASTARTUP)(__in WORD wVersionRequested, __out LPWSADATA lpWSAData);
 typedef int(WSAAPI *PFN_WSACLEANUP)();
@@ -70,6 +77,109 @@ typedef BOOL(WINAPI *PFN_CREATE_PROCESS_WITH_LOGON_W)(LPCWSTR lpUsername, LPCWST
                                                       LPCWSTR lpCurrentDirectory,
                                                       LPSTARTUPINFOW lpStartupInfo,
                                                       LPPROCESS_INFORMATION lpProcessInformation);
+
+typedef BOOL(WINAPI *PFN_CREATE_PROCESS_INTERNAL_A)(
+    HANDLE hToken, LPCSTR lpApplicationName, LPSTR lpCommandLine,
+    LPSECURITY_ATTRIBUTES lpProcessAttributes, LPSECURITY_ATTRIBUTES lpThreadAttributes,
+    BOOL bInheritHandles, DWORD dwCreationFlags, LPVOID lpEnvironment, LPCSTR lpCurrentDirectory,
+    LPSTARTUPINFOA lpStartupInfo, LPPROCESS_INFORMATION lpProcessInformation, PHANDLE hNewToken);
+
+typedef BOOL(WINAPI *PFN_CREATE_PROCESS_INTERNAL_W)(
+    HANDLE hToken, LPCWSTR lpApplicationName, LPWSTR lpCommandLine,
+    LPSECURITY_ATTRIBUTES lpProcessAttributes, LPSECURITY_ATTRIBUTES lpThreadAttributes,
+    BOOL bInheritHandles, DWORD dwCreationFlags, LPVOID lpEnvironment, LPCWSTR lpCurrentDirectory,
+    LPSTARTUPINFOW lpStartupInfo, LPPROCESS_INFORMATION lpProcessInformation, PHANDLE hNewToken);
+
+#ifndef NT_SUCCESS
+#define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
+#endif
+
+#ifndef THREAD_CREATE_FLAGS_CREATE_SUSPENDED
+#define THREAD_CREATE_FLAGS_CREATE_SUSPENDED 0x00000001
+#endif
+
+#ifndef PROCESS_CREATE_FLAGS_SUSPENDED
+#define PROCESS_CREATE_FLAGS_SUSPENDED 0x00000200
+#endif
+
+typedef LONG NTSTATUS;
+
+typedef struct _UNICODE_STRING_LOCAL
+{
+  USHORT Length;
+  USHORT MaximumLength;
+  PWSTR Buffer;
+} UNICODE_STRING_LOCAL;
+
+typedef struct _RTL_USER_PROCESS_PARAMETERS_LOCAL
+{
+  BYTE Reserved1[16];
+  PVOID Reserved2[10];
+  UNICODE_STRING_LOCAL ImagePathName;
+  UNICODE_STRING_LOCAL CommandLine;
+} RTL_USER_PROCESS_PARAMETERS_LOCAL;
+
+typedef NTSTATUS(NTAPI *PFN_NT_CREATE_USER_PROCESS)(
+    PHANDLE ProcessHandle, PHANDLE ThreadHandle, ACCESS_MASK ProcessDesiredAccess,
+    ACCESS_MASK ThreadDesiredAccess, void *ProcessObjectAttributes, void *ThreadObjectAttributes,
+    ULONG ProcessFlags, ULONG ThreadFlags, void *ProcessParameters, void *CreateInfo,
+    void *AttributeList);
+
+typedef NTSTATUS(NTAPI *PFN_NT_CREATE_THREAD_EX)(
+    PHANDLE ThreadHandle, ACCESS_MASK DesiredAccess, void *ObjectAttributes,
+    HANDLE ProcessHandle, PVOID StartRoutine, PVOID Argument, ULONG CreateFlags,
+    ULONG_PTR ZeroBits, SIZE_T StackSize, SIZE_T MaximumStackSize, void *AttributeList);
+
+typedef NTSTATUS(NTAPI *PFN_NT_CREATE_PROCESS_EX)(
+    PHANDLE ProcessHandle, ACCESS_MASK DesiredAccess, void *ObjectAttributes,
+    HANDLE ParentProcess, ULONG Flags, HANDLE SectionHandle, HANDLE DebugPort,
+    HANDLE ExceptionPort, ULONG JobMemberLevel);
+
+typedef NTSTATUS(NTAPI *PFN_NT_CREATE_PROCESS)(
+    PHANDLE ProcessHandle, ACCESS_MASK DesiredAccess, void *ObjectAttributes,
+    HANDLE ParentProcess, BOOLEAN InheritObjectTable, HANDLE SectionHandle,
+    HANDLE DebugPort, HANDLE ExceptionPort);
+
+typedef NTSTATUS(NTAPI *PFN_NT_CREATE_THREAD)(
+    PHANDLE ThreadHandle, ACCESS_MASK DesiredAccess, void *ObjectAttributes,
+    HANDLE ProcessHandle, void *ClientId, void *ThreadContext, void *InitialTeb,
+    BOOLEAN CreateSuspended);
+
+typedef HANDLE(WINAPI *PFN_CREATE_REMOTE_THREAD)(
+    HANDLE hProcess, LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwStackSize,
+    LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter, DWORD dwCreationFlags,
+    LPDWORD lpThreadId);
+
+typedef HANDLE(WINAPI *PFN_CREATE_REMOTE_THREAD_EX)(
+    HANDLE hProcess, LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwStackSize,
+    LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter, DWORD dwCreationFlags,
+    LPPROC_THREAD_ATTRIBUTE_LIST lpAttributeList, LPDWORD lpThreadId);
+
+typedef BOOL(WINAPI *PFN_CREATE_PROCESS_WITH_TOKEN_W)(
+    HANDLE hToken, DWORD dwLogonFlags, LPCWSTR lpApplicationName, LPWSTR lpCommandLine,
+    DWORD dwCreationFlags, LPVOID lpEnvironment, LPCWSTR lpCurrentDirectory,
+    LPSTARTUPINFOW lpStartupInfo, LPPROCESS_INFORMATION lpProcessInformation);
+
+typedef void(WINAPI *PFN_EXIT_PROCESS)(UINT uExitCode);
+typedef NTSTATUS(NTAPI *PFN_NT_TERMINATE_PROCESS)(HANDLE ProcessHandle, NTSTATUS ExitStatus);
+
+typedef struct _PROCESS_HANDLE_TABLE_ENTRY_INFO
+{
+  HANDLE HandleValue;
+  ULONG_PTR HandleCount;
+  ULONG_PTR PointerCount;
+  ULONG GrantedAccess;
+  ULONG ObjectTypeIndex;
+  ULONG HandleAttributes;
+  ULONG Reserved;
+} PROCESS_HANDLE_TABLE_ENTRY_INFO;
+
+typedef struct _PROCESS_HANDLE_SNAPSHOT_INFORMATION
+{
+  ULONG_PTR NumberOfHandles;
+  ULONG_PTR Reserved;
+  PROCESS_HANDLE_TABLE_ENTRY_INFO Handles[1];
+} PROCESS_HANDLE_SNAPSHOT_INFORMATION;
 
 static rdcstr GetExecutableBasename(LPCWSTR lpApplicationName, LPCWSTR lpCommandLine)
 {
@@ -146,6 +256,10 @@ TEST_CASE("Win32 child-tool exclusion parses only the executable token", "[win32
 
 #endif
 
+static std::set<DWORD> s_HandledPids;
+static std::mutex s_HandledPidsMutex;
+static std::atomic<bool> s_ExitScanned(false);
+
 class SysHook : LibraryHook
 {
 public:
@@ -175,6 +289,7 @@ public:
 
     // register libraries that we care about. We don't need a callback when they are loaded
     LibraryHooks::RegisterLibraryHook("kernel32.dll", NULL);
+    LibraryHooks::RegisterLibraryHook("kernelbase.dll", NULL);
     LibraryHooks::RegisterLibraryHook("advapi32.dll", NULL);
     LibraryHooks::RegisterLibraryHook("api-ms-win-core-processthreads-l1-1-0.dll", NULL);
     LibraryHooks::RegisterLibraryHook("api-ms-win-core-processthreads-l1-1-1.dll", NULL);
@@ -187,11 +302,41 @@ public:
     CreateProcessA.Register("kernel32.dll", "CreateProcessA", CreateProcessA_hook);
     CreateProcessW.Register("kernel32.dll", "CreateProcessW", CreateProcessW_hook);
 
+    Kernel32CreateProcessInternalA.Register("kernel32.dll", "CreateProcessInternalA",
+                                            Kernel32CreateProcessInternalA_hook);
+    Kernel32CreateProcessInternalW.Register("kernel32.dll", "CreateProcessInternalW",
+                                            Kernel32CreateProcessInternalW_hook);
+
+    KernelbaseCreateProcessA.Register("kernelbase.dll", "CreateProcessA", KernelbaseCreateProcessA_hook);
+    KernelbaseCreateProcessW.Register("kernelbase.dll", "CreateProcessW", KernelbaseCreateProcessW_hook);
+
+    KernelbaseCreateProcessInternalA.Register("kernelbase.dll", "CreateProcessInternalA",
+                                              KernelbaseCreateProcessInternalA_hook);
+    KernelbaseCreateProcessInternalW.Register("kernelbase.dll", "CreateProcessInternalW",
+                                              KernelbaseCreateProcessInternalW_hook);
+
+    NtCreateUserProcess.Register("ntdll.dll", "NtCreateUserProcess", NtCreateUserProcess_hook);
+    NtCreateThreadEx.Register("ntdll.dll", "NtCreateThreadEx", NtCreateThreadEx_hook);
+    NtCreateProcessEx.Register("ntdll.dll", "NtCreateProcessEx", NtCreateProcessEx_hook);
+    NtCreateProcess.Register("ntdll.dll", "NtCreateProcess", NtCreateProcess_hook);
+    NtCreateThread.Register("ntdll.dll", "NtCreateThread", NtCreateThread_hook);
+
     CreateProcessAsUserA.Register("advapi32.dll", "CreateProcessAsUserA", CreateProcessAsUserA_hook);
     CreateProcessAsUserW.Register("advapi32.dll", "CreateProcessAsUserW", CreateProcessAsUserW_hook);
 
     CreateProcessWithLogonW.Register("advapi32.dll", "CreateProcessWithLogonW",
                                      CreateProcessWithLogonW_hook);
+    CreateProcessWithTokenW.Register("advapi32.dll", "CreateProcessWithTokenW",
+                                     CreateProcessWithTokenW_hook);
+
+    Kernel32CreateRemoteThread.Register("kernel32.dll", "CreateRemoteThread",
+                                        Kernel32CreateRemoteThread_hook);
+    Kernel32CreateRemoteThreadEx.Register("kernel32.dll", "CreateRemoteThreadEx",
+                                          Kernel32CreateRemoteThreadEx_hook);
+    // kernelbase.dll!CreateRemoteThreadEx is forwarded from kernel32.dll, no need to double hook
+
+    NtTerminateProcess.Register("ntdll.dll", "NtTerminateProcess", NtTerminateProcess_hook);
+    ExitProcess.Register("kernel32.dll", "ExitProcess", ExitProcess_hook);
 
     // handle API set exports if they exist. These don't really exist so we don't have to worry
     // about double hooking, and also they call into the 'real' implementation in kernelbase.dll
@@ -228,6 +373,193 @@ public:
 
     m_RecurseSlot = Threading::AllocateTLSSlot();
     Threading::SetTLSValue(m_RecurseSlot, NULL);
+
+    // Start anti-unhook watchdog thread
+    Threading::CloseThread(Threading::CreateThread([]() {
+      HMODULE hNtdll = GetModuleHandleA("ntdll.dll");
+      HMODULE hKernelbase = GetModuleHandleA("kernelbase.dll");
+      void *pNtCreateUser = hNtdll ? (void *)GetProcAddress(hNtdll, "NtCreateUserProcess") : NULL;
+      void *pNtCreateThread = hNtdll ? (void *)GetProcAddress(hNtdll, "NtCreateThreadEx") : NULL;
+      void *pCreateProcInternal =
+          hKernelbase ? (void *)GetProcAddress(hKernelbase, "CreateProcessInternalW") : NULL;
+
+      RDCLOG("[SYS_WATCHDOG] Anti-unhook watchdog active in PID %u", GetCurrentProcessId());
+
+      for(int iter = 0; iter < 600; iter++)
+      {
+        Threading::Sleep(50);
+
+        if(pNtCreateUser)
+        {
+          uint8_t bytes[14] = {0};
+          memcpy(bytes, pNtCreateUser, 14);
+          bool isHooked = (bytes[0] == 0xE9 || (bytes[0] == 0xFF && bytes[1] == 0x25));
+          if(!isHooked)
+          {
+            RDCLOG(
+                "[SYS_WATCHDOG] NtCreateUserProcess was UNHOOKED in PID %u at iter %d! Bytes: "
+                "%02X %02X %02X %02X %02X %02X. Re-hooking...",
+                GetCurrentProcessId(), iter, bytes[0], bytes[1], bytes[2], bytes[3], bytes[4],
+                bytes[5]);
+            MH_EnableHook(pNtCreateUser);
+          }
+        }
+
+        if(pNtCreateThread)
+        {
+          uint8_t bytes[14] = {0};
+          memcpy(bytes, pNtCreateThread, 14);
+          bool isHooked = (bytes[0] == 0xE9 || (bytes[0] == 0xFF && bytes[1] == 0x25));
+          if(!isHooked)
+          {
+            RDCLOG(
+                "[SYS_WATCHDOG] NtCreateThreadEx was UNHOOKED in PID %u at iter %d! Bytes: "
+                "%02X %02X %02X %02X %02X %02X. Re-hooking...",
+                GetCurrentProcessId(), iter, bytes[0], bytes[1], bytes[2], bytes[3], bytes[4],
+                bytes[5]);
+            MH_EnableHook(pNtCreateThread);
+          }
+        }
+
+        if(pCreateProcInternal)
+        {
+          uint8_t bytes[14] = {0};
+          memcpy(bytes, pCreateProcInternal, 14);
+          bool isHooked = (bytes[0] == 0xE9 || (bytes[0] == 0xFF && bytes[1] == 0x25));
+          if(!isHooked)
+          {
+            RDCLOG(
+                "[SYS_WATCHDOG] CreateProcessInternalW was UNHOOKED in PID %u at iter %d! Bytes: "
+                "%02X %02X %02X %02X %02X %02X. Re-hooking...",
+                GetCurrentProcessId(), iter, bytes[0], bytes[1], bytes[2], bytes[3], bytes[4],
+                bytes[5]);
+            MH_EnableHook(pCreateProcInternal);
+          }
+        }
+      }
+    }));
+
+    // Start child process handle sentinel thread (detects direct syscalls, unhooked calls, etc.)
+    Threading::CloseThread(Threading::CreateThread([]() {
+      DWORD myPid = GetCurrentProcessId();
+      {
+        std::lock_guard<std::mutex> lock(s_HandledPidsMutex);
+        s_HandledPids.insert(myPid);
+      }
+
+      RDCLOG("[HANDLE_SENTINEL] Child handle sentinel active in PID %u (1ms polling)", myPid);
+
+      for(int loop = 0; loop < 15000; loop++)
+      {
+        Threading::Sleep(1);
+
+        if(!RenderDoc::Inst().GetCaptureOptions().hookIntoChildren)
+          continue;
+
+        ScanHandles();
+      }
+    }));
+  }
+
+  static void CheckAndInjectCandidateHandle(HANDLE hCandidate, DWORD myPid)
+  {
+    if(hCandidate == NULL || hCandidate == INVALID_HANDLE_VALUE)
+      return;
+
+    DWORD pid = GetProcessId(hCandidate);
+    if(pid == 0 || pid == myPid)
+      return;
+
+    {
+      std::lock_guard<std::mutex> lock(s_HandledPidsMutex);
+      if(s_HandledPids.count(pid) > 0)
+        return;
+      s_HandledPids.insert(pid);
+    }
+
+    wchar_t exePath[MAX_PATH] = {0};
+    DWORD pathLen = MAX_PATH;
+    QueryFullProcessImageNameW(hCandidate, 0, exePath, &pathLen);
+
+    RDCLOG("[HANDLE_SENTINEL] Discovered new child/target process PID %u (path: %ls) via handle %p in PID %u! Injecting dgcore...",
+           pid, exePath, hCandidate, myPid);
+
+    if(IsExcludedChildTool(exePath, NULL))
+    {
+      RDCLOG("[HANDLE_SENTINEL] Process PID %u is excluded child tool, skipping", pid);
+      return;
+    }
+
+    CaptureOptions childOptions = RenderDoc::Inst().GetCaptureOptions();
+#if defined(DCOMP_SINGLE_GENERATION_CHILD_HOOK) && DCOMP_SINGLE_GENERATION_CHILD_HOOK
+    childOptions.hookIntoChildren = false;
+#endif
+
+    rdcpair<RDResult, uint32_t> res = Process::InjectIntoProcess(
+        pid, {}, RenderDoc::Inst().GetCaptureFileTemplate(), childOptions, false, hCandidate);
+
+    if(res.first == ResultCode::Succeeded)
+    {
+      RDCLOG("[HANDLE_SENTINEL] Successfully injected child PID %u via handle %p, ident=%u",
+             pid, hCandidate, res.second);
+      RenderDoc::Inst().AddChildProcess(pid, res.second);
+    }
+    else
+    {
+      RDCERR("[HANDLE_SENTINEL] Failed to inject child PID %u via handle %p: %s",
+             pid, hCandidate, res.first.message.c_str());
+    }
+  }
+
+  static void ScanHandles()
+  {
+    DWORD myPid = GetCurrentProcessId();
+
+    typedef NTSTATUS(NTAPI * PFN_NT_QUERY_INFORMATION_PROCESS)(HANDLE, ULONG, PVOID, ULONG, PULONG);
+    static PFN_NT_QUERY_INFORMATION_PROCESS pfnNtQueryInfoProcess =
+        (PFN_NT_QUERY_INFORMATION_PROCESS)GetProcAddress(GetModuleHandleA("ntdll.dll"),
+                                                         "NtQueryInformationProcess");
+
+    bool usedQuery = false;
+    if(pfnNtQueryInfoProcess)
+    {
+      static std::vector<uint8_t> handleBuf(256 * 1024);
+      ULONG retLen = 0;
+      NTSTATUS status = pfnNtQueryInfoProcess(GetCurrentProcess(), 51 /* ProcessHandleInformation */,
+                                             handleBuf.data(), (ULONG)handleBuf.size(), &retLen);
+      if(status == 0xC0000004 /* STATUS_INFO_LENGTH_MISMATCH */ && retLen > handleBuf.size())
+      {
+        handleBuf.resize(retLen + 4096);
+        status = pfnNtQueryInfoProcess(GetCurrentProcess(), 51, handleBuf.data(),
+                                      (ULONG)handleBuf.size(), &retLen);
+      }
+
+      if(NT_SUCCESS(status))
+      {
+        usedQuery = true;
+        PROCESS_HANDLE_SNAPSHOT_INFORMATION *info =
+            (PROCESS_HANDLE_SNAPSHOT_INFORMATION *)handleBuf.data();
+        
+        static int s_ScanCounter = 0;
+        if(++s_ScanCounter % 1000 == 0)
+        {
+          RDCLOG("[HANDLE_SENTINEL] PID %u heartbeat: %u handles in table", myPid, (unsigned)info->NumberOfHandles);
+        }
+
+        for(ULONG_PTR i = 0; i < info->NumberOfHandles; i++)
+        {
+          CheckAndInjectCandidateHandle(info->Handles[i].HandleValue, myPid);
+        }
+      }
+    }
+
+    if(!usedQuery)
+    {
+      for(uintptr_t hVal = 4; hVal < 0x4000; hVal += 4)
+      {
+        CheckAndInjectCandidateHandle((HANDLE)hVal, myPid);
+      }
+    }
   }
 
 private:
@@ -249,6 +581,24 @@ private:
   void EndRecurse() { Threading::SetTLSValue(m_RecurseSlot, NULL); }
   HookedFunction<PFN_CREATE_PROCESS_A> CreateProcessA;
   HookedFunction<PFN_CREATE_PROCESS_W> CreateProcessW;
+  HookedFunction<PFN_CREATE_PROCESS_INTERNAL_A> Kernel32CreateProcessInternalA;
+  HookedFunction<PFN_CREATE_PROCESS_INTERNAL_W> Kernel32CreateProcessInternalW;
+  HookedFunction<PFN_CREATE_PROCESS_A> KernelbaseCreateProcessA;
+  HookedFunction<PFN_CREATE_PROCESS_W> KernelbaseCreateProcessW;
+  HookedFunction<PFN_CREATE_PROCESS_INTERNAL_A> KernelbaseCreateProcessInternalA;
+  HookedFunction<PFN_CREATE_PROCESS_INTERNAL_W> KernelbaseCreateProcessInternalW;
+  HookedFunction<PFN_NT_CREATE_USER_PROCESS> NtCreateUserProcess;
+  HookedFunction<PFN_NT_CREATE_THREAD_EX> NtCreateThreadEx;
+  HookedFunction<PFN_NT_CREATE_PROCESS_EX> NtCreateProcessEx;
+  HookedFunction<PFN_NT_CREATE_PROCESS> NtCreateProcess;
+  HookedFunction<PFN_NT_CREATE_THREAD> NtCreateThread;
+  HookedFunction<PFN_CREATE_REMOTE_THREAD> Kernel32CreateRemoteThread;
+  HookedFunction<PFN_CREATE_REMOTE_THREAD_EX> Kernel32CreateRemoteThreadEx;
+  HookedFunction<PFN_CREATE_REMOTE_THREAD_EX> KernelbaseCreateRemoteThreadEx;
+  HookedFunction<PFN_CREATE_PROCESS_WITH_TOKEN_W> CreateProcessWithTokenW;
+  HookedFunction<PFN_EXIT_PROCESS> ExitProcess;
+  HookedFunction<PFN_NT_TERMINATE_PROCESS> NtTerminateProcess;
+
 
   HookedFunction<PFN_CREATE_PROCESS_A> API110CreateProcessA;
   HookedFunction<PFN_CREATE_PROCESS_W> API110CreateProcessW;
@@ -322,6 +672,9 @@ private:
 #endif
 
     bool recursive = syshooks.CheckRecurse();
+
+    RDCLOG("[SYS_HOOK] Intercepted %s: flags=0x%08x, inject=%d, recurse=%d", entryPoint,
+           dwCreationFlags, (int)inject, (int)recursive);
 
     if(recursive)
       return realFunc(dwCreationFlags, pEnvironment, lpProcessInformation);
@@ -428,7 +781,9 @@ private:
 
     if(ret && inject)
     {
-      RDCDEBUG("Intercepting %s", entryPoint);
+      RDCLOG("[SYS_HOOK] %s successfully created child PID %u, handle %p, injecting dgcore...",
+             entryPoint, lpProcessInformation ? lpProcessInformation->dwProcessId : 0,
+             lpProcessInformation ? lpProcessInformation->hProcess : NULL);
 
       // inherit logfile and capture options
       CaptureOptions childOptions = RenderDoc::Inst().GetCaptureOptions();
@@ -442,10 +797,23 @@ private:
 
       rdcpair<RDResult, uint32_t> res = Process::InjectIntoProcess(
           lpProcessInformation->dwProcessId, {}, RenderDoc::Inst().GetCaptureFileTemplate(),
-          childOptions, false);
+          childOptions, false, lpProcessInformation->hProcess);
 
       if(res.first == ResultCode::Succeeded)
         RenderDoc::Inst().AddChildProcess((uint32_t)lpProcessInformation->dwProcessId, res.second);
+      else
+        RDCERR("[SYS_HOOK] Failed to inject into child PID %u: %s",
+               lpProcessInformation ? lpProcessInformation->dwProcessId : 0,
+               res.first.message.c_str());
+    }
+    else if(ret && !inject)
+    {
+      RDCLOG("[SYS_HOOK] %s created child PID %u, but NOT injecting (inject=false)",
+             entryPoint, lpProcessInformation ? lpProcessInformation->dwProcessId : 0);
+    }
+    else if(!ret)
+    {
+      RDCLOG("[SYS_HOOK] %s realFunc failed, err=%u", entryPoint, GetLastError());
     }
 
     if(resume)
@@ -468,11 +836,25 @@ private:
   static bool ShouldInject(LPCWSTR lpApplicationName, LPCWSTR lpCommandLine)
   {
     if(!RenderDoc::Inst().GetCaptureOptions().hookIntoChildren)
+    {
+      RDCLOG("[SYS_HOOK] ShouldInject=false (hookIntoChildren=0) for app='%ls', cmd='%ls'",
+             lpApplicationName ? lpApplicationName : L"(null)",
+             lpCommandLine ? lpCommandLine : L"(null)");
       return false;
+    }
 
-    // sanity check to make sure we're not going to go into an infinity loop injecting into
-    // ourselves.
-    return !IsExcludedChildTool(lpApplicationName, lpCommandLine);
+    if(IsExcludedChildTool(lpApplicationName, lpCommandLine))
+    {
+      RDCLOG("[SYS_HOOK] ShouldInject=false (excluded) for app='%ls', cmd='%ls'",
+             lpApplicationName ? lpApplicationName : L"(null)",
+             lpCommandLine ? lpCommandLine : L"(null)");
+      return false;
+    }
+
+    RDCLOG("[SYS_HOOK] ShouldInject=true for app='%ls', cmd='%ls'",
+           lpApplicationName ? lpApplicationName : L"(null)",
+           lpCommandLine ? lpCommandLine : L"(null)");
+    return true;
   }
 
   static bool ShouldInject(LPCSTR lpApplicationName, LPCSTR lpCommandLine)
@@ -521,6 +903,672 @@ private:
         },
         dwCreationFlags, ShouldInject(lpApplicationName, lpCommandLine), lpEnvironment,
         lpProcessInformation);
+  }
+
+  static BOOL WINAPI KernelbaseCreateProcessA_hook(
+      __in_opt LPCSTR lpApplicationName, __inout_opt LPSTR lpCommandLine,
+      __in_opt LPSECURITY_ATTRIBUTES lpProcessAttributes,
+      __in_opt LPSECURITY_ATTRIBUTES lpThreadAttributes, __in BOOL bInheritHandles,
+      __in DWORD dwCreationFlags, __in_opt LPVOID lpEnvironment, __in_opt LPCSTR lpCurrentDirectory,
+      __in LPSTARTUPINFOA lpStartupInfo, __out LPPROCESS_INFORMATION lpProcessInformation)
+  {
+    return Hooked_CreateProcess(
+        "kernelbase!CreateProcessA",
+        [=](DWORD flags, LPVOID env, LPPROCESS_INFORMATION pi) {
+          return syshooks.KernelbaseCreateProcessA()(
+              lpApplicationName, lpCommandLine, lpProcessAttributes, lpThreadAttributes,
+              bInheritHandles, flags, env, lpCurrentDirectory, lpStartupInfo, pi);
+        },
+        dwCreationFlags, ShouldInject(lpApplicationName, lpCommandLine), lpEnvironment,
+        lpProcessInformation);
+  }
+
+  static BOOL WINAPI KernelbaseCreateProcessW_hook(
+      __in_opt LPCWSTR lpApplicationName, __inout_opt LPWSTR lpCommandLine,
+      __in_opt LPSECURITY_ATTRIBUTES lpProcessAttributes,
+      __in_opt LPSECURITY_ATTRIBUTES lpThreadAttributes, __in BOOL bInheritHandles,
+      __in DWORD dwCreationFlags, __in_opt LPVOID lpEnvironment,
+      __in_opt LPCWSTR lpCurrentDirectory, __in LPSTARTUPINFOW lpStartupInfo,
+      __out LPPROCESS_INFORMATION lpProcessInformation)
+  {
+    return Hooked_CreateProcess(
+        "kernelbase!CreateProcessW",
+        [=](DWORD flags, LPVOID env, LPPROCESS_INFORMATION pi) {
+          return syshooks.KernelbaseCreateProcessW()(
+              lpApplicationName, lpCommandLine, lpProcessAttributes, lpThreadAttributes,
+              bInheritHandles, flags, env, lpCurrentDirectory, lpStartupInfo, pi);
+        },
+        dwCreationFlags, ShouldInject(lpApplicationName, lpCommandLine), lpEnvironment,
+        lpProcessInformation);
+  }
+
+  static BOOL WINAPI Kernel32CreateProcessInternalA_hook(
+      HANDLE hToken, LPCSTR lpApplicationName, LPSTR lpCommandLine,
+      LPSECURITY_ATTRIBUTES lpProcessAttributes, LPSECURITY_ATTRIBUTES lpThreadAttributes,
+      BOOL bInheritHandles, DWORD dwCreationFlags, LPVOID lpEnvironment,
+      LPCSTR lpCurrentDirectory, LPSTARTUPINFOA lpStartupInfo,
+      LPPROCESS_INFORMATION lpProcessInformation, PHANDLE hNewToken)
+  {
+    return Hooked_CreateProcess(
+        "kernel32!CreateProcessInternalA",
+        [=](DWORD flags, LPVOID env, LPPROCESS_INFORMATION pi) {
+          return syshooks.Kernel32CreateProcessInternalA()(
+              hToken, lpApplicationName, lpCommandLine, lpProcessAttributes, lpThreadAttributes,
+              bInheritHandles, flags, env, lpCurrentDirectory, lpStartupInfo, pi, hNewToken);
+        },
+        dwCreationFlags, ShouldInject(lpApplicationName, lpCommandLine), lpEnvironment,
+        lpProcessInformation);
+  }
+
+  static BOOL WINAPI Kernel32CreateProcessInternalW_hook(
+      HANDLE hToken, LPCWSTR lpApplicationName, LPWSTR lpCommandLine,
+      LPSECURITY_ATTRIBUTES lpProcessAttributes, LPSECURITY_ATTRIBUTES lpThreadAttributes,
+      BOOL bInheritHandles, DWORD dwCreationFlags, LPVOID lpEnvironment,
+      LPCWSTR lpCurrentDirectory, LPSTARTUPINFOW lpStartupInfo,
+      LPPROCESS_INFORMATION lpProcessInformation, PHANDLE hNewToken)
+  {
+    return Hooked_CreateProcess(
+        "kernel32!CreateProcessInternalW",
+        [=](DWORD flags, LPVOID env, LPPROCESS_INFORMATION pi) {
+          return syshooks.Kernel32CreateProcessInternalW()(
+              hToken, lpApplicationName, lpCommandLine, lpProcessAttributes, lpThreadAttributes,
+              bInheritHandles, flags, env, lpCurrentDirectory, lpStartupInfo, pi, hNewToken);
+        },
+        dwCreationFlags, ShouldInject(lpApplicationName, lpCommandLine), lpEnvironment,
+        lpProcessInformation);
+  }
+
+  static BOOL WINAPI KernelbaseCreateProcessInternalA_hook(
+      HANDLE hToken, LPCSTR lpApplicationName, LPSTR lpCommandLine,
+      LPSECURITY_ATTRIBUTES lpProcessAttributes, LPSECURITY_ATTRIBUTES lpThreadAttributes,
+      BOOL bInheritHandles, DWORD dwCreationFlags, LPVOID lpEnvironment,
+      LPCSTR lpCurrentDirectory, LPSTARTUPINFOA lpStartupInfo,
+      LPPROCESS_INFORMATION lpProcessInformation, PHANDLE hNewToken)
+  {
+    return Hooked_CreateProcess(
+        "kernelbase!CreateProcessInternalA",
+        [=](DWORD flags, LPVOID env, LPPROCESS_INFORMATION pi) {
+          return syshooks.KernelbaseCreateProcessInternalA()(
+              hToken, lpApplicationName, lpCommandLine, lpProcessAttributes, lpThreadAttributes,
+              bInheritHandles, flags, env, lpCurrentDirectory, lpStartupInfo, pi, hNewToken);
+        },
+        dwCreationFlags, ShouldInject(lpApplicationName, lpCommandLine), lpEnvironment,
+        lpProcessInformation);
+  }
+
+  static BOOL WINAPI KernelbaseCreateProcessInternalW_hook(
+      HANDLE hToken, LPCWSTR lpApplicationName, LPWSTR lpCommandLine,
+      LPSECURITY_ATTRIBUTES lpProcessAttributes, LPSECURITY_ATTRIBUTES lpThreadAttributes,
+      BOOL bInheritHandles, DWORD dwCreationFlags, LPVOID lpEnvironment,
+      LPCWSTR lpCurrentDirectory, LPSTARTUPINFOW lpStartupInfo,
+      LPPROCESS_INFORMATION lpProcessInformation, PHANDLE hNewToken)
+  {
+    return Hooked_CreateProcess(
+        "kernelbase!CreateProcessInternalW",
+        [=](DWORD flags, LPVOID env, LPPROCESS_INFORMATION pi) {
+          return syshooks.KernelbaseCreateProcessInternalW()(
+              hToken, lpApplicationName, lpCommandLine, lpProcessAttributes, lpThreadAttributes,
+              bInheritHandles, flags, env, lpCurrentDirectory, lpStartupInfo, pi, hNewToken);
+        },
+        dwCreationFlags, ShouldInject(lpApplicationName, lpCommandLine), lpEnvironment,
+        lpProcessInformation);
+  }
+
+  static NTSTATUS NTAPI NtCreateUserProcess_hook(
+      PHANDLE ProcessHandle, PHANDLE ThreadHandle, ACCESS_MASK ProcessDesiredAccess,
+      ACCESS_MASK ThreadDesiredAccess, void *ProcessObjectAttributes,
+      void *ThreadObjectAttributes, ULONG ProcessFlags, ULONG ThreadFlags,
+      void *ProcessParameters, void *CreateInfo, void *AttributeList)
+  {
+    bool recursive = syshooks.CheckRecurse();
+
+    if(recursive)
+    {
+      return syshooks.NtCreateUserProcess()(
+          ProcessHandle, ThreadHandle, ProcessDesiredAccess, ThreadDesiredAccess,
+          ProcessObjectAttributes, ThreadObjectAttributes, ProcessFlags, ThreadFlags,
+          ProcessParameters, CreateInfo, AttributeList);
+    }
+
+    std::wstring appPathStr;
+    std::wstring cmdLineStr;
+    if(ProcessParameters)
+    {
+      RTL_USER_PROCESS_PARAMETERS_LOCAL *params =
+          (RTL_USER_PROCESS_PARAMETERS_LOCAL *)ProcessParameters;
+      if(params->ImagePathName.Buffer && params->ImagePathName.Length > 0)
+        appPathStr.assign(params->ImagePathName.Buffer, params->ImagePathName.Length / sizeof(wchar_t));
+      if(params->CommandLine.Buffer && params->CommandLine.Length > 0)
+        cmdLineStr.assign(params->CommandLine.Buffer, params->CommandLine.Length / sizeof(wchar_t));
+    }
+    const wchar_t *appPath = appPathStr.c_str();
+    const wchar_t *cmdLine = cmdLineStr.c_str();
+
+    RDCLOG("[SYS_HOOK] Intercepted ntdll!NtCreateUserProcess directly! app='%ls', cmd='%ls', ProcessFlags=0x%08x, ThreadFlags=0x%08x",
+           appPath, cmdLine, ProcessFlags, ThreadFlags);
+
+    bool inject = ShouldInject(appPath, cmdLine);
+
+    bool resume = false;
+    if(inject)
+    {
+      if((ThreadFlags & THREAD_CREATE_FLAGS_CREATE_SUSPENDED) == 0)
+      {
+        resume = true;
+        ThreadFlags |= THREAD_CREATE_FLAGS_CREATE_SUSPENDED;
+      }
+      ProcessDesiredAccess |= PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION |
+                              PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_VM_READ | SYNCHRONIZE;
+      ThreadDesiredAccess |= THREAD_SUSPEND_RESUME | THREAD_QUERY_INFORMATION;
+    }
+
+    NTSTATUS status = syshooks.NtCreateUserProcess()(
+        ProcessHandle, ThreadHandle, ProcessDesiredAccess, ThreadDesiredAccess,
+        ProcessObjectAttributes, ThreadObjectAttributes, ProcessFlags, ThreadFlags,
+        ProcessParameters, CreateInfo, AttributeList);
+
+    if(NT_SUCCESS(status) && inject && ProcessHandle && *ProcessHandle)
+    {
+      DWORD pid = GetProcessId(*ProcessHandle);
+      RDCLOG("[SYS_HOOK] NtCreateUserProcess successfully created child PID %u, handle %p, status 0x%08x. Injecting dgcore...",
+             pid, *ProcessHandle, (uint32_t)status);
+
+      CaptureOptions childOptions = RenderDoc::Inst().GetCaptureOptions();
+#if defined(DCOMP_SINGLE_GENERATION_CHILD_HOOK) && DCOMP_SINGLE_GENERATION_CHILD_HOOK
+      childOptions.hookIntoChildren = false;
+      RDCDEBUG("Injecting child with further child hooks disabled");
+#endif
+
+      rdcpair<RDResult, uint32_t> res = Process::InjectIntoProcess(
+          pid, {}, RenderDoc::Inst().GetCaptureFileTemplate(), childOptions, false, *ProcessHandle);
+
+      if(res.first == ResultCode::Succeeded)
+      {
+        RDCLOG("[SYS_HOOK] NtCreateUserProcess child PID %u injected successfully, ident=%u", pid, res.second);
+        RenderDoc::Inst().AddChildProcess(pid, res.second);
+      }
+      else
+      {
+        RDCERR("[SYS_HOOK] NtCreateUserProcess failed to inject child PID %u: %s", pid,
+               res.first.message.c_str());
+      }
+    }
+    else if(NT_SUCCESS(status) && !inject)
+    {
+      DWORD pid = (ProcessHandle && *ProcessHandle) ? GetProcessId(*ProcessHandle) : 0;
+      RDCLOG("[SYS_HOOK] NtCreateUserProcess created child PID %u, but NOT injecting (inject=false)", pid);
+    }
+    else if(!NT_SUCCESS(status))
+    {
+      RDCLOG("[SYS_HOOK] NtCreateUserProcess failed, NTSTATUS=0x%08x", (uint32_t)status);
+    }
+
+    if(resume && ThreadHandle && *ThreadHandle)
+    {
+      ResumeThread(*ThreadHandle);
+    }
+
+    syshooks.EndRecurse();
+    return status;
+  }
+
+  static NTSTATUS NTAPI NtCreateProcessEx_hook(
+      PHANDLE ProcessHandle, ACCESS_MASK DesiredAccess, void *ObjectAttributes,
+      HANDLE ParentProcess, ULONG Flags, HANDLE SectionHandle, HANDLE DebugPort,
+      HANDLE ExceptionPort, ULONG JobMemberLevel)
+  {
+    bool recursive = syshooks.CheckRecurse();
+    if(recursive)
+    {
+      return syshooks.NtCreateProcessEx()(
+          ProcessHandle, DesiredAccess, ObjectAttributes, ParentProcess, Flags,
+          SectionHandle, DebugPort, ExceptionPort, JobMemberLevel);
+    }
+
+    DesiredAccess |= PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION |
+                     PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_VM_READ | SYNCHRONIZE;
+
+    NTSTATUS status = syshooks.NtCreateProcessEx()(
+        ProcessHandle, DesiredAccess, ObjectAttributes, ParentProcess, Flags,
+        SectionHandle, DebugPort, ExceptionPort, JobMemberLevel);
+
+    if(NT_SUCCESS(status) && ProcessHandle && *ProcessHandle)
+    {
+      DWORD pid = GetProcessId(*ProcessHandle);
+      RDCLOG("[SYS_HOOK] NtCreateProcessEx created child PID %u, handle %p, status 0x%08x",
+             pid, *ProcessHandle, (uint32_t)status);
+    }
+
+    syshooks.EndRecurse();
+    return status;
+  }
+
+  static NTSTATUS NTAPI NtCreateThreadEx_hook(
+      PHANDLE ThreadHandle, ACCESS_MASK DesiredAccess, void *ObjectAttributes,
+      HANDLE ProcessHandle, PVOID StartRoutine, PVOID Argument, ULONG CreateFlags,
+      ULONG_PTR ZeroBits, SIZE_T StackSize, SIZE_T MaximumStackSize, void *AttributeList)
+  {
+    bool recursive = syshooks.CheckRecurse();
+    if(recursive)
+    {
+      return syshooks.NtCreateThreadEx()(
+          ThreadHandle, DesiredAccess, ObjectAttributes, ProcessHandle, StartRoutine,
+          Argument, CreateFlags, ZeroBits, StackSize, MaximumStackSize, AttributeList);
+    }
+
+    DWORD targetPid = 0;
+    if(ProcessHandle != NULL && ProcessHandle != GetCurrentProcess())
+    {
+      targetPid = GetProcessId(ProcessHandle);
+    }
+
+    if(targetPid != 0 && targetPid != GetCurrentProcessId())
+    {
+      RDCLOG("[SYS_HOOK] NtCreateThreadEx called for REMOTE process PID %u! CreateFlags=0x%08x",
+             targetPid, CreateFlags);
+
+      bool resume = false;
+      if((CreateFlags & THREAD_CREATE_FLAGS_CREATE_SUSPENDED) == 0)
+      {
+        resume = true;
+        CreateFlags |= THREAD_CREATE_FLAGS_CREATE_SUSPENDED;
+      }
+
+      NTSTATUS status = syshooks.NtCreateThreadEx()(
+          ThreadHandle, DesiredAccess, ObjectAttributes, ProcessHandle, StartRoutine,
+          Argument, CreateFlags, ZeroBits, StackSize, MaximumStackSize, AttributeList);
+
+      if(NT_SUCCESS(status) && RenderDoc::Inst().GetCaptureOptions().hookIntoChildren)
+      {
+        RDCLOG("[SYS_HOOK] Remote thread created in PID %u, injecting dgcore...", targetPid);
+        CaptureOptions childOptions = RenderDoc::Inst().GetCaptureOptions();
+#if defined(DCOMP_SINGLE_GENERATION_CHILD_HOOK) && DCOMP_SINGLE_GENERATION_CHILD_HOOK
+        childOptions.hookIntoChildren = false;
+#endif
+        rdcpair<RDResult, uint32_t> res = Process::InjectIntoProcess(
+            targetPid, {}, RenderDoc::Inst().GetCaptureFileTemplate(), childOptions, false, ProcessHandle);
+
+        if(res.first == ResultCode::Succeeded)
+        {
+          RDCLOG("[SYS_HOOK] PID %u injected successfully via NtCreateThreadEx, ident=%u", targetPid, res.second);
+          RenderDoc::Inst().AddChildProcess(targetPid, res.second);
+        }
+        else
+        {
+          RDCERR("[SYS_HOOK] Failed to inject PID %u via NtCreateThreadEx: %s", targetPid, res.first.message.c_str());
+        }
+      }
+
+      if(resume && ThreadHandle && *ThreadHandle)
+      {
+        ResumeThread(*ThreadHandle);
+      }
+
+      syshooks.EndRecurse();
+      return status;
+    }
+
+    NTSTATUS status = syshooks.NtCreateThreadEx()(
+        ThreadHandle, DesiredAccess, ObjectAttributes, ProcessHandle, StartRoutine,
+        Argument, CreateFlags, ZeroBits, StackSize, MaximumStackSize, AttributeList);
+
+    syshooks.EndRecurse();
+    return status;
+  }
+
+  static NTSTATUS NTAPI NtCreateProcess_hook(
+      PHANDLE ProcessHandle, ACCESS_MASK DesiredAccess, void *ObjectAttributes,
+      HANDLE ParentProcess, BOOLEAN InheritObjectTable, HANDLE SectionHandle,
+      HANDLE DebugPort, HANDLE ExceptionPort)
+  {
+    bool recursive = syshooks.CheckRecurse();
+    if(recursive)
+    {
+      return syshooks.NtCreateProcess()(ProcessHandle, DesiredAccess, ObjectAttributes,
+                                        ParentProcess, InheritObjectTable, SectionHandle,
+                                        DebugPort, ExceptionPort);
+    }
+
+    DesiredAccess |= PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION |
+                     PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_VM_READ | SYNCHRONIZE;
+
+    NTSTATUS status = syshooks.NtCreateProcess()(ProcessHandle, DesiredAccess, ObjectAttributes,
+                                                ParentProcess, InheritObjectTable, SectionHandle,
+                                                DebugPort, ExceptionPort);
+
+    if(NT_SUCCESS(status) && ProcessHandle && *ProcessHandle)
+    {
+      DWORD pid = GetProcessId(*ProcessHandle);
+      RDCLOG("[SYS_HOOK] NtCreateProcess created child PID %u, handle %p, status 0x%08x",
+             pid, *ProcessHandle, (uint32_t)status);
+    }
+
+    syshooks.EndRecurse();
+    return status;
+  }
+
+  static NTSTATUS NTAPI NtCreateThread_hook(
+      PHANDLE ThreadHandle, ACCESS_MASK DesiredAccess, void *ObjectAttributes,
+      HANDLE ProcessHandle, void *ClientId, void *ThreadContext, void *InitialTeb,
+      BOOLEAN CreateSuspended)
+  {
+    bool recursive = syshooks.CheckRecurse();
+    if(recursive)
+    {
+      return syshooks.NtCreateThread()(ThreadHandle, DesiredAccess, ObjectAttributes,
+                                       ProcessHandle, ClientId, ThreadContext, InitialTeb,
+                                       CreateSuspended);
+    }
+
+    DWORD targetPid = 0;
+    if(ProcessHandle != NULL && ProcessHandle != GetCurrentProcess())
+      targetPid = GetProcessId(ProcessHandle);
+
+    if(targetPid != 0 && targetPid != GetCurrentProcessId())
+    {
+      RDCLOG("[SYS_HOOK] NtCreateThread called for REMOTE process PID %u! CreateSuspended=%d",
+             targetPid, (int)CreateSuspended);
+
+      BOOLEAN forceSuspended = TRUE;
+      NTSTATUS status = syshooks.NtCreateThread()(
+          ThreadHandle, DesiredAccess, ObjectAttributes, ProcessHandle, ClientId,
+          ThreadContext, InitialTeb, forceSuspended);
+
+      if(NT_SUCCESS(status) && RenderDoc::Inst().GetCaptureOptions().hookIntoChildren)
+      {
+        RDCLOG("[SYS_HOOK] Remote thread created in PID %u via NtCreateThread, injecting dgcore...", targetPid);
+        CaptureOptions childOptions = RenderDoc::Inst().GetCaptureOptions();
+#if defined(DCOMP_SINGLE_GENERATION_CHILD_HOOK) && DCOMP_SINGLE_GENERATION_CHILD_HOOK
+        childOptions.hookIntoChildren = false;
+#endif
+        rdcpair<RDResult, uint32_t> res = Process::InjectIntoProcess(
+            targetPid, {}, RenderDoc::Inst().GetCaptureFileTemplate(), childOptions, false, ProcessHandle);
+
+        if(res.first == ResultCode::Succeeded)
+        {
+          RDCLOG("[SYS_HOOK] PID %u injected successfully via NtCreateThread, ident=%u", targetPid, res.second);
+          RenderDoc::Inst().AddChildProcess(targetPid, res.second);
+        }
+        else
+        {
+          RDCERR("[SYS_HOOK] Failed to inject PID %u via NtCreateThread: %s", targetPid, res.first.message.c_str());
+        }
+      }
+
+      if(!CreateSuspended && ThreadHandle && *ThreadHandle)
+        ResumeThread(*ThreadHandle);
+
+      syshooks.EndRecurse();
+      return status;
+    }
+
+    NTSTATUS status = syshooks.NtCreateThread()(
+        ThreadHandle, DesiredAccess, ObjectAttributes, ProcessHandle, ClientId,
+        ThreadContext, InitialTeb, CreateSuspended);
+    syshooks.EndRecurse();
+    return status;
+  }
+
+  static HANDLE WINAPI Kernel32CreateRemoteThread_hook(
+      HANDLE hProcess, LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwStackSize,
+      LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter, DWORD dwCreationFlags,
+      LPDWORD lpThreadId)
+  {
+    bool recursive = syshooks.CheckRecurse();
+    if(recursive)
+    {
+      return syshooks.Kernel32CreateRemoteThread()(hProcess, lpThreadAttributes, dwStackSize,
+                                                   lpStartAddress, lpParameter, dwCreationFlags,
+                                                   lpThreadId);
+    }
+
+    DWORD targetPid = 0;
+    if(hProcess != NULL && hProcess != GetCurrentProcess())
+      targetPid = GetProcessId(hProcess);
+
+    if(targetPid != 0 && targetPid != GetCurrentProcessId())
+    {
+      RDCLOG("[SYS_HOOK] CreateRemoteThread called for REMOTE PID %u! flags=0x%08x", targetPid, dwCreationFlags);
+      bool resume = false;
+      if((dwCreationFlags & CREATE_SUSPENDED) == 0)
+      {
+        resume = true;
+        dwCreationFlags |= CREATE_SUSPENDED;
+      }
+
+      HANDLE hThread = syshooks.Kernel32CreateRemoteThread()(
+          hProcess, lpThreadAttributes, dwStackSize, lpStartAddress, lpParameter, dwCreationFlags, lpThreadId);
+
+      if(hThread != NULL && RenderDoc::Inst().GetCaptureOptions().hookIntoChildren)
+      {
+        RDCLOG("[SYS_HOOK] Remote thread created in PID %u via CreateRemoteThread, injecting dgcore...", targetPid);
+        CaptureOptions childOptions = RenderDoc::Inst().GetCaptureOptions();
+#if defined(DCOMP_SINGLE_GENERATION_CHILD_HOOK) && DCOMP_SINGLE_GENERATION_CHILD_HOOK
+        childOptions.hookIntoChildren = false;
+#endif
+        rdcpair<RDResult, uint32_t> res = Process::InjectIntoProcess(
+            targetPid, {}, RenderDoc::Inst().GetCaptureFileTemplate(), childOptions, false, hProcess);
+
+        if(res.first == ResultCode::Succeeded)
+        {
+          RDCLOG("[SYS_HOOK] PID %u injected successfully via CreateRemoteThread, ident=%u", targetPid, res.second);
+          RenderDoc::Inst().AddChildProcess(targetPid, res.second);
+        }
+        else
+        {
+          RDCERR("[SYS_HOOK] Failed to inject PID %u via CreateRemoteThread: %s", targetPid, res.first.message.c_str());
+        }
+      }
+
+      if(resume && hThread != NULL)
+        ResumeThread(hThread);
+
+      syshooks.EndRecurse();
+      return hThread;
+    }
+
+    HANDLE ret = syshooks.Kernel32CreateRemoteThread()(hProcess, lpThreadAttributes, dwStackSize,
+                                                      lpStartAddress, lpParameter, dwCreationFlags, lpThreadId);
+    syshooks.EndRecurse();
+    return ret;
+  }
+
+  static HANDLE WINAPI
+  Kernel32CreateRemoteThreadEx_hook(HANDLE hProcess, LPSECURITY_ATTRIBUTES lpThreadAttributes,
+                                   SIZE_T dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress,
+                                   LPVOID lpParameter, DWORD dwCreationFlags,
+                                   LPPROC_THREAD_ATTRIBUTE_LIST lpAttributeList, LPDWORD lpThreadId)
+  {
+    bool recursive = syshooks.CheckRecurse();
+    if(recursive)
+    {
+      return syshooks.Kernel32CreateRemoteThreadEx()(hProcess, lpThreadAttributes, dwStackSize,
+                                                     lpStartAddress, lpParameter, dwCreationFlags,
+                                                     lpAttributeList, lpThreadId);
+    }
+
+    DWORD targetPid = 0;
+    if(hProcess != NULL && hProcess != GetCurrentProcess())
+      targetPid = GetProcessId(hProcess);
+
+    if(targetPid != 0 && targetPid != GetCurrentProcessId())
+    {
+      RDCLOG("[SYS_HOOK] CreateRemoteThreadEx called for REMOTE PID %u! flags=0x%08x", targetPid, dwCreationFlags);
+      bool resume = false;
+      if((dwCreationFlags & CREATE_SUSPENDED) == 0)
+      {
+        resume = true;
+        dwCreationFlags |= CREATE_SUSPENDED;
+      }
+
+      HANDLE hThread = syshooks.Kernel32CreateRemoteThreadEx()(
+          hProcess, lpThreadAttributes, dwStackSize, lpStartAddress, lpParameter, dwCreationFlags,
+          lpAttributeList, lpThreadId);
+
+      if(hThread != NULL && RenderDoc::Inst().GetCaptureOptions().hookIntoChildren)
+      {
+        RDCLOG("[SYS_HOOK] Remote thread created in PID %u via CreateRemoteThreadEx, injecting dgcore...", targetPid);
+        CaptureOptions childOptions = RenderDoc::Inst().GetCaptureOptions();
+#if defined(DCOMP_SINGLE_GENERATION_CHILD_HOOK) && DCOMP_SINGLE_GENERATION_CHILD_HOOK
+        childOptions.hookIntoChildren = false;
+#endif
+        rdcpair<RDResult, uint32_t> res = Process::InjectIntoProcess(
+            targetPid, {}, RenderDoc::Inst().GetCaptureFileTemplate(), childOptions, false, hProcess);
+
+        if(res.first == ResultCode::Succeeded)
+        {
+          RDCLOG("[SYS_HOOK] PID %u injected successfully via CreateRemoteThreadEx, ident=%u", targetPid, res.second);
+          RenderDoc::Inst().AddChildProcess(targetPid, res.second);
+        }
+        else
+        {
+          RDCERR("[SYS_HOOK] Failed to inject PID %u via CreateRemoteThreadEx: %s", targetPid, res.first.message.c_str());
+        }
+      }
+
+      if(resume && hThread != NULL)
+        ResumeThread(hThread);
+
+      syshooks.EndRecurse();
+      return hThread;
+    }
+
+    HANDLE ret = syshooks.Kernel32CreateRemoteThreadEx()(
+        hProcess, lpThreadAttributes, dwStackSize, lpStartAddress, lpParameter, dwCreationFlags,
+        lpAttributeList, lpThreadId);
+    syshooks.EndRecurse();
+    return ret;
+  }
+
+  static HANDLE WINAPI
+  KernelbaseCreateRemoteThreadEx_hook(HANDLE hProcess, LPSECURITY_ATTRIBUTES lpThreadAttributes,
+                                     SIZE_T dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress,
+                                     LPVOID lpParameter, DWORD dwCreationFlags,
+                                     LPPROC_THREAD_ATTRIBUTE_LIST lpAttributeList, LPDWORD lpThreadId)
+  {
+    bool recursive = syshooks.CheckRecurse();
+    if(recursive)
+    {
+      return syshooks.KernelbaseCreateRemoteThreadEx()(hProcess, lpThreadAttributes, dwStackSize,
+                                                       lpStartAddress, lpParameter, dwCreationFlags,
+                                                       lpAttributeList, lpThreadId);
+    }
+
+    DWORD targetPid = 0;
+    if(hProcess != NULL && hProcess != GetCurrentProcess())
+      targetPid = GetProcessId(hProcess);
+
+    if(targetPid != 0 && targetPid != GetCurrentProcessId())
+    {
+      RDCLOG("[SYS_HOOK] kernelbase!CreateRemoteThreadEx called for REMOTE PID %u! flags=0x%08x", targetPid, dwCreationFlags);
+      bool resume = false;
+      if((dwCreationFlags & CREATE_SUSPENDED) == 0)
+      {
+        resume = true;
+        dwCreationFlags |= CREATE_SUSPENDED;
+      }
+
+      HANDLE hThread = syshooks.KernelbaseCreateRemoteThreadEx()(
+          hProcess, lpThreadAttributes, dwStackSize, lpStartAddress, lpParameter, dwCreationFlags,
+          lpAttributeList, lpThreadId);
+
+      if(hThread != NULL && RenderDoc::Inst().GetCaptureOptions().hookIntoChildren)
+      {
+        RDCLOG("[SYS_HOOK] Remote thread created in PID %u via kernelbase!CreateRemoteThreadEx, injecting dgcore...", targetPid);
+        CaptureOptions childOptions = RenderDoc::Inst().GetCaptureOptions();
+#if defined(DCOMP_SINGLE_GENERATION_CHILD_HOOK) && DCOMP_SINGLE_GENERATION_CHILD_HOOK
+        childOptions.hookIntoChildren = false;
+#endif
+        rdcpair<RDResult, uint32_t> res = Process::InjectIntoProcess(
+            targetPid, {}, RenderDoc::Inst().GetCaptureFileTemplate(), childOptions, false, hProcess);
+
+        if(res.first == ResultCode::Succeeded)
+        {
+          RDCLOG("[SYS_HOOK] PID %u injected successfully via kernelbase!CreateRemoteThreadEx, ident=%u", targetPid, res.second);
+          RenderDoc::Inst().AddChildProcess(targetPid, res.second);
+        }
+        else
+        {
+          RDCERR("[SYS_HOOK] Failed to inject PID %u via kernelbase!CreateRemoteThreadEx: %s", targetPid, res.first.message.c_str());
+        }
+      }
+
+      if(resume && hThread != NULL)
+        ResumeThread(hThread);
+
+      syshooks.EndRecurse();
+      return hThread;
+    }
+
+    HANDLE ret = syshooks.KernelbaseCreateRemoteThreadEx()(
+        hProcess, lpThreadAttributes, dwStackSize, lpStartAddress, lpParameter, dwCreationFlags,
+        lpAttributeList, lpThreadId);
+    syshooks.EndRecurse();
+    return ret;
+  }
+
+  static BOOL WINAPI CreateProcessWithTokenW_hook(
+      HANDLE hToken, DWORD dwLogonFlags, LPCWSTR lpApplicationName, LPWSTR lpCommandLine,
+      DWORD dwCreationFlags, LPVOID lpEnvironment, LPCWSTR lpCurrentDirectory,
+      LPSTARTUPINFOW lpStartupInfo, LPPROCESS_INFORMATION lpProcessInformation)
+  {
+    return Hooked_CreateProcess(
+        "advapi32!CreateProcessWithTokenW",
+        [=](DWORD flags, LPVOID env, LPPROCESS_INFORMATION pi) {
+          return syshooks.CreateProcessWithTokenW()(hToken, dwLogonFlags, lpApplicationName,
+                                                   lpCommandLine, flags, env, lpCurrentDirectory,
+                                                   lpStartupInfo, pi);
+        },
+        dwCreationFlags, ShouldInject(lpApplicationName, lpCommandLine), lpEnvironment,
+        lpProcessInformation);
+  }
+
+  static NTSTATUS NTAPI NtTerminateProcess_hook(HANDLE ProcessHandle, NTSTATUS ExitStatus)
+  {
+    bool recursive = syshooks.CheckRecurse();
+    if(recursive)
+    {
+      return syshooks.NtTerminateProcess()(ProcessHandle, ExitStatus);
+    }
+
+    if(ProcessHandle == NULL || ProcessHandle == GetCurrentProcess() || ProcessHandle == (HANDLE)-1)
+    {
+      if(RenderDoc::Inst().GetCaptureOptions().hookIntoChildren)
+      {
+        if(!s_ExitScanned.exchange(true))
+        {
+          RDCLOG("[SYS_HOOK] NtTerminateProcess called on self in PID %u! Scanning handles before exit...",
+                 GetCurrentProcessId());
+          ScanHandles();
+        }
+      }
+    }
+
+    syshooks.EndRecurse();
+    return syshooks.NtTerminateProcess()(ProcessHandle, ExitStatus);
+  }
+
+  static void WINAPI ExitProcess_hook(UINT uExitCode)
+  {
+    bool recursive = syshooks.CheckRecurse();
+    if(recursive)
+    {
+      syshooks.ExitProcess()(uExitCode);
+      return;
+    }
+
+    if(RenderDoc::Inst().GetCaptureOptions().hookIntoChildren)
+    {
+      if(!s_ExitScanned.exchange(true))
+      {
+        RDCLOG("[SYS_HOOK] ExitProcess called in PID %u! Scanning handles before exit...",
+               GetCurrentProcessId());
+        ScanHandles();
+      }
+    }
+
+    syshooks.EndRecurse();
+    syshooks.ExitProcess()(uExitCode);
   }
 
   static BOOL WINAPI API110CreateProcessA_hook(

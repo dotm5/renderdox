@@ -1008,6 +1008,35 @@ static bool IsInlineGraphicsLibrary(const rdcstr &libraryName)
          libraryName == "d3d12.dll" || libraryName == "d3d11on12.dll";
 }
 
+static bool ShouldInlineHook(const rdcstr &libraryName, const rdcstr &funcName)
+{
+  if(IsInlineGraphicsLibrary(libraryName))
+    return true;
+
+  if((libraryName == "kernel32.dll" || libraryName == "kernelbase.dll") &&
+     (funcName == "CreateProcessW" || funcName == "CreateProcessA" ||
+      funcName == "CreateProcessInternalW" || funcName == "CreateProcessInternalA" ||
+      funcName == "CreateRemoteThread" || funcName == "CreateRemoteThreadEx" ||
+      funcName == "ExitProcess" || funcName == "TerminateProcess"))
+    return true;
+
+  if(libraryName == "advapi32.dll" &&
+     (funcName == "CreateProcessAsUserW" || funcName == "CreateProcessAsUserA" ||
+      funcName == "CreateProcessWithLogonW" || funcName == "CreateProcessWithTokenW"))
+    return true;
+
+  if(libraryName == "ntdll.dll" &&
+     (funcName == "NtCreateUserProcess" || funcName == "ZwCreateUserProcess" ||
+      funcName == "NtCreateThreadEx" || funcName == "ZwCreateThreadEx" ||
+      funcName == "NtCreateThread" || funcName == "ZwCreateThread" ||
+      funcName == "NtCreateProcessEx" || funcName == "ZwCreateProcessEx" ||
+      funcName == "NtCreateProcess" || funcName == "ZwCreateProcess" ||
+      funcName == "NtTerminateProcess" || funcName == "ZwTerminateProcess"))
+    return true;
+
+  return false;
+}
+
 static void RememberOriginalSlot(InlineGraphicsHook &installed, void **slot)
 {
   if(slot == NULL)
@@ -1050,16 +1079,25 @@ static void InstallInlineGraphicsHooks()
   for(auto libraryIt = s_HookData->DllHooks.begin(); libraryIt != s_HookData->DllHooks.end();
       ++libraryIt)
   {
-    if(!IsInlineGraphicsLibrary(libraryIt->first))
+    bool isGraphics = IsInlineGraphicsLibrary(libraryIt->first);
+    bool isKernel = (libraryIt->first == "kernel32.dll" || libraryIt->first == "kernelbase.dll");
+    bool isAdvapi = (libraryIt->first == "advapi32.dll");
+    bool isNtdll = (libraryIt->first == "ntdll.dll");
+    if(!isGraphics && !isKernel && !isAdvapi && !isNtdll)
       continue;
 
     DllHookset &hookset = libraryIt->second;
     HMODULE module = hookset.originalModule ? hookset.originalModule : hookset.module;
     if(module == NULL)
+      module = GetModuleHandleA(libraryIt->first.c_str());
+    if(module == NULL)
       continue;
 
     for(FunctionHook &hook : hookset.FunctionHooks)
     {
+      if(!ShouldInlineHook(libraryIt->first, hook.function))
+        continue;
+
       if(hook.hook == NULL || hook.orig == NULL)
         continue;
 
@@ -1073,7 +1111,7 @@ static void InstallInlineGraphicsHooks()
         InlineGraphicsHook &installed = installedIt->second;
         if(installed.detour != hook.hook)
         {
-          RDCERR("Graphics entry %s!%s shares target %p with a different hook", libraryIt->first.c_str(),
+          RDCERR("Inline entry %s!%s shares target %p with a different hook", libraryIt->first.c_str(),
                  hook.function.c_str(), target);
           continue;
         }
@@ -1090,7 +1128,7 @@ static void InstallInlineGraphicsHooks()
       MH_STATUS status = MH_CreateHook(target, hook.hook, &installed.trampoline);
       if(status != MH_OK)
       {
-        RDCERR("Could not create graphics entry hook for %s!%s at %p: MinHook status %d",
+        RDCERR("Could not create inline entry hook for %s!%s at %p: MinHook status %d",
                libraryIt->first.c_str(), hook.function.c_str(), target, (int)status);
         continue;
       }
@@ -1105,13 +1143,13 @@ static void InstallInlineGraphicsHooks()
       {
         *hook.orig = target;
         MH_RemoveHook(target);
-        RDCERR("Could not enable graphics entry hook for %s!%s at %p: MinHook status %d",
+        RDCERR("Could not enable inline entry hook for %s!%s at %p: MinHook status %d",
                libraryIt->first.c_str(), hook.function.c_str(), target, (int)status);
         continue;
       }
 
       s_InlineGraphicsHooks[target] = installed;
-      RDCLOG("Installed graphics entry hook for %s!%s at %p", libraryIt->first.c_str(),
+      RDCLOG("Installed inline entry hook for %s!%s at %p", libraryIt->first.c_str(),
              hook.function.c_str(), target);
     }
   }

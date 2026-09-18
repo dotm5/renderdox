@@ -297,11 +297,43 @@ void InjectDLL(HANDLE hProcess, rdcwstr libName)
   }
 }
 
-uintptr_t FindRemoteDLL(DWORD pid, rdcstr libName)
+uintptr_t FindRemoteDLL(HANDLE hProcess, DWORD pid, rdcstr libName)
 {
-  HANDLE hModuleSnap = INVALID_HANDLE_VALUE;
-
   rdcwstr wlibName = StringFormat::UTF82Wide(strlower(libName));
+
+  if(hProcess != NULL)
+  {
+    HMODULE hMods[1024];
+    DWORD cbNeeded = 0;
+    for(int retry = 0; retry < 10; retry++)
+    {
+      if(EnumProcessModules(hProcess, hMods, sizeof(hMods), &cbNeeded))
+      {
+        DWORD count = cbNeeded / sizeof(HMODULE);
+        for(DWORD i = 0; i < count; i++)
+        {
+          wchar_t szModName[MAX_PATH] = {0};
+          if(GetModuleFileNameExW(hProcess, hMods[i], szModName, MAX_PATH))
+          {
+            wchar_t *wc = szModName;
+            while(*wc)
+            {
+              *wc = towlower(*wc);
+              wc++;
+            }
+            if(wcsstr(szModName, wlibName.c_str()) != NULL)
+            {
+              RDCDEBUG("Found remote DLL via EnumProcessModules: %ls at %p", szModName, (void *)hMods[i]);
+              return (uintptr_t)hMods[i];
+            }
+          }
+        }
+      }
+      Sleep(10);
+    }
+  }
+
+  HANDLE hModuleSnap = INVALID_HANDLE_VALUE;
 
   // up to 10 retries
   for(int i = 0; i < 10; i++)
@@ -371,7 +403,13 @@ uintptr_t FindRemoteDLL(DWORD pid, rdcstr libName)
 
   if(ret == 0)
   {
-    HANDLE h = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, pid);
+    HANDLE h = hProcess;
+    bool ownHandle = false;
+    if(!h)
+    {
+      h = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, pid);
+      ownHandle = true;
+    }
 
     DWORD exitCode = 0;
 
@@ -387,10 +425,10 @@ uintptr_t FindRemoteDLL(DWORD pid, rdcstr libName)
     }
     else
     {
-      RDCERR("Couldn't find module '%s' among %d modules", libName.c_str(), numModules);
+      RDCERR("Couldn't find module '%s' among %d modules in PID %u", libName.c_str(), numModules, pid);
     }
 
-    if(h)
+    if(ownHandle && h)
       CloseHandle(h);
   }
 
@@ -575,14 +613,45 @@ static PROCESS_INFORMATION RunProcess(const rdcstr &app, const rdcstr &workingDi
 rdcpair<RDResult, uint32_t> Process::InjectIntoProcess(uint32_t pid,
                                                        const rdcarray<EnvironmentModification> &env,
                                                        const rdcstr &capturefile,
-                                                       const CaptureOptions &opts, bool waitForExit)
+                                                       const CaptureOptions &opts, bool waitForExit,
+                                                       void *existingProcessHandle)
 {
   rdcwstr wcapturefile = StringFormat::UTF82Wide(capturefile);
 
-  HANDLE hProcess =
-      OpenProcess(PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION |
-                      PROCESS_VM_WRITE | PROCESS_VM_READ | SYNCHRONIZE,
-                  FALSE, pid);
+  HANDLE hProcess = NULL;
+  bool shouldClose = false;
+
+  if(existingProcessHandle != NULL)
+  {
+    if(DuplicateHandle(GetCurrentProcess(), (HANDLE)existingProcessHandle, GetCurrentProcess(),
+                       &hProcess, 0, FALSE, DUPLICATE_SAME_ACCESS) && hProcess != NULL)
+    {
+      shouldClose = true;
+    }
+    else
+    {
+      RDCDEBUG("DuplicateHandle failed (%u), borrowing existing process handle directly", GetLastError());
+      hProcess = (HANDLE)existingProcessHandle;
+      shouldClose = false;
+    }
+  }
+
+  if(hProcess == NULL)
+  {
+    hProcess = OpenProcess(PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION |
+                               PROCESS_VM_WRITE | PROCESS_VM_READ | SYNCHRONIZE,
+                           FALSE, pid);
+    shouldClose = (hProcess != NULL);
+  }
+
+  if(hProcess == NULL)
+  {
+    DWORD err = GetLastError();
+    RDResult result;
+    SET_ERROR_RESULT(result, ResultCode::InjectionFailed,
+                     "Couldn't open process for injection (PID %lu), err: %lu", pid, err);
+    return {result, 0};
+  }
 
   if(opts.delayForDebugger > 0)
   {
@@ -635,7 +704,8 @@ rdcpair<RDResult, uint32_t> Process::InjectIntoProcess(uint32_t pid,
     RDResult result;
     SET_ERROR_RESULT(result, ResultCode::IncompatibleProcess,
                      "Couldn't determine bitness of process, err: %08x", err);
-    CloseHandle(hProcess);
+    if(shouldClose && hProcess)
+      CloseHandle(hProcess);
     return {result, 0};
   }
 
@@ -657,7 +727,8 @@ rdcpair<RDResult, uint32_t> Process::InjectIntoProcess(uint32_t pid,
     RDResult result;
     SET_ERROR_RESULT(result, ResultCode::IncompatibleProcess,
                      "Couldn't determine bitness of self, err: %08x", err);
-    CloseHandle(hProcess);
+    if(shouldClose && hProcess)
+      CloseHandle(hProcess);
     return {result, 0};
   }
 
@@ -708,7 +779,8 @@ rdcpair<RDResult, uint32_t> Process::InjectIntoProcess(uint32_t pid,
     {
       RDCDEBUG("Running from %ls", renderdocPathLower);
 
-      CloseHandle(hProcess);
+      if(shouldClose && hProcess)
+        CloseHandle(hProcess);
       RDResult result;
       SET_ERROR_RESULT(result, ResultCode::IncompatibleProcess,
                        "Can't capture 64-bit program with 32-bit build of DComp. Please run a "
@@ -933,7 +1005,8 @@ rdcpair<RDResult, uint32_t> Process::InjectIntoProcess(uint32_t pid,
           "Can't run 32-bit dgcorecmd to capture 32-bit program."
           "If this is a locally built DComp you must build both 32-bit and 64-bit versions.");
 #endif
-      CloseHandle(hProcess);
+      if(shouldClose && hProcess)
+        CloseHandle(hProcess);
       return {result, 0};
     }
 
@@ -948,7 +1021,8 @@ rdcpair<RDResult, uint32_t> Process::InjectIntoProcess(uint32_t pid,
     if(waitForExit)
       WaitForSingleObject(hProcess, INFINITE);
 
-    CloseHandle(hProcess);
+    if(shouldClose && hProcess)
+      CloseHandle(hProcess);
 
     if(exitCode == 0)
     {
@@ -974,7 +1048,7 @@ rdcpair<RDResult, uint32_t> Process::InjectIntoProcess(uint32_t pid,
 
   const char *rdoc_dll = RDOC_CORE_FILENAME;
 
-  uintptr_t loc = FindRemoteDLL(pid, RDOC_CORE_FILENAME);
+  uintptr_t loc = FindRemoteDLL(hProcess, pid, RDOC_CORE_FILENAME);
 
   rdcpair<RDResult, uint32_t> result = {ResultCode::Succeeded, 0};
 
@@ -1034,7 +1108,8 @@ rdcpair<RDResult, uint32_t> Process::InjectIntoProcess(uint32_t pid,
   if(waitForExit)
     WaitForSingleObject(hProcess, INFINITE);
 
-  CloseHandle(hProcess);
+  if(shouldClose && hProcess)
+    CloseHandle(hProcess);
 
   return result;
 }
@@ -1161,7 +1236,7 @@ rdcpair<RDResult, uint32_t> Process::LaunchAndInjectIntoProcess(
     return {result, 0};
   }
 
-  rdcpair<RDResult, uint32_t> ret = InjectIntoProcess(pi.dwProcessId, {}, capturefile, opts, false);
+  rdcpair<RDResult, uint32_t> ret = InjectIntoProcess(pi.dwProcessId, {}, capturefile, opts, false, pi.hProcess);
 
   CloseHandle(pi.hProcess);
   ResumeThread(pi.hThread);
