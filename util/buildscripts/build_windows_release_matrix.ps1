@@ -148,6 +148,12 @@ $qtTlsAvailable = @($qtTlsRuntimeFiles | Where-Object {
     Test-Path -LiteralPath `
       (Join-Path $repositoryRoot "qrenderdoc\3rdparty\qt\x64\bin\$_") -PathType Leaf
   }).Count -eq $qtTlsRuntimeFiles.Count
+if(-not $pysideEnabled)
+{
+  Write-Warning ('PySide2 is not part of the dependency set, so the packages will ' +
+                 'ship without the Python Qt bindings. Extract qrenderdoc_3rdparty.zip ' +
+                 'in the repository root to include them.')
+}
 $closureCheck = Join-Path $PSScriptRoot 'check_windows_runtime_closure.py'
 if(-not (Test-Path -LiteralPath $closureCheck -PathType Leaf))
 {
