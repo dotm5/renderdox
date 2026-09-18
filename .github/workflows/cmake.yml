@@ -2,7 +2,7 @@ name: CMake
 
 on:
   push:
-    branches: [dgcore-main]
+    branches: [dgcore-main, 'feat/**']
     paths-ignore:
       - '**/*.md'
       - 'docs/**'
