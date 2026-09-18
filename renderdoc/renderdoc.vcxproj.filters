@@ -273,6 +273,9 @@
     <ClInclude Include="common\custom_assert.h">
       <Filter>Common</Filter>
     </ClInclude>
+    <ClInclude Include="os\win32\win32_inline_hook.h">
+      <Filter>OS\Win32</Filter>
+    </ClInclude>
     <ClInclude Include="os\win32\win32_specific.h">
       <Filter>OS\Win32</Filter>
     </ClInclude>
@@ -637,6 +640,9 @@
     </ClCompile>
     <ClCompile Include="core\core.cpp">
       <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="os\win32\win32_inline_hook.cpp">
+      <Filter>OS\Win32</Filter>
     </ClCompile>
     <ClCompile Include="os\win32\win32_hook.cpp">
       <Filter>OS\Win32</Filter>

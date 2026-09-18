@@ -160,9 +160,25 @@ $projectRecords = foreach($relativeProjectPath in $projectPaths)
     continue
   }
 
-  if($projectText -match '3rdparty[\\/]+minhook')
+  if($projectText -match 'minhook')
   {
-    $errors.Add("$relativeProjectPath still references removed MinHook sources")
+    $errors.Add("$relativeProjectPath still references the removed MinHook sources")
+  }
+
+  if($relativeProjectPath -eq 'renderdoc\renderdoc.vcxproj')
+  {
+    # The inline hook engine is vendored under safetyhook/ + zydis/ and only the
+    # adapter translation unit may consume its C++23 headers.
+    foreach($requiredEngineReference in @('safetyhook\src\*.cpp', 'zydis\src\**\*.c',
+                                          'os\win32\win32_inline_hook.cpp',
+                                          '<LanguageStandard>stdcpplatest</LanguageStandard>'))
+    {
+      if(-not $projectText.Contains($requiredEngineReference))
+      {
+        $errors.Add("$relativeProjectPath no longer references the inline hook engine: " +
+                    $requiredEngineReference)
+      }
+    }
   }
 
   $isBootstrapProject =
@@ -199,25 +215,29 @@ $projectRecords = foreach($relativeProjectPath in $projectPaths)
 
   foreach($source in $projectXml.SelectNodes('//m:ClCompile[@Include]', $namespace))
   {
-    if($source.Include -notmatch '\$\(')
+    # Wildcard items are expanded by MSBuild at evaluation time, so the literal
+    # pattern is not itself a file on disk.
+    if($source.Include -match '\$\(' -or $source.Include -match '[\*\?]')
     {
-      $resolved = [IO.Path]::GetFullPath(
-        (Join-Path (Split-Path -Parent $projectPath) $source.Include))
-      if(-not (Test-Path -LiteralPath $resolved -PathType Leaf))
+      continue
+    }
+
+    $resolved = [IO.Path]::GetFullPath(
+      (Join-Path (Split-Path -Parent $projectPath) $source.Include))
+    if(-not (Test-Path -LiteralPath $resolved -PathType Leaf))
+    {
+      $message = "$relativeProjectPath compiles missing source $($source.Include)"
+      if($isSolutionProject -or $isBootstrapProject)
       {
-        $message = "$relativeProjectPath compiles missing source $($source.Include)"
-        if($isSolutionProject -or $isBootstrapProject)
+        $errors.Add($message)
+      }
+      else
+      {
+        if(-not $standaloneMissingSources.ContainsKey($relativeProjectPath))
         {
-          $errors.Add($message)
+          $standaloneMissingSources[$relativeProjectPath] = 0
         }
-        else
-        {
-          if(-not $standaloneMissingSources.ContainsKey($relativeProjectPath))
-          {
-            $standaloneMissingSources[$relativeProjectPath] = 0
-          }
-          $standaloneMissingSources[$relativeProjectPath]++
-        }
+        $standaloneMissingSources[$relativeProjectPath]++
       }
     }
   }
@@ -535,6 +555,21 @@ if($qtUiProjectText.Contains(
 if(-not $qtUiProjectText.Contains('shiboken2.lib'))
 {
   $errors.Add("$qtUiProject no longer links the PySide2 binding runtime")
+}
+
+# The inline hook engine is vendored in-tree next to the removed MinHook
+# submodule, so the tree must stay complete for the core project to build.
+foreach($requiredEnginePath in @(
+    'safetyhook\include\safetyhook.hpp',
+    'safetyhook\LICENSE',
+    'zydis\include\Zydis\Zydis.h',
+    'zydis\LICENSE',
+    'zydis\dependencies\zycore\include\Zycore\Defines.h'))
+{
+  if(-not (Test-Path -LiteralPath (Join-Path $repositoryRoot $requiredEnginePath) -PathType Leaf))
+  {
+    $errors.Add("The vendored inline hook engine is incomplete: $requiredEnginePath")
+  }
 }
 $releaseMatrixScript = 'util\buildscripts\build_windows_release_matrix.ps1'
 $releaseMatrixText = Get-Content -LiteralPath `

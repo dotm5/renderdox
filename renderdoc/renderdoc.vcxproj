@@ -68,7 +68,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>$(SolutionDir)renderdoc\;$(SolutionDir)renderdoc\3rdparty\;$(SolutionDir)minhook\include\;$(SolutionDir)minhook\src\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)renderdoc\;$(SolutionDir)renderdoc\3rdparty\;$(SolutionDir)safetyhook\include\;$(SolutionDir)zydis\include\;$(SolutionDir)zydis\dependencies\zycore\include\</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>RDOC_BASE_NAME=$(RDocReplayBaseName);DCOMP_EXPORTS;DCOMP_PLATFORM_WIN32;WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level4</WarningLevel>
       <TreatWarningAsError>true</TreatWarningAsError>
@@ -639,37 +639,38 @@
     <ClCompile Include="os\win32\win32_shellext.cpp" />
     <ClCompile Include="os\win32\win32_stringio.cpp" />
     <ClCompile Include="os\win32\win32_threading.cpp" />
-    <ClCompile Include="..\minhook\src\buffer.c">
+    <ClCompile Include="os\win32\win32_inline_hook.cpp">
+      <!-- Only this translation unit consumes the SafetyHook headers, which require C++23. -->
+      <LanguageStandard>stdcpplatest</LanguageStandard>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <ForcedIncludeFiles></ForcedIncludeFiles>
-      <TreatWarningAsError>false</TreatWarningAsError>
-      <WarningLevel>Level3</WarningLevel>
     </ClCompile>
-    <ClCompile Include="..\minhook\src\hde\hde32.c">
-      <ExcludedFromBuild Condition="'$(Platform)'=='x64'">true</ExcludedFromBuild>
+    <ClCompile Include="..\safetyhook\src\*.cpp">
+      <LanguageStandard>stdcpplatest</LanguageStandard>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <ForcedIncludeFiles></ForcedIncludeFiles>
       <TreatWarningAsError>false</TreatWarningAsError>
       <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>ZYDIS_STATIC_BUILD;ZYCORE_STATIC_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\minhook\src\hde\hde64.c">
-      <ExcludedFromBuild Condition="'$(Platform)'=='Win32'">true</ExcludedFromBuild>
+    <ClCompile Include="..\zydis\src\**\*.c">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <AdditionalIncludeDirectories>$(SolutionDir)zydis\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ForcedIncludeFiles></ForcedIncludeFiles>
       <TreatWarningAsError>false</TreatWarningAsError>
       <WarningLevel>Level3</WarningLevel>
+      <LanguageStandard_C>stdc11</LanguageStandard_C>
+      <ObjectFileName>$(IntDir)zydis_%(Filename).obj</ObjectFileName>
+      <PreprocessorDefinitions>ZYDIS_STATIC_BUILD;ZYCORE_STATIC_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\minhook\src\hook.c">
+    <ClCompile Include="..\zydis\dependencies\zycore\src\**\*.c">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <ForcedIncludeFiles></ForcedIncludeFiles>
       <TreatWarningAsError>false</TreatWarningAsError>
       <WarningLevel>Level3</WarningLevel>
-    </ClCompile>
-    <ClCompile Include="..\minhook\src\trampoline.c">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <ForcedIncludeFiles></ForcedIncludeFiles>
-      <TreatWarningAsError>false</TreatWarningAsError>
-      <WarningLevel>Level3</WarningLevel>
+      <LanguageStandard_C>stdc11</LanguageStandard_C>
+      <ObjectFileName>$(IntDir)zycore_%(Filename).obj</ObjectFileName>
+      <PreprocessorDefinitions>ZYDIS_STATIC_BUILD;ZYCORE_STATIC_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <ClCompile Include="replay\app_api.cpp" />
     <ClCompile Include="replay\basic_types_tests.cpp" />

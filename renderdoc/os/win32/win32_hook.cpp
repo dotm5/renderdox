@@ -33,14 +33,14 @@
 #include <functional>
 #include <map>
 #include <set>
-#if defined(DCOMP_INLINE_GRAPHICS_HOOKS) && DCOMP_INLINE_GRAPHICS_HOOKS
-#include <MinHook.h>
-#endif
 #include "common/common.h"
 #include "common/threading.h"
 #include "generated/product_identity.h"
 #include "hooks/hooks.h"
 #include "os/os_specific.h"
+#if defined(DCOMP_INLINE_GRAPHICS_HOOKS) && DCOMP_INLINE_GRAPHICS_HOOKS
+#include "os/win32/win32_inline_hook.h"
+#endif
 #include "strings/string_utils.h"
 
 #define VERBOSE_DEBUG_HOOK OPTION_OFF
@@ -995,12 +995,11 @@ struct InlineGraphicsHook
   void *detour = NULL;
   void *trampoline = NULL;
   rdcarray<void **> originalSlots;
+  Win32InlineHook *hook = NULL;
 };
 
 static std::map<void *, InlineGraphicsHook> s_InlineGraphicsHooks;
 static Threading::CriticalSection s_InlineGraphicsHookLock;
-static bool s_InlineGraphicsMinHookInitialised = false;
-static bool s_InlineGraphicsOwnsMinHook = false;
 
 static bool IsInlineGraphicsLibrary(const rdcstr &libraryName)
 {
@@ -1020,32 +1019,12 @@ static void RememberOriginalSlot(InlineGraphicsHook &installed, void **slot)
   installed.originalSlots.push_back(slot);
 }
 
-static bool InitialiseInlineGraphicsHooks()
-{
-  if(s_InlineGraphicsMinHookInitialised)
-    return true;
-
-  MH_STATUS status = MH_Initialize();
-  if(status != MH_OK && status != MH_ERROR_ALREADY_INITIALIZED)
-  {
-    RDCERR("Could not initialise graphics entry hooks: MinHook status %d", (int)status);
-    return false;
-  }
-
-  s_InlineGraphicsMinHookInitialised = true;
-  s_InlineGraphicsOwnsMinHook = status == MH_OK;
-  return true;
-}
-
 static void InstallInlineGraphicsHooks()
 {
   if(IsProxyOnly())
     return;
 
   SCOPED_LOCK(s_InlineGraphicsHookLock);
-
-  if(!InitialiseInlineGraphicsHooks())
-    return;
 
   for(auto libraryIt = s_HookData->DllHooks.begin(); libraryIt != s_HookData->DllHooks.end();
       ++libraryIt)
@@ -1086,12 +1065,12 @@ static void InstallInlineGraphicsHooks()
       InlineGraphicsHook installed;
       installed.target = target;
       installed.detour = hook.hook;
+      installed.hook = Win32CreateInlineHook(target, hook.hook, &installed.trampoline);
 
-      MH_STATUS status = MH_CreateHook(target, hook.hook, &installed.trampoline);
-      if(status != MH_OK)
+      if(installed.hook == NULL)
       {
-        RDCERR("Could not create graphics entry hook for %s!%s at %p: MinHook status %d",
-               libraryIt->first.c_str(), hook.function.c_str(), target, (int)status);
+        RDCERR("Could not create graphics entry hook for %s!%s at %p", libraryIt->first.c_str(),
+               hook.function.c_str(), target);
         continue;
       }
 
@@ -1100,13 +1079,12 @@ static void InstallInlineGraphicsHooks()
       *hook.orig = installed.trampoline;
       RememberOriginalSlot(installed, hook.orig);
 
-      status = MH_EnableHook(target);
-      if(status != MH_OK && status != MH_ERROR_ENABLED)
+      if(!Win32EnableInlineHook(installed.hook))
       {
         *hook.orig = target;
-        MH_RemoveHook(target);
-        RDCERR("Could not enable graphics entry hook for %s!%s at %p: MinHook status %d",
-               libraryIt->first.c_str(), hook.function.c_str(), target, (int)status);
+        Win32DestroyInlineHook(installed.hook);
+        RDCERR("Could not enable graphics entry hook for %s!%s at %p", libraryIt->first.c_str(),
+               hook.function.c_str(), target);
         continue;
       }
 
@@ -1121,14 +1099,15 @@ static void RemoveInlineGraphicsHooks()
 {
   SCOPED_LOCK(s_InlineGraphicsHookLock);
 
-  if(!s_InlineGraphicsMinHookInitialised)
+  if(s_InlineGraphicsHooks.empty())
     return;
 
   for(auto &hookIt : s_InlineGraphicsHooks)
   {
     InlineGraphicsHook &installed = hookIt.second;
-    MH_DisableHook(installed.target);
-    MH_RemoveHook(installed.target);
+
+    Win32DestroyInlineHook(installed.hook);
+    installed.hook = NULL;
 
     for(void **slot : installed.originalSlots)
       if(slot && *slot == installed.trampoline)
@@ -1136,12 +1115,6 @@ static void RemoveInlineGraphicsHooks()
   }
 
   s_InlineGraphicsHooks.clear();
-
-  if(s_InlineGraphicsOwnsMinHook)
-    MH_Uninitialize();
-
-  s_InlineGraphicsMinHookInitialised = false;
-  s_InlineGraphicsOwnsMinHook = false;
 }
 #endif
 

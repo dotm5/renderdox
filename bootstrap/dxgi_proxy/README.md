@@ -20,7 +20,7 @@ calls target the real system DXGI rather than this proxy.
 If the Core is absent, disabled, or fails the handshake, the proxy continues
 as a plain System32 DXGI forwarder. It does not modify the PEB, rename files,
 hard-code a target executable, load D3D12/D3D11, patch function entry points,
-or include MinHook.
+or carry a hooking engine.
 
 Optional diagnostics are written only when `DCOMP_BOOTSTRAP_LOG` contains an
 absolute log-file path.
