@@ -32,6 +32,10 @@
 #include "api/app/renderdoc_app.h"
 #include "generated/product_identity.h"
 
+// The assembly stubs read this table after ProxyExportsReady is published.
+extern "C" FARPROC ProxyExportTargets[51] = {};
+extern "C" volatile LONG ProxyExportsReady = 0;
+
 namespace
 {
 enum D3D11Export : uint32_t
@@ -89,6 +93,7 @@ enum D3D11Export : uint32_t
   OpenAdapter10_2,
   D3D11ExportCount,
 };
+static_assert(D3D11ExportCount == 51, "Update the proxy forwarding table and stubs together");
 
 const char *const ExportNames[D3D11ExportCount] = {
     "CreateDirect3D11DeviceFromDXGIDevice",
@@ -150,7 +155,6 @@ HMODULE ProxyModule = NULL;
 HMODULE RealD3D11 = NULL;
 HMODULE CoreModule = NULL;
 INIT_ONCE Initialisation = INIT_ONCE_STATIC_INIT;
-FARPROC ExportTargets[D3D11ExportCount] = {};
 FARPROC RealExportTargets[D3D11ExportCount] = {};
 GetProcAddressProc RealGetProcAddress = NULL;
 wchar_t LogPath[32768] = {};
@@ -297,7 +301,7 @@ void ResolveExports(bool useHookAwareLookup)
   {
     FARPROC target = useHookAwareLookup ? HookAwareGetProcAddress(RealD3D11, ExportNames[i])
                                         : RealGetProcAddress(RealD3D11, ExportNames[i]);
-    ExportTargets[i] = target;
+    ProxyExportTargets[i] = target;
     if(!useHookAwareLookup)
       RealExportTargets[i] = target;
 
@@ -307,14 +311,14 @@ void ResolveExports(bool useHookAwareLookup)
       GetModulePath(targetModule, targetPath);
 
     Log(L"DComp D3D11 bootstrap: export %-38hs target=%p module=%s\n", ExportNames[i],
-        ExportTargets[i], targetPath[0] ? targetPath : L"<unresolved>");
+        ProxyExportTargets[i], targetPath[0] ? targetPath : L"<unresolved>");
   }
 }
 
 void RestoreRealExports()
 {
   for(uint32_t i = 0; i < D3D11ExportCount; ++i)
-    ExportTargets[i] = RealExportTargets[i];
+    ProxyExportTargets[i] = RealExportTargets[i];
 }
 
 bool VerifyHookTargets()
@@ -323,7 +327,7 @@ bool VerifyHookTargets()
 
   for(D3D11Export index : required)
   {
-    if(ExportTargets[index] == NULL || ModuleFromAddress(ExportTargets[index]) != CoreModule)
+    if(ProxyExportTargets[index] == NULL || ModuleFromAddress(ProxyExportTargets[index]) != CoreModule)
       return false;
   }
 
@@ -396,6 +400,7 @@ BOOL CALLBACK InitialiseBootstrap(PINIT_ONCE, PVOID, PVOID *)
 
   Log(L"DComp D3D11 bootstrap: initialisation complete, core=%s hooks=%s\n",
       CoreHandshakeSucceeded ? L"ready" : L"not-ready", HookTargetsActive ? L"active" : L"inactive");
+  InterlockedExchange(&ProxyExportsReady, 1);
   return TRUE;
 }
 };    // namespace
@@ -407,7 +412,7 @@ extern "C" FARPROC __cdecl ResolveExport(uint32_t index)
   if(index >= D3D11ExportCount)
     return NULL;
 
-  return ExportTargets[index];
+  return ProxyExportTargets[index];
 }
 
 BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID)

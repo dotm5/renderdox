@@ -32,6 +32,10 @@
 #include "api/app/renderdoc_app.h"
 #include "generated/product_identity.h"
 
+// The assembly stubs read this table after ProxyExportsReady is published.
+extern "C" FARPROC ProxyExportTargets[18] = {};
+extern "C" volatile LONG ProxyExportsReady = 0;
+
 namespace
 {
 enum D3D12Export : uint32_t
@@ -56,6 +60,7 @@ enum D3D12Export : uint32_t
   GetBehaviorValue,
   D3D12ExportCount,
 };
+static_assert(D3D12ExportCount == 18, "Update the proxy forwarding table and stubs together");
 
 const char *const ExportNames[D3D12ExportCount] = {
     "SetAppCompatStringPointer",
@@ -84,7 +89,6 @@ HMODULE ProxyModule = NULL;
 HMODULE RealD3D12 = NULL;
 HMODULE CoreModule = NULL;
 INIT_ONCE Initialisation = INIT_ONCE_STATIC_INIT;
-FARPROC ExportTargets[D3D12ExportCount] = {};
 FARPROC RealExportTargets[D3D12ExportCount] = {};
 GetProcAddressProc RealGetProcAddress = NULL;
 wchar_t LogPath[32768] = {};
@@ -231,7 +235,7 @@ void ResolveExports(bool useHookAwareLookup)
   {
     FARPROC target = useHookAwareLookup ? HookAwareGetProcAddress(RealD3D12, ExportNames[i])
                                         : RealGetProcAddress(RealD3D12, ExportNames[i]);
-    ExportTargets[i] = target;
+    ProxyExportTargets[i] = target;
     if(!useHookAwareLookup)
       RealExportTargets[i] = target;
 
@@ -248,7 +252,7 @@ void ResolveExports(bool useHookAwareLookup)
 void RestoreRealExports()
 {
   for(uint32_t i = 0; i < D3D12ExportCount; ++i)
-    ExportTargets[i] = RealExportTargets[i];
+    ProxyExportTargets[i] = RealExportTargets[i];
 }
 
 bool VerifyHookTargets()
@@ -262,7 +266,7 @@ bool VerifyHookTargets()
 
   for(D3D12Export index : required)
   {
-    if(ExportTargets[index] == NULL || ModuleFromAddress(ExportTargets[index]) != CoreModule)
+    if(ProxyExportTargets[index] == NULL || ModuleFromAddress(ProxyExportTargets[index]) != CoreModule)
       return false;
   }
 
@@ -335,6 +339,7 @@ BOOL CALLBACK InitialiseBootstrap(PINIT_ONCE, PVOID, PVOID *)
 
   Log(L"DComp D3D12 bootstrap: initialisation complete, core=%s hooks=%s\n",
       CoreHandshakeSucceeded ? L"ready" : L"not-ready", HookTargetsActive ? L"active" : L"inactive");
+  InterlockedExchange(&ProxyExportsReady, 1);
   return TRUE;
 }
 };    // namespace
@@ -346,7 +351,7 @@ extern "C" FARPROC __cdecl ResolveExport(uint32_t index)
   if(index >= D3D12ExportCount)
     return NULL;
 
-  return ExportTargets[index];
+  return ProxyExportTargets[index];
 }
 
 BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID)

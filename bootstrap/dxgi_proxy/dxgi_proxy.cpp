@@ -32,6 +32,10 @@
 #include "api/app/renderdoc_app.h"
 #include "generated/product_identity.h"
 
+// The assembly stubs read this table after ProxyExportsReady is published.
+extern "C" FARPROC ProxyExportTargets[20] = {};
+extern "C" volatile LONG ProxyExportsReady = 0;
+
 namespace
 {
 enum DXGIExport : uint32_t
@@ -58,6 +62,7 @@ enum DXGIExport : uint32_t
   DXGIReportAdapterConfiguration,
   DXGIExportCount,
 };
+static_assert(DXGIExportCount == 20, "Update the proxy forwarding table and stubs together");
 
 const char *const ExportNames[DXGIExportCount] = {
     "ApplyCompatResolutionQuirking",
@@ -88,7 +93,6 @@ HMODULE ProxyModule = NULL;
 HMODULE RealDXGI = NULL;
 HMODULE CoreModule = NULL;
 INIT_ONCE Initialisation = INIT_ONCE_STATIC_INIT;
-FARPROC ExportTargets[DXGIExportCount] = {};
 FARPROC RealExportTargets[DXGIExportCount] = {};
 GetProcAddressProc RealGetProcAddress = NULL;
 wchar_t LogPath[32768] = {};
@@ -232,25 +236,25 @@ void ResolveExports(bool useHookAwareLookup)
 {
   for(uint32_t i = 0; i < DXGIExportCount; ++i)
   {
-    ExportTargets[i] = useHookAwareLookup ? HookAwareGetProcAddress(RealDXGI, ExportNames[i])
+    ProxyExportTargets[i] = useHookAwareLookup ? HookAwareGetProcAddress(RealDXGI, ExportNames[i])
                                           : RealGetProcAddress(RealDXGI, ExportNames[i]);
     if(!useHookAwareLookup)
-      RealExportTargets[i] = ExportTargets[i];
+      RealExportTargets[i] = ProxyExportTargets[i];
 
-    HMODULE targetModule = ModuleFromAddress(ExportTargets[i]);
+    HMODULE targetModule = ModuleFromAddress(ProxyExportTargets[i]);
     wchar_t targetPath[32768] = {};
     if(targetModule != NULL)
       GetModulePath(targetModule, targetPath);
 
     Log(L"DComp DXGI bootstrap: export %-38hs target=%p module=%s\n", ExportNames[i],
-        ExportTargets[i], targetPath[0] ? targetPath : L"<unresolved>");
+        ProxyExportTargets[i], targetPath[0] ? targetPath : L"<unresolved>");
   }
 }
 
 void RestoreRealExports()
 {
   for(uint32_t i = 0; i < DXGIExportCount; ++i)
-    ExportTargets[i] = RealExportTargets[i];
+    ProxyExportTargets[i] = RealExportTargets[i];
 }
 
 bool VerifyHookTargets()
@@ -259,7 +263,7 @@ bool VerifyHookTargets()
 
   for(DXGIExport index : required)
   {
-    if(ExportTargets[index] == NULL || ModuleFromAddress(ExportTargets[index]) != CoreModule)
+    if(ProxyExportTargets[index] == NULL || ModuleFromAddress(ProxyExportTargets[index]) != CoreModule)
       return false;
   }
 
@@ -332,6 +336,7 @@ BOOL CALLBACK InitialiseBootstrap(PINIT_ONCE, PVOID, PVOID *)
 
   Log(L"DComp DXGI bootstrap: initialisation complete, core=%s hooks=%s\n",
       CoreHandshakeSucceeded ? L"ready" : L"not-ready", HookTargetsActive ? L"active" : L"inactive");
+  InterlockedExchange(&ProxyExportsReady, 1);
   return TRUE;
 }
 };    // namespace
@@ -343,7 +348,7 @@ extern "C" FARPROC __cdecl ResolveExport(uint32_t index)
   if(index >= DXGIExportCount)
     return NULL;
 
-  return ExportTargets[index];
+  return ProxyExportTargets[index];
 }
 
 BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID)

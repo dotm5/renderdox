@@ -3,11 +3,19 @@
 option casemap:none
 
 extern _ResolveExport:proc
+extern _ProxyExportTargets:dword
+extern _ProxyExportsReady:dword
 
 .code
 
 D3D12_EXPORT_STUB macro symbol:req, index:req
+LOCAL slow_path
 symbol proc
+    cmp dword ptr [_ProxyExportsReady], 1
+    jne slow_path
+    jmp dword ptr [_ProxyExportTargets + index * 4]
+
+slow_path:
     pushfd
     pushad
     push index

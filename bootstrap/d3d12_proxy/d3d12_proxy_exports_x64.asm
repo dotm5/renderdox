@@ -1,11 +1,19 @@
 option casemap:none
 
 extern ResolveExport:proc
+extern ProxyExportTargets:qword
+extern ProxyExportsReady:dword
 
 .code
 
 D3D12_EXPORT_STUB macro symbol:req, index:req
+LOCAL slow_path
 symbol proc frame
+    cmp dword ptr [ProxyExportsReady], 1
+    jne slow_path
+    jmp qword ptr [ProxyExportTargets + index * 8]
+
+slow_path:
     sub rsp, 0a8h
     .allocstack 0a8h
     .endprolog
