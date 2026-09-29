@@ -99,6 +99,47 @@ jobs:
             -OutputDirectory $output `
             -IncludeBootstrap
 
+      - name: Verify packaged Python and Qt bindings
+        shell: pwsh
+        run: |
+          $output = Join-Path $env:RUNNER_TEMP 'dcomp-release'
+          foreach($package in @('msvc-release', 'clangcl-release'))
+          {
+            $root = Join-Path $output $package
+            $manifest = Get-Content -LiteralPath (Join-Path $root 'manifest.json') -Raw |
+              ConvertFrom-Json
+            if(-not $manifest.runtime_closure_verified -or -not $manifest.pyside2)
+            {
+              throw "$package is missing its verified PySide2 runtime"
+            }
+
+            $pythonDll = $manifest.python_abi
+            $pythonZip = "python$($manifest.python_major_minor).zip"
+            if($pythonDll -notmatch '^python3[0-9]+\.dll$')
+            {
+              throw "$package has an invalid Python ABI: $pythonDll"
+            }
+            foreach($relative in @(
+                $pythonDll, $pythonZip, '_ctypes.pyd',
+                'pymodules\renderdoc.pyd', 'pymodules\qrenderdoc.pyd',
+                'shiboken2.dll', 'PySide2\pyside2.dll',
+                'PySide2\QtCore.pyd', 'PySide2\QtGui.pyd', 'PySide2\QtWidgets.pyd',
+                'Qt5Core.dll', 'Qt5Gui.dll', 'Qt5Widgets.dll',
+                'qtplugins\platforms\qwindows.dll',
+                'libcrypto-1_1-x64.dll', 'libssl-1_1-x64.dll',
+                'bootstrap\dxgi_proxy\dxgi.dll',
+                'bootstrap\d3d11_proxy\d3d11.dll',
+                'bootstrap\d3d12_proxy\d3d12.dll',
+                'bootstrap\aftermath_proxy\GFSDK_Aftermath_Lib.x64.dll'))
+            {
+              if(-not (Test-Path -LiteralPath (Join-Path $root $relative) -PathType Leaf))
+              {
+                throw "$package is missing $relative"
+              }
+            }
+            Write-Host "$package includes $pythonDll, PySide2/Shiboken2, Qt and four bootstrap DLLs"
+          }
+
       - name: Smoke-test packaged command line executables
         shell: pwsh
         run: |
@@ -144,6 +185,33 @@ jobs:
           $checksums | Set-Content -LiteralPath (Join-Path $assetRoot 'SHA256SUMS.txt') `
             -Encoding ascii
           $checksums | ForEach-Object { Write-Host $_ }
+
+      - name: Verify contents of the release archives
+        shell: pwsh
+        run: |
+          $assetRoot = Join-Path $env:RUNNER_TEMP 'release-assets'
+          foreach($package in @('msvc-release', 'clangcl-release'))
+          {
+            $archive = @(Get-ChildItem -LiteralPath $assetRoot -File `
+              -Filter "renderdox-*-windows-x64-$package.zip")
+            if($archive.Count -ne 1) { throw "Expected one $package archive" }
+            $unpacked = Join-Path $env:RUNNER_TEMP "verify-$package"
+            Expand-Archive -LiteralPath $archive[0].FullName -DestinationPath $unpacked
+            $manifest = Get-Content -LiteralPath (Join-Path $unpacked 'manifest.json') -Raw |
+              ConvertFrom-Json
+            foreach($file in $manifest.files)
+            {
+              $path = Join-Path $unpacked $file.path
+              if(-not (Test-Path -LiteralPath $path -PathType Leaf) -or
+                 (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ne $file.sha256)
+              {
+                throw "$package archive has a missing or altered file: $($file.path)"
+              }
+            }
+            python util/buildscripts/check_windows_runtime_closure.py $unpacked --quiet
+            if($LASTEXITCODE -ne 0) { throw "$package archive has missing DLL dependencies" }
+            Write-Host "$package archive verified: $($manifest.files.Count) files"
+          }
 
       - name: Generate signed build provenance
         if: github.event_name == 'push' && github.ref == 'refs/heads/dgcore-main'
