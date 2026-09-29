@@ -1,18 +1,19 @@
+from __future__ import annotations
+from typing import Dict
 import renderdoc as rd
 import rdtest
-from typing import List, Tuple
 import time
 import os
 
 
-def srgb2linear(f):
+def srgb2linear(f: float):
     if f <= 0.04045:
         return f / 12.92
     else:
         return ((f + 0.055) / 1.055) ** 2.4
 
 
-def linear2srgb(f):
+def linear2srgb(f: float):
     if f <= 0.0031308:
         return f * 12.92
     else:
@@ -22,15 +23,13 @@ def linear2srgb(f):
 # Not a real test, re-used by API-specific tests
 class Texture_Zoo():
     def __init__(self):
+        self.worker_thread = 0
         self.proxied = False
         self.fake_msaa = False
-        self.textures = {}
         self.filename = ''
-        self.textures = {}
-        self.controller = None
-        self.controller: rd.ReplayController
-        self.out: rd.ReplayOutput
-        self.out = None
+        self.textures: Dict[rd.ResourceId | str, rd.TextureDescription] = {}
+        self.controller: rd.ReplayController | None = None
+        self.out: rd.ReplayOutput | None = None
         self.pipeType = rd.GraphicsAPI.D3D11
         self.opengl_mode = False
         self.d3d_mode = False
@@ -45,14 +44,14 @@ class Texture_Zoo():
         if self.opengl_mode:
             y = max(1, self.textures[tex].height >> sub.mip) - 1 - y
 
-        return self.controller.PickPixel(tex, x, y, sub, typeCast)
+        return self.test.pick_pixel(tex, x, y, sub, typeCast)
 
     TEST_CAPTURE = 0
     TEST_DDS = 1
     TEST_PNG = 2
 
     def check_test(self, fmt_name: str, name: str, test_mode: int):
-        pipe: rd.PipeState = self.controller.GetPipelineState()
+        pipe = self.controller.GetPipelineState()
 
         image_view = (test_mode != Texture_Zoo.TEST_CAPTURE)
 
@@ -67,7 +66,7 @@ class Texture_Zoo():
         for t in texs:
             self.textures[t.resourceId] = t
 
-        tex: rd.TextureDescription = self.textures[tex_id]
+        tex = self.textures[tex_id]
 
         testCompType = desc.format.compType
         if testCompType == rd.CompType.Typeless:
@@ -91,11 +90,11 @@ class Texture_Zoo():
 
             path = rdtest.get_tmp_path(self.filename + '.dds')
 
-            success: bool = self.controller.SaveTexture(save_data, path)
+            success = self.controller.SaveTexture(save_data, path)
 
             if not success:
                 if self.d3d_mode:
-                    raise rdtest.TestFailureException("Couldn't save DDS to {} on D3D.".format(self.filename))
+                    raise rdtest.TestFailureException(f"Couldn't save DDS to {self.filename} on D3D.")
 
                 try:
                     os.remove(path)
@@ -118,7 +117,7 @@ class Texture_Zoo():
                 save_data.comp.blackPoint = -1.0
                 save_data.comp.whitePoint = 0.0
 
-            success: bool = self.controller.SaveTexture(save_data, path)
+            success = self.controller.SaveTexture(save_data, path)
 
             if not success:
                 try:
@@ -162,12 +161,10 @@ class Texture_Zoo():
             if tex_format.type == rd.ResourceFormatType.D24S8 or tex_format.type == rd.ResourceFormatType.D16S8 or tex_format.type == rd.ResourceFormatType.D32S8:
                 if tex_format.type != orig_format.type:
                     raise rdtest.TestFailureException(
-                        "Format on load from dds {} is different to format expected {}".format(tex_format.Name(),
-                                                                                               orig_format.Name()))
+                        f"Format on load from dds {tex_format.Name()} is different to format expected {orig_format.Name()}")
             elif tex_format.Name() != orig_format.Name():
                 raise rdtest.TestFailureException(
-                    "Format on load from dds {} is different to format expected {}".format(tex_format.Name(),
-                                                                                           orig_format.Name()))
+                    f"Format on load from dds {tex_format.Name()} is different to format expected {orig_format.Name()}")
 
             tex_format.SetBGRAOrder(bgra)
             tex_format.compType = ct
@@ -259,10 +256,11 @@ class Texture_Zoo():
 
                     self.out.Display()
 
-                    pixels: bytes = self.out.ReadbackOutputTexture()
+                    pixels = self.out.ReadbackOutputTexture()
                     dim = self.out.GetDimensions()
 
-                    stencilpixels = None
+                    stencilpixels = bytes()
+                    alphapixels = bytes()
 
                     # Grab stencil separately
                     if tex.format.type == rd.ResourceFormatType.D16S8 or tex.format.type == rd.ResourceFormatType.D24S8 or tex.format.type == rd.ResourceFormatType.D32S8:
@@ -274,7 +272,7 @@ class Texture_Zoo():
                         self.out.SetTextureDisplay(tex_display)
                         self.out.Display()
 
-                        stencilpixels: bytes = self.out.ReadbackOutputTexture()
+                        stencilpixels = self.out.ReadbackOutputTexture()
 
                     # Grab alpha if needed (since the readback output is RGB only)
                     if comp_count == 4 or tex.format.type == rd.ResourceFormatType.A8:
@@ -286,7 +284,7 @@ class Texture_Zoo():
                         self.out.SetTextureDisplay(tex_display)
                         self.out.Display()
 
-                        alphapixels: bytes = self.out.ReadbackOutputTexture()
+                        alphapixels = self.out.ReadbackOutputTexture()
 
                     all_good = True
 
@@ -301,7 +299,7 @@ class Texture_Zoo():
                             if test_mode != Texture_Zoo.TEST_PNG:
                                 for i in expected:
                                     if i < tex_display.rangeMin or tex_display.rangeMax < i:
-                                        raise rdtest.TestFailureException("expected value {} is outside of texture display range! {} - {}".format(i, tex_display.rangeMin, tex_display.rangeMax))
+                                        raise rdtest.TestFailureException(f"expected value {i} is outside of texture display range! {tex_display.rangeMin} - {tex_display.rangeMax}")
 
                             # convert the expected values to range-adapted values
                             for i in range(len(expected)):
@@ -310,19 +308,18 @@ class Texture_Zoo():
 
                             # get the bytes from the displayed pixel
                             offs = y * dim[0] * 3 + x * 3
-                            displayed = [int(a) for a in pixels[offs:offs + comp_count]]
+                            displayed_raw = [int(a) for a in pixels[offs:offs + comp_count]]
                             if comp_count == 4:
-                                del displayed[3]
-                                displayed.append(int(alphapixels[offs]))
-                            if stencilpixels is not None:
-                                del displayed[1:]
-                                displayed.append(int(stencilpixels[offs]))
+                                del displayed_raw[3]
+                                displayed_raw.append(int(alphapixels[offs]))
+                            if len(stencilpixels) > 0:
+                                del displayed_raw[1:]
+                                displayed_raw.append(int(stencilpixels[offs]))
                             if tex.format.type == rd.ResourceFormatType.A8:
-                                displayed = [int(alphapixels[offs])]
+                                displayed_raw = [int(alphapixels[offs])]
 
                             # normalise the displayed values
-                            for i in range(len(displayed)):
-                                displayed[i] = float(displayed[i]) / 255.0
+                            displayed = [float(x) / 255.0 for x in displayed_raw]
 
                             # For SRGB textures match linear picked values. We do this for alpha too since it's rendered
                             # via RGB
@@ -341,10 +338,9 @@ class Texture_Zoo():
 
                             # Need an additional 1/255 epsilon to account for us going via a 8-bit backbuffer for display
                             if not rdtest.value_compare(displayed, expected, 1.0/255.0 + eps):
-                                #rdtest.log.print(
-                                #    "Quick-checking ({},{}) of slice {}, mip {}, sample {} of {} {} got {}. Expected {}.".format(
-                                #        x, y, sl, mp, sm, name, fmt_name, displayed, expected) +
-                                #    "Falling back to pixel picking tests.")
+                                # rdtest.log.print(
+                                #    f"Quick-checking ({x},{y}) of slice {sl}, mip {mp}, sample {sm} of {name} {fmt_name} " +
+                                #    f"got {displayed}. Expected {expected}. Falling back to pixel picking tests.")
                                 # Currently this seems to fail in some proxy scenarios with sRGB, but since it's not a
                                 # real error we just silently swallow it
                                 all_good = False
@@ -363,18 +359,22 @@ class Texture_Zoo():
 
                             if not rdtest.value_compare(picked, expected, eps):
                                 raise rdtest.TestFailureException(
-                                    "At ({},{}) of slice {}, mip {}, sample {} of {} {} got {}. Expected {}".format(
-                                        x, y, sl, mp, sm, name, fmt_name, picked, expected))
+                                    f"At ({x},{y}) of slice {sl}, mip {mp}, sample {sm} of {name} {fmt_name} got {picked}. Expected {expected}")
 
         if not image_view:
             output_tex = pipe.GetOutputTargets()[0].resource
 
             # in the test captures pick the output texture, it should be identical to the
             # (0,0) pixel in slice 0, mip 0, sample 0
-            view: rd.Viewport = pipe.GetViewport(0)
+            x, y = self.test.get_view_centre()
 
-            val: rd.PixelValue = self.pick(pipe.GetOutputTargets()[0].resource, int(view.x + view.width / 2),
-                                           int(view.y + view.height / 2), rd.Subresource(), rd.CompType.Typeless)
+            val = self.pick(
+                pipe.GetOutputTargets()[0].resource,
+                x,
+                y,
+                rd.Subresource(),
+                rd.CompType.Typeless,
+            )
 
             picked = list(val.floatValue)
 
@@ -412,7 +412,7 @@ class Texture_Zoo():
 
             if not rdtest.value_compare(picked, value0, eps):
                 raise rdtest.TestFailureException(
-                    "In {} {} Top-left pixel as rendered is {}. Expected {}".format(name, fmt_name, picked, value0))
+                    f"In {name} {fmt_name} Top-left pixel as rendered is {picked}. Expected {value0}")
 
     def get_expected_value(self, comp_count: int, comp_type: rd.CompType, cur_sub: rd.Subresource, test_mode: int,
                            tex: rd.TextureDescription, x: int, y: int, z: int):
@@ -501,8 +501,17 @@ class Texture_Zoo():
 
         return expected
 
-    def get_picked_pixel_value(self, comp_count, comp_type, cur_sub, tex, tex_id, x, y):
-        picked_combo: rd.PixelValue = self.pick(tex_id, x, y, cur_sub, comp_type)
+    def get_picked_pixel_value(
+        self,
+        comp_count: int,
+        comp_type: rd.CompType,
+        cur_sub: rd.Subresource,
+        tex: rd.TextureDescription,
+        tex_id: rd.ResourceId,
+        x: int,
+        y: int,
+    ):
+        picked_combo = self.pick(tex_id, x, y, cur_sub, comp_type)
 
         if comp_type == rd.CompType.SInt:
             picked = [float(a) for a in picked_combo.intValue]
@@ -535,24 +544,24 @@ class Texture_Zoo():
         return picked
 
     def check_capture_with_controller(self, proxy_api: str):
-        self.controller: rd.ReplayController
         any_failed = False
 
         if proxy_api != '':
-            rdtest.log.print('Running with {} local proxy'.format(proxy_api))
+            rdtest.log.print(f'Running with {proxy_api} local proxy')
             self.proxied = True
         else:
             rdtest.log.print('Running on direct replay')
             self.proxied = False
 
-        self.out: rd.ReplayOutput = self.controller.CreateOutput(rd.CreateHeadlessWindowingData(100, 100),
-                                                                 rd.ReplayOutputType.Texture)
+        self.out = self.controller.CreateOutput(
+            rd.CreateHeadlessWindowingData(100, 100), rd.ReplayOutputType.Texture
+        )
 
         for d in self.controller.GetRootActions():
             if 'slice tests' in d.customName:
                 for sub in d.children:
                     if sub.flags & rd.ActionFlags.Drawcall:
-                        self.controller.SetFrameEvent(sub.eventId, True)
+                        self.test.set_event(sub.eventId, True)
 
                         pipe = self.controller.GetPipelineState()
 
@@ -568,14 +577,13 @@ class Texture_Zoo():
                                 comp_type = rd.CompType.Typeless
 
                                 # test that pixel picking sees the right things
-                                picked = self.controller.PickPixel(tex_id, 15, 15, cur_sub, comp_type)
+                                picked = self.test.pick_pixel(tex_id, 15, 15, cur_sub, comp_type)
 
                                 if not rdtest.value_compare(picked.floatValue, expected):
                                     raise rdtest.TestFailureException(
-                                        "Expected to pick {} at slice {} mip {}, got {}"
-                                        .format(expected, sl, mip, picked.floatValue))
+                                        f"Expected to pick {expected} at slice {sl} mip {mip}, got {picked.floatValue}")
 
-                                rdtest.log.success('Picked pixel is correct at slice {} mip {}'.format(sl, mip))
+                                rdtest.log.success(f'Picked pixel is correct at slice {sl} mip {mip}')
 
                                 # Render output texture a three scales - below 100%, 100%, above 100%
                                 tex_display = rd.TextureDisplay()
@@ -590,19 +598,17 @@ class Texture_Zoo():
                                     tex_display.scale = scale
                                     self.out.SetTextureDisplay(tex_display)
                                     self.out.Display()
-                                    pixels: bytes = self.out.ReadbackOutputTexture()
+                                    pixels = self.out.ReadbackOutputTexture()
 
                                     actual = [int(a) for a in pixels[0:3]]
 
                                     if not rdtest.value_compare(actual, expected):
                                         raise rdtest.TestFailureException(
-                                            "Expected to display {} at slice {} mip {} scale {}%, got {}"
-                                            .format(expected, sl, mip, int(scale * 100), actual))
+                                            f"Expected to display {expected} at slice {sl} mip {mip} scale {int(scale * 100)}%, got {actual}")
 
-                                    rdtest.log.success('Displayed pixel is correct at scale {}% in slice {} mip {}'
-                                                       .format(int(scale * 100), sl, mip))
+                                    rdtest.log.success(f'Displayed pixel is correct at scale {int(scale * 100)}% in slice {sl} mip {mip}')
                     elif sub.flags & rd.ActionFlags.SetMarker:
-                        rdtest.log.print('Checking {} for slice display'.format(sub.customName))
+                        rdtest.log.print(f'Checking {sub.customName} for slice display')
 
                 continue
 
@@ -615,8 +621,6 @@ class Texture_Zoo():
 
                 # Iterate over actions in this region
                 for sub in d.children:
-                    sub: rd.ActionDescription
-
                     if sub.flags & rd.ActionFlags.SetMarker:
                         name = sub.customName
 
@@ -625,7 +629,7 @@ class Texture_Zoo():
                         tests_run = tests_run + 1
                         try:
                             # Set this event as current
-                            self.controller.SetFrameEvent(sub.eventId, True)
+                            self.test.set_event(sub.eventId, True)
 
                             self.filename = (d.customName + '@' + name).replace('->', '_')
 
@@ -635,7 +639,7 @@ class Texture_Zoo():
                             rdtest.log.error(str(ex))
 
                 if not failed:
-                    rdtest.log.success("All {} texture tests for {} are OK".format(tests_run, d.customName))
+                    rdtest.log.success(f"All {tests_run} texture tests for {d.customName} are OK")
 
         self.out.Shutdown()
         self.out = None
@@ -643,14 +647,15 @@ class Texture_Zoo():
         if not any_failed:
             if proxy_api != '':
                 rdtest.log.success(
-                    'All textures are OK with {} as local proxy'.format(proxy_api))
+                    f'All textures are OK with {proxy_api} as local proxy')
             else:
                 rdtest.log.success("All textures are OK on direct replay")
         else:
             raise rdtest.TestFailureException("Some tests were not as expected")
 
-    def check_capture(self, capture_filename: str, controller: rd.ReplayController):
-        self.controller = controller
+    def check_capture(self, capture_filename: str, test: rdtest.testcase.TestCase):
+        self.test = test
+        self.controller = test.controller
 
         self.pipeType = self.controller.GetAPIProperties().pipelineType
         self.opengl_mode = (self.controller.GetAPIProperties().pipelineType == rd.GraphicsAPI.OpenGL)
@@ -672,22 +677,20 @@ class Texture_Zoo():
         self.controller = None
 
         # Launch a remote server
-        rdtest.launch_remote_server()
+        base_port = rdtest.launch_remote_server()
 
         # Wait for it to start
         time.sleep(0.5)
 
-        ret: Tuple[rd.ResultDetails, rd.RemoteServer] = rd.CreateRemoteServerConnection('localhost')
-        result, remote = ret
+        result, remote = rd.CreateRemoteServerConnection(f'localhost:{base_port+self.worker_thread}')
 
-        if result != rd.ResultCode.Succeeded:
+        if not result:
             time.sleep(2)
 
-            ret: Tuple[rd.ResultDetails, rd.RemoteServer] = rd.CreateRemoteServerConnection('localhost')
-            result, remote = ret
+            result, remote = rd.CreateRemoteServerConnection(f'localhost:{base_port+self.worker_thread}')
 
-        if result != rd.ResultCode.Succeeded:
-            raise rdtest.TestFailureException("Couldn't connect to remote server: {}".format(str(result)))
+        if not result:
+            raise rdtest.TestFailureException(f"Couldn't connect to remote server {base_port+self.worker_thread}: {result!s}")
 
         proxies = remote.LocalProxies()
 
@@ -698,12 +701,12 @@ class Texture_Zoo():
                 if api not in proxies:
                     continue
 
-                rdtest.log.begin_section("{} proxy".format(api))
+                rdtest.log.begin_section(f"{api} proxy")
                 try:
-                    ret: Tuple[rd.ResultDetails, rd.ReplayController] = remote.OpenCapture(proxies.index(api),
-                                                                                        capture_filename,
-                                                                                        rd.ReplayOptions(), None)
-                    result, self.controller = ret
+                    result, self.controller = remote.OpenCapture(
+                        proxies.index(api), capture_filename, rd.ReplayOptions(), None
+                    )
+                    self.test.controller = self.controller
 
                     # Now check with the proxy
                     self.check_capture_with_controller(api)
@@ -713,8 +716,9 @@ class Texture_Zoo():
                     rdtest.log.error(str(ex))
                     failed = True
                 finally:
-                    rdtest.log.end_section("{} proxy".format(api))
-                    remote.CloseCapture(self.controller)
+                    rdtest.log.end_section(f"{api} proxy")
+                    if self.controller is not None:
+                        remote.CloseCapture(self.controller)
                     self.controller = None
         finally:
             remote.ShutdownServerAndConnection()
@@ -733,16 +737,16 @@ class Texture_Zoo():
             cap = rd.OpenCaptureFile()
             result = cap.OpenFile(file.path, 'rdc', None)
 
-            if result != rd.ResultCode.Succeeded:
-                rdtest.log.error("Couldn't open {}".format(file.name))
+            if not result:
+                rdtest.log.error(f"Couldn't open {file.name}")
                 failed = True
                 continue
 
-            ret: Tuple[rd.ResultDetails, rd.ReplayController] = cap.OpenCapture(rd.ReplayOptions(), None)
-            result, self.controller = ret
+            result, self.controller = cap.OpenCapture(rd.ReplayOptions(), None)
+            self.test.controller = self.controller
 
-            if result != rd.ResultCode.Succeeded:
-                rdtest.log.error("Couldn't open {}".format(file.name))
+            if not result:
+                rdtest.log.error(f"Couldn't open {file.name}")
                 failed = True
                 continue
 
@@ -750,11 +754,11 @@ class Texture_Zoo():
 
             [a, b] = file.name.replace('.dds', ' (DDS)').replace('.png', ' (PNG)').split('@')
 
-            self.controller.SetFrameEvent(self.controller.GetRootActions()[0].eventId, True)
+            self.test.set_event(self.controller.GetRootActions()[0].eventId, True)
 
             try:
                 self.opengl_mode = False
-                fmt: rd.ResourceFormat = self.controller.GetTextures()[0].format
+                fmt = self.controller.GetTextures()[0].format
 
                 is_compressed = (rd.ResourceFormatType.BC1 <= fmt.type <= rd.ResourceFormatType.BC7 or
                                  fmt.type == rd.ResourceFormatType.EAC or fmt.type == rd.ResourceFormatType.ETC2 or
@@ -766,16 +770,16 @@ class Texture_Zoo():
                 if was_opengl and not is_compressed:
                     self.opengl_mode = True
 
-                self.out: rd.ReplayOutput = self.controller.CreateOutput(rd.CreateHeadlessWindowingData(100, 100), rd.ReplayOutputType.Texture)
+                self.out = self.controller.CreateOutput(rd.CreateHeadlessWindowingData(100, 100), rd.ReplayOutputType.Texture)
 
-                rdtest.log.print("Checking {}".format(file.name))
+                rdtest.log.print(f"Checking {file.name}")
 
                 self.check_test(a, b, Texture_Zoo.TEST_DDS if '.dds' in file.name else Texture_Zoo.TEST_PNG)
 
                 self.out.Shutdown()
                 self.out = None
 
-                rdtest.log.success("{} loaded with the correct data".format(file.name))
+                rdtest.log.success(f"{file.name} loaded with the correct data")
             except rdtest.TestFailureException as ex:
                 rdtest.log.error(str(ex))
                 failed = True

@@ -744,7 +744,7 @@ bool VulkanGraphicsTest::Init()
 
   if(!headless)
   {
-    mainWindow = MakeWindow(screenWidth, screenHeight, "Autotesting");
+    mainWindow = MakeWindow(screenWidth, screenHeight, screenTitle);
 
     if(!mainWindow->Initialised())
     {
@@ -1014,7 +1014,7 @@ VkPipelineShaderStageCreateInfo VulkanGraphicsTest::CompileShaderModule(
   VkShaderModule ret = VK_NULL_HANDLE;
 
   std::vector<uint32_t> spirv =
-      ::CompileShaderToSpv(source_text, target, lang, stage, entry_point, macros);
+      ::CompileShaderToSpv(demoName, source_text, target, lang, stage, entry_point, macros);
 
   if(spirv.empty())
     return {};
@@ -1142,6 +1142,18 @@ template <>
 void VulkanGraphicsTest::setName(VkCommandPool obj, const std::string &name)
 {
   setName(VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t)obj, name);
+}
+
+template <>
+void VulkanGraphicsTest::setName(VkQueue obj, const std::string &name)
+{
+  setName(VK_OBJECT_TYPE_QUEUE, (uint64_t)obj, name);
+}
+
+template <>
+void VulkanGraphicsTest::setName(VkShaderModule obj, const std::string &name)
+{
+  setName(VK_OBJECT_TYPE_SHADER_MODULE, (uint64_t)obj, name);
 }
 
 void VulkanGraphicsTest::setName(VkObjectType objType, uint64_t obj, const std::string &name)
@@ -1746,8 +1758,8 @@ void VulkanWindow::Acquire()
   semIdx = (semIdx + 1) % renderStartSemaphore.size();
 
   // acquire next image stupidly does not properly block, do a manual block
-  vkWaitForFences(m_Test->device, 1, &imageFences[semIdx], VK_FALSE, UINT64_MAX);
-  vkResetFences(m_Test->device, 1, &imageFences[semIdx]);
+  CHECK_VKR(vkWaitForFences(m_Test->device, 1, &imageFences[semIdx], VK_FALSE, UINT64_MAX));
+  CHECK_VKR(vkResetFences(m_Test->device, 1, &imageFences[semIdx]));
 
   VkResult vkr = vkAcquireNextImageKHR(m_Test->device, swap, UINT64_MAX,
                                        renderStartSemaphore[semIdx], imageFences[semIdx], &imgIndex);
@@ -1820,6 +1832,8 @@ void VulkanWindow::Present(VkQueue queue)
 {
   if(swap == VK_NULL_HANDLE)
     return;
+
+  vkDeviceWaitIdle(m_Test->device);
 
   VkResult vkr =
       vkQueuePresentKHR(queue, vkh::PresentInfoKHR(swap, imgIndex, &renderEndSemaphore[semIdx]));

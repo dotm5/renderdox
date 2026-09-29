@@ -5,60 +5,50 @@ class VK_Multi_View(rdtest.TestCase):
     demos_test_name = 'VK_Multi_View'
 
     def check_capture(self):
-        if not self.controller.GetAPIProperties().shaderDebugging:
-            rdtest.log.success("Shader debugging not enabled, skipping test")
-            return
-
         x = 200
         y = 150
 
         for test_name in ["Vertex: viewIndex", "Geometry: viewIndex", "Fragment: viewIndex", "No viewIndex"]:
-            rdtest.log.print("Test {}".format(test_name))
+            rdtest.log.print(f"Test {test_name}")
             label = self.find_action(test_name)
             if label is None:
                 continue
             action = label.nextAction
-            self.controller.SetFrameEvent(action.eventId, True)
+            assert action is not None
+            self.set_event(action.eventId, True)
 
-            pipe: rd.PipeState = self.controller.GetPipelineState()
-            if not pipe.GetShaderReflection(rd.ShaderStage.Pixel).debugInfo.debuggable:
-                raise rdtest.TestFailureException("Test {} shader can not be debugged".format(test_name))
+            pipe = self.controller.GetPipelineState()
 
             for view in range(2):
                 # Debug the pixel shader
                 inputs = rd.DebugPixelInputs()
                 inputs.view = view
-                trace: rd.ShaderDebugTrace = self.controller.DebugPixel(x, y, inputs)
-                if trace.debugger is None:
-                    self.controller.FreeTrace(trace)
-                    raise rdtest.TestFailureException("Test {} view {} did not debug at all".format(test_name, view))
+                with self.debug_pixel(x, y, inputs) as debug:
+                    cycles, variables = self.process_trace(debug.trace)
+                    output = self.find_output_source_var(debug.trace, rd.ShaderBuiltin.ColorOutput, 0)
 
-                cycles, variables = self.process_trace(trace)
-                output: rd.SourceVariableMapping = self.find_output_source_var(trace, rd.ShaderBuiltin.ColorOutput, 0)
-                debugged = self.evaluate_source_var(output, variables)
-                slice = view + 1
-                sub = rd.Subresource(0, slice, 0)
-                self.check_pixel_value(pipe.GetOutputTargets()[0].resource, x, y, debugged.value.f32v[0:4], sub=sub)
-                self.controller.FreeTrace(trace)
+                    debugged = self.evaluate_source_var(output, variables)
+                    slice = view + 1
+                    sub = rd.Subresource(0, slice, 0)
+                    self.check_pixel_value(pipe.GetOutputTargets()[0].resource, x, y, debugged.value.f32v[0:4], sub=sub)
 
-                inst = 0
-                postvs = self.get_postvs(action, rd.MeshDataStage.VSOut, instance=inst, view=view)
-                for vtx in range(action.numIndices):
-                    idx = vtx
-                    self.check_debug(vtx, idx, inst, view, postvs)
-                rdtest.log.print(f"View {view} Slice {slice} passed")
+                    inst = 0
+                    postvs = self.get_postvs(action, rd.MeshDataStage.VSOut, instance=inst, view=view)
+                    for vtx in range(action.numIndices):
+                        idx = vtx
+                        self.check_vertex_debug(vtx, idx, inst, postvs, view=view)
+                    rdtest.log.success(f"View {view} Slice {slice} passed")
 
         for test_name in ["viewportIndex choice"]:
-            rdtest.log.print("Test {}".format(test_name))
+            rdtest.log.print(f"Test {test_name}")
             label = self.find_action(test_name)
             if label is None:
                 continue
             action = label.nextAction
-            self.controller.SetFrameEvent(action.eventId, True)
+            assert action is not None
+            self.set_event(action.eventId, True)
 
-            pipe: rd.PipeState = self.controller.GetPipelineState()
-            if not pipe.GetShaderReflection(rd.ShaderStage.Pixel).debugInfo.debuggable:
-                raise rdtest.TestFailureException("Test {} shader can not be debugged".format(test_name))
+            pipe = self.controller.GetPipelineState()
 
             for view in range(2):
                 if view == 0:
@@ -69,66 +59,22 @@ class VK_Multi_View(rdtest.TestCase):
                 # Debug the pixel shader
                 inputs = rd.DebugPixelInputs()
                 inputs.view = view
-                trace: rd.ShaderDebugTrace = self.controller.DebugPixel(x, y, inputs)
-                if trace.debugger is None:
-                    self.controller.FreeTrace(trace)
-                    raise rdtest.TestFailureException("Test {} view {} did not debug at all".format(test_name, view))
+                with self.debug_pixel(x, y, inputs) as debug:
+                    cycles, variables = self.process_trace(debug.trace)
+                    output = self.find_output_source_var(debug.trace, rd.ShaderBuiltin.ColorOutput, 0)
 
-                cycles, variables = self.process_trace(trace)
-                output: rd.SourceVariableMapping = self.find_output_source_var(trace, rd.ShaderBuiltin.ColorOutput, 0)
-                debugged = self.evaluate_source_var(output, variables)
-                slice = view + 1
-                sub = rd.Subresource(0, slice, 0)
-                self.check_pixel_value(pipe.GetOutputTargets()[0].resource, x, y, debugged.value.f32v[0:4], sub=sub)
-                self.controller.FreeTrace(trace)
+                    debugged = self.evaluate_source_var(output, variables)
+                    slice = view + 1
+                    sub = rd.Subresource(0, slice, 0)
+                    self.check_pixel_value(pipe.GetOutputTargets()[0].resource, x, y, debugged.value.f32v[0:4], sub=sub)
 
-                inst = 0
-                postvs = self.get_postvs(action, rd.MeshDataStage.VSOut, instance=inst, view=view)
-                for vtx in range(action.numIndices):
-                    idx = vtx
-                    self.check_debug(vtx, idx, inst, view, postvs)
-                rdtest.log.print(f"View {view} Slice {slice} passed")
+                    inst = 0
+                    postvs = self.get_postvs(action, rd.MeshDataStage.VSOut, instance=inst, view=view)
+                    for vtx in range(action.numIndices):
+                        idx = vtx
+                        self.check_vertex_debug(vtx, idx, inst, postvs, view=view)
+                    rdtest.log.print(f"View {view} Slice {slice} passed")
 
         rdtest.log.success("All tests matched")
 
-
-    def check_debug(self, vtx, idx, inst, view, postvs):
-        trace: rd.ShaderDebugTrace = self.controller.DebugVertex(vtx, inst, idx, view)
-
-        if trace.debugger is None:
-            self.controller.FreeTrace(trace)
-
-            raise rdtest.TestFailureException("Couldn't debug vertex {} in instance {} for view {}".format(vtx, inst, view))
-
-        cycles, variables = self.process_trace(trace)
-
-        for var in trace.sourceVars:
-            var: rd.SourceVariableMapping
-            if var.variables[0].type == rd.DebugVariableType.Variable and var.signatureIndex >= 0:
-                name = var.name
-
-                if name not in postvs[vtx].keys():
-                    raise rdtest.TestFailureException("Don't have expected output for {}".format(name))
-
-                expect = postvs[vtx][name]
-                value = self.evaluate_source_var(var, variables)
-
-                if len(expect) != value.columns:
-                    raise rdtest.TestFailureException(
-                        "Output {} at vert {} (idx {}) instance {} view {} has different size ({} values) to expectation ({} values)"
-                            .format(name, vtx, idx, inst, view, value.columns, len(expect)))
-
-                if value.type == rd.VarType.SInt:
-                    debugged = value.value.s32v[0:value.columns]
-                elif value.type == rd.VarType.UInt:
-                    debugged = value.value.u32v[0:value.columns]
-                else:
-                    debugged = value.value.f32v[0:value.columns]
-
-                if not rdtest.value_compare(expect, debugged):
-                    raise rdtest.TestFailureException(
-                        "Debugged value {} at vert {} (idx {}) instance {} view {}: {} doesn't exactly match postvs output {}".format(
-                            name, vtx, idx, inst, view, debugged, expect))
-        rdtest.log.success('Successfully debugged vertex {} in instance {} for view {}'
-                           .format(vtx, inst, view))
 

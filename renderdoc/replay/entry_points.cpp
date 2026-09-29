@@ -1012,8 +1012,6 @@ extern "C" RENDERDOC_API int RENDERDOC_CC DCOMP_RunFunctionalTests(const rdcarra
                          // specify python module path
                          L"--pydgcore",
                          StringFormat::UTF82Wide(modulePath),
-                         // force in-process as we can't fork out to python to pass args
-                         L"--in-process",
                      });
 
   rdcarray<wchar_t *> wideArgStrings;

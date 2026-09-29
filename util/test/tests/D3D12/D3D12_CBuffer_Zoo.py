@@ -1,3 +1,5 @@
+from typing import Dict, List
+
 import rdtest
 import renderdoc as rd
 
@@ -8,19 +10,20 @@ class D3D12_CBuffer_Zoo(rdtest.TestCase):
         rdtest.log.begin_section("DXBC Draw")
         action = self.find_action("DXBC Draw")
 
-        self.check(action is not None)
+        assert action is not None
 
-        self.controller.SetFrameEvent(action.nextAction.eventId, False)
+        self.set_event(action.nextAction.eventId, False)
 
-        pipe: rd.PipeState = self.controller.GetPipelineState()
+        pipe = self.controller.GetPipelineState()
 
         stage = rd.ShaderStage.Pixel
 
         # Verify that the DXBC action is first
-        disasm = self.controller.DisassembleShader(pipe.GetGraphicsPipelineObject(), pipe.GetShaderReflection(stage),
-                                                   '')
+        refl = pipe.GetShaderReflection(stage)
+        assert refl is not None
+        disasm = self.controller.DisassembleShader(pipe.GetGraphicsPipelineObject(), refl, '')
 
-        self.check('ps_5_1' in disasm)
+        assert 'ps_5_1' in disasm
 
         self.check_event()
 
@@ -35,14 +38,15 @@ class D3D12_CBuffer_Zoo(rdtest.TestCase):
             return
 
         rdtest.log.begin_section("SM6.0 Draw")
-        self.controller.SetFrameEvent(action.nextAction.eventId, False)
+        self.set_event(action.nextAction.eventId, False)
 
-        pipe: rd.PipeState = self.controller.GetPipelineState()
+        pipe = self.controller.GetPipelineState()
 
-        disasm = self.controller.DisassembleShader(pipe.GetGraphicsPipelineObject(), pipe.GetShaderReflection(stage),
-                                                   '')
+        refl = pipe.GetShaderReflection(stage)
+        assert refl is not None
+        disasm = self.controller.DisassembleShader(pipe.GetGraphicsPipelineObject(), refl, '')
 
-        self.check('SM6.0' in disasm)
+        assert 'SM6.0' in disasm
         self.check_event()
         rdtest.log.success("SM 6.0 action is as expected")
         rdtest.log.end_section("SM6.0 Draw")
@@ -55,23 +59,25 @@ class D3D12_CBuffer_Zoo(rdtest.TestCase):
             return
 
         rdtest.log.begin_section("SM6.6 Draw")
-        self.controller.SetFrameEvent(action.nextAction.eventId, False)
+        self.set_event(action.nextAction.eventId, False)
 
-        pipe: rd.PipeState = self.controller.GetPipelineState()
+        pipe = self.controller.GetPipelineState()
 
-        disasm = self.controller.DisassembleShader(pipe.GetGraphicsPipelineObject(), pipe.GetShaderReflection(stage),
-                                                   '')
-        self.check('SM6.6' in disasm)
+        refl = pipe.GetShaderReflection(stage)
+        assert refl is not None
+        disasm = self.controller.DisassembleShader(pipe.GetGraphicsPipelineObject(), refl, '')
+
+        assert 'SM6.6' in disasm
         self.check_event()
         rdtest.log.success("SM 6.6 action is as expected")
         rdtest.log.end_section("SM6.6 Draw")
 
     def check_event(self):
-        pipe: rd.PipeState = self.controller.GetPipelineState()
+        pipe = self.controller.GetPipelineState()
 
         stage = rd.ShaderStage.Pixel
 
-        refl: rd.ShaderReflection = pipe.GetShaderReflection(stage)
+        refl = pipe.GetShaderReflection(stage)
 
         # Make sure we have five constant buffers - b7 normal, b1 root constants, b2, b3 and space9999999:b0
         binds = [
@@ -84,13 +90,12 @@ class D3D12_CBuffer_Zoo(rdtest.TestCase):
 
         if len(refl.constantBlocks) != len(binds):
             raise rdtest.TestFailureException(
-                "Expected {} constant buffers, only got {}".format(len(binds), len(refl.constantBlocks)))
+                f"Expected {len(binds)} constant buffers, only got {len(refl.constantBlocks)}")
 
         for b in range(0, len(binds)):
             if binds[b][0] != refl.constantBlocks[b].fixedBindSetOrSpace or binds[b][1] != refl.constantBlocks[b].fixedBindNumber:
                 raise rdtest.TestFailureException(
-                    "Unexpected cb[{}] mapping: space {} bind {}".format(b, refl.constantBlocks[b].fixedBindSetOrSpace,
-                                                                         refl.constantBlocks[b].fixedBindNumber))
+                    f"Unexpected cb[{b}] mapping: space {refl.constantBlocks[b].fixedBindSetOrSpace} bind {refl.constantBlocks[b].fixedBindNumber}")
 
         cbuf = pipe.GetConstantBlock(stage, 0, 0).descriptor
 
@@ -149,37 +154,32 @@ class D3D12_CBuffer_Zoo(rdtest.TestCase):
 
         rdtest.log.success("Array cbuffer variables are as expected")
 
-        if self.controller.GetAPIProperties().shaderDebugging and pipe.GetShaderReflection(
-                rd.ShaderStage.Pixel).debugInfo.debuggable:
-            trace: rd.ShaderDebugTrace = self.controller.DebugPixel(int(pipe.GetViewport(0).width / 2.0),
-                                                                    int(pipe.GetViewport(0).height / 2.0),
-                                                                    rd.DebugPixelInputs())
+        x, y = self.get_view_centre()
 
-            debugVars = dict()
+        with self.debug_pixel(x, y, rd.DebugPixelInputs()) as debug:
+            debugVars: Dict[str, rd.ShaderVariable] = dict()
 
-            for base in trace.constantBlocks:
+            for base in debug.trace.constantBlocks:
                 for var in base.members:
                     debugVars[base.name + var.name] = var
 
-            cbufferVars = []
+            cbufferVars: List[rd.ShaderVariable] = []
 
-            for sourceVar in trace.sourceVars:
-                sourceVar: rd.SourceVariableMapping
-
+            for sourceVar in debug.trace.sourceVars:
                 if sourceVar.variables[0].name not in debugVars.keys():
                     continue
 
-                eval: rd.ShaderVariable = self.evaluate_source_var(sourceVar, debugVars)
+                eval = self.evaluate_source_var(sourceVar, debugVars)
                 cbufferVars.append(eval)
 
             cbufferVars = self.combine_source_vars(cbufferVars)
 
-            self.check(len(cbufferVars) == 5)
-            self.check(cbufferVars[0].name == 'consts')
-            self.check(cbufferVars[1].name == 'rootconsts')
-            self.check(cbufferVars[2].name == 'packed_consts')
-            self.check(cbufferVars[3].name == 'array_consts')
-            self.check(cbufferVars[4].name == 'hugespace')
+            assert len(cbufferVars) == 5
+            assert cbufferVars[0].name == 'consts'
+            assert cbufferVars[1].name == 'rootconsts'
+            assert cbufferVars[2].name == 'packed_consts'
+            assert cbufferVars[3].name == 'array_consts'
+            assert cbufferVars[4].name == 'hugespace'
 
             var_check = rdtest.ConstantBufferChecker(cbufferVars[0].members)
             root_check = rdtest.ConstantBufferChecker(cbufferVars[1].members)
@@ -197,26 +197,29 @@ class D3D12_CBuffer_Zoo(rdtest.TestCase):
             arrays_check.done()
             rdtest.log.success("Array cbuffer variables are as expected")
 
-            cycles, variables = self.process_trace(trace)
+            cycles, variables = self.process_trace(debug.trace)
 
-            output = self.find_output_source_var(trace, rd.ShaderBuiltin.ColorOutput, 0)
+            output = self.find_output_source_var(debug.trace, rd.ShaderBuiltin.ColorOutput, 0)
 
             debugged = self.evaluate_source_var(output, variables)
 
             if not rdtest.util.value_compare(debugged.value.f32v[0:4], [543.1, 546.0, 545.0, 546.0]):
                 raise rdtest.TestFailureException(
-                    "Debugged output {} did not match expected {}".format(
-                        debugged.value.f32v[0:4], [543.1, 546.0, 545.0, 546.0]))
+                    f"Debugged output {debugged.value.f32v[0:4]} did not match expected {[543.1, 546.0, 545.0, 546.0]}")
 
             rdtest.log.success("Debugged output matched as expected")
-
-            self.controller.FreeTrace(trace)
 
         self.check_pixel_value(pipe.GetOutputTargets()[0].resource, 0.5, 0.5, [543.1, 546.0, 545.0, 546.0])
 
         rdtest.log.success("Picked value is as expected")
 
-    def check_cbuffers(self, var_check, root_check, huge_check, packed_check):
+    def check_cbuffers(
+        self,
+        var_check: rdtest.ConstantBufferChecker,
+        root_check: rdtest.ConstantBufferChecker,
+        huge_check: rdtest.ConstantBufferChecker,
+        packed_check: rdtest.ConstantBufferChecker,
+    ):
         # For more detailed reference for the below checks, see the commented definition of the cbuffer
         # in the shader source code in the demo itself
 

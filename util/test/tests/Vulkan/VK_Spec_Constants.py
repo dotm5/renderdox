@@ -12,25 +12,25 @@ class VK_Spec_Constants(rdtest.TestCase):
 
         # We should have 4 actions, with spec constant values 0, 1, 2, 3
         for num_colors in range(4):
-            self.check(action is not None)
+            assert action is not None
 
-            self.controller.SetFrameEvent(action.eventId, False)
+            self.set_event(action.eventId, False)
 
-            pipe: rd.PipeState = self.controller.GetPipelineState()
+            pipe = self.controller.GetPipelineState()
             vkpipe = self.controller.GetVulkanPipelineState()
 
-            shader: rd.ShaderReflection = pipe.GetShaderReflection(rd.ShaderStage.Pixel)
+            shader = pipe.GetShaderReflection(rd.ShaderStage.Pixel)
 
             # uniform buffer and spec constants
-            self.check(len(shader.constantBlocks) == 2)
-            self.check(shader.constantBlocks[0].bufferBacked)
-            self.check(not shader.constantBlocks[1].bufferBacked)
-            self.check(len(shader.constantBlocks[1].variables) == 3)
+            assert len(shader.constantBlocks) == 2
+            assert shader.constantBlocks[0].bufferBacked
+            assert not shader.constantBlocks[1].bufferBacked
+            assert len(shader.constantBlocks[1].variables) == 3
 
             # should be an array of num_colors+1 elements
             array_len = shader.constantBlocks[0].variables[0].type.elements
             if not rdtest.value_compare(array_len, num_colors+1):
-                raise rdtest.TestFailureException("CBuffer variable is array of {}, not {}".format(array_len, num_colors+1))
+                raise rdtest.TestFailureException(f"CBuffer variable is array of {array_len}, not {num_colors + 1}")
 
             if num_colors > 0:
                 cbuf = pipe.GetConstantBlock(rd.ShaderStage.Pixel, 0, 0).descriptor
@@ -40,10 +40,10 @@ class VK_Spec_Constants(rdtest.TestCase):
                                                                      pipe.GetShaderEntryPoint(rd.ShaderStage.Pixel), 0,
                                                                      cbuf.resource, cbuf.byteOffset, cbuf.byteSize)
 
-                self.check(len(cb_vars) == 1)
+                assert len(cb_vars) == 1
 
                 if not rdtest.value_compare(len(cb_vars[0].members), num_colors+1):
-                    raise rdtest.TestFailureException("CBuffer variable is array of {}, not {}".format(len(cb_vars[0].members), num_colors+1))
+                    raise rdtest.TestFailureException(f"CBuffer variable is array of {len(cb_vars[0].members)}, not {num_colors + 1}")
 
                 for col in range(num_colors):
                     expected = [0.0, 0.0, 0.0, 0.0]
@@ -52,9 +52,9 @@ class VK_Spec_Constants(rdtest.TestCase):
                     val = [i for i in cb_vars[0].members[col].value.f32v[0:4]]
 
                     if not rdtest.value_compare(val, expected):
-                        raise rdtest.TestFailureException("Cbuffer[{}] value {} doesn't match expectation {}".format(col, val, expected))
+                        raise rdtest.TestFailureException(f"Cbuffer[{col}] value {val} doesn't match expectation {expected}")
 
-                rdtest.log.success("Draw with {} colors uniform buffer is as expected".format(num_colors))
+                rdtest.log.success(f"Draw with {num_colors} colors uniform buffer is as expected")
 
             cbuf = pipe.GetConstantBlock(rd.ShaderStage.Pixel, 1, 0).descriptor
 
@@ -63,7 +63,7 @@ class VK_Spec_Constants(rdtest.TestCase):
                                                                  pipe.GetShaderEntryPoint(rd.ShaderStage.Pixel), 1,
                                                                  cbuf.resource, cbuf.byteOffset, cbuf.byteSize)
 
-            self.check(len(cb_vars) == 3)
+            assert len(cb_vars) == 3
 
             refl = pipe.GetShaderReflection(rd.ShaderStage.Pixel)
 
@@ -81,15 +81,15 @@ class VK_Spec_Constants(rdtest.TestCase):
                 if cb_var.name == "numcols":
                     if not rdtest.value_compare(cb_var.value.s32v[0], num_colors):
                         raise rdtest.TestFailureException(
-                            "{} spec constant is {}, not {}".format(cb_var.name, cb_var.value.s32v[0], num_colors))
+                            f"{cb_var.name} spec constant is {cb_var.value.s32v[0]}, not {num_colors}")
 
                     read = struct.unpack_from("L", vkpipe.fragmentShader.specializationData, refl_var.byteOffset)[0]
 
                     if not rdtest.value_compare(read, num_colors):
                         raise rdtest.TestFailureException(
-                            "{} spec constant read manually is {}, not {}".format(cb_var.name, read, num_colors))
+                            f"{cb_var.name} spec constant read manually is {read}, not {num_colors}")
 
-                    rdtest.log.success("Draw with {} colors constant {} is as expected".format(num_colors, cb_var.name))
+                    rdtest.log.success(f"Draw with {num_colors} colors constant {cb_var.name} is as expected")
                 elif cb_var.name == "NOT_numcols":
                     expected = 999
                     if num_colors == 2:
@@ -97,15 +97,15 @@ class VK_Spec_Constants(rdtest.TestCase):
 
                     if not rdtest.value_compare(cb_var.value.s32v[0], expected):
                         raise rdtest.TestFailureException(
-                            "{} spec constant is {}, not {}".format(cb_var.name, cb_var.value.s32v[0], expected))
+                            f"{cb_var.name} spec constant is {cb_var.value.s32v[0]}, not {expected}")
 
                     read = struct.unpack_from("L", vkpipe.fragmentShader.specializationData, refl_var.byteOffset)[0]
 
                     if not rdtest.value_compare(read, expected):
                         raise rdtest.TestFailureException(
-                            "{} spec constant read manually is {}, not {}".format(cb_var.name, read, expected))
+                            f"{cb_var.name} spec constant read manually is {read}, not {expected}")
 
-                    rdtest.log.success("Draw with {} colors constant {} is as expected".format(num_colors, cb_var.name))
+                    rdtest.log.success(f"Draw with {num_colors} colors constant {cb_var.name} is as expected")
                 elif cb_var.name == "some_float":
                     expected = 1.5
                     if num_colors == 1:
@@ -115,19 +115,19 @@ class VK_Spec_Constants(rdtest.TestCase):
 
                     if not rdtest.value_compare(cb_var.value.f32v[0], expected):
                         raise rdtest.TestFailureException(
-                            "{} spec constant is {}, not {}".format(cb_var.name, cb_var.value.f32v[0], expected))
+                            f"{cb_var.name} spec constant is {cb_var.value.f32v[0]}, not {expected}")
 
                     read = struct.unpack_from("f", vkpipe.fragmentShader.specializationData, refl_var.byteOffset)[0]
 
                     if not rdtest.value_compare(read, expected):
                         raise rdtest.TestFailureException(
-                            "{} spec constant read manually is {}, not {}".format(cb_var.name, read, expected))
+                            f"{cb_var.name} spec constant read manually is {read}, not {expected}")
 
-                    rdtest.log.success("Draw with {} colors constant {} is as expected".format(num_colors, cb_var.name))
+                    rdtest.log.success(f"Draw with {num_colors} colors constant {cb_var.name} is as expected")
                 else:
-                    raise rdtest.TestFailureException("Spec constant {} is unexpected".format(cb_var.name))
+                    raise rdtest.TestFailureException(f"Spec constant {cb_var.name} is unexpected")
 
-            rdtest.log.success("Draw with {} colors specialisation constant is as expected".format(num_colors))
+            rdtest.log.success(f"Draw with {num_colors} colors specialisation constant is as expected")
 
             view = pipe.GetViewport(0)
 
@@ -139,6 +139,6 @@ class VK_Spec_Constants(rdtest.TestCase):
             # Sample the centre of the viewport
             self.check_pixel_value(pipe.GetOutputTargets()[0].resource, int(view.x) + int(view.width / 2), int(view.height / 2), expected)
 
-            rdtest.log.success("Draw with {} colors picked value is as expected".format(num_colors))
+            rdtest.log.success(f"Draw with {num_colors} colors picked value is as expected")
 
             action = action.nextAction

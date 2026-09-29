@@ -1,3 +1,5 @@
+from typing import Callable, Tuple
+
 import renderdoc as rd
 import rdtest
 
@@ -12,51 +14,51 @@ class D3D12_Predication(rdtest.TestCase):
         d = self.find_action("Draw", c.eventId+1)
         e = self.find_action("Draw", d.eventId+1)
 
-        viewport_array = lambda view: (view.x, view.y, view.width, view.height)
+        viewport_array: Callable[[rd.Viewport], Tuple[float,float,float,float]] = lambda view: (view.x, view.y, view.width, view.height)
 
-        self.controller.SetFrameEvent(a.eventId, False)
+        self.set_event(a.eventId, False)
         pipe = self.controller.GetPipelineState()
         self.check_triangle(vp=viewport_array(pipe.GetViewport(0)))
 
         rdtest.log.success("Non-predicated triangle is correct")
 
-        self.check(self.controller.GetD3D12PipelineState().predication.resourceId == rd.ResourceId())
+        assert self.controller.GetD3D12PipelineState().predication.resourceId == rd.ResourceId()
 
-        self.controller.SetFrameEvent(b.eventId, False)
+        self.set_event(b.eventId, False)
         pipe = self.controller.GetPipelineState()
         self.check_triangle(vp=viewport_array(pipe.GetViewport(0)))
 
-        self.check(self.controller.GetD3D12PipelineState().predication.resourceId != rd.ResourceId())
-        self.check(self.controller.GetD3D12PipelineState().predication.offset == 0)
+        assert self.controller.GetD3D12PipelineState().predication.resourceId != rd.ResourceId()
+        assert self.controller.GetD3D12PipelineState().predication.offset == 0
 
         rdtest.log.success("Fixed data predicated triangle is correct")
 
-        self.controller.SetFrameEvent(c.eventId, False)
+        self.set_event(c.eventId, False)
         pipe = self.controller.GetPipelineState()
         self.check_triangle(vp=viewport_array(pipe.GetViewport(0)))
 
-        self.check(self.controller.GetD3D12PipelineState().predication.resourceId != rd.ResourceId())
-        self.check(self.controller.GetD3D12PipelineState().predication.offset > 0)
+        assert self.controller.GetD3D12PipelineState().predication.resourceId != rd.ResourceId()
+        assert self.controller.GetD3D12PipelineState().predication.offset > 0
 
         rdtest.log.success("Current frame query-predicated triangle is correct")
 
-        self.controller.SetFrameEvent(d.eventId, False)
+        self.set_event(d.eventId, False)
         pipe = self.controller.GetPipelineState()
         self.check_triangle(vp=viewport_array(pipe.GetViewport(0)))
 
         rdtest.log.success("Previous frame query-predicated triangle is correct")
 
-        self.controller.SetFrameEvent(e.eventId, False)
+        self.set_event(e.eventId, False)
         pipe = self.controller.GetPipelineState()
         self.check_pixel_value(pipe.GetOutputTargets()[0].resource, 200, 150, [0.2, 0.2, 0.2, 1.0])
 
-        self.check(self.controller.GetD3D12PipelineState().predication.resourceId != rd.ResourceId())
-        self.check(self.controller.GetD3D12PipelineState().predication.offset > 0)
+        assert self.controller.GetD3D12PipelineState().predication.resourceId != rd.ResourceId()
+        assert self.controller.GetD3D12PipelineState().predication.offset > 0
 
         rdtest.log.success("Failing predicated triangle is correct")
 
         for eid in range(self.get_last_action().eventId):
-            self.controller.SetFrameEvent(eid, False)
+            self.set_event(eid, False)
 
         if not self.controller.GetFatalErrorStatus().OK():
             raise rdtest.TestFailureException(self.controller.GetFatalErrorStatus().Message())

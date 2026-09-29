@@ -17,6 +17,15 @@ if sys.platform == "msys":
     nl = "\r\n"
 
 
+verbose_prints = False
+
+
+def log(s: str):
+    global verbose_prints
+    if verbose_prints:
+        print(s)
+
+
 # RenderDoc/swig specific filtering
 def shouldskip(name) -> bool:
     if name.startswith("Swig") or name.startswith("SWIG"):
@@ -106,6 +115,14 @@ def process_annotation(context: Any, deps: Optional[List[str]], annot: str) -> s
             return f"'{ret}'"
         return ret
 
+    callable = annot.startswith("Callable") or annot.startswith("typing.Callable")
+
+    eval_annot = annot
+    if callable:
+        eval_annot = eval_annot.replace("NoneType", "None")
+        # TypeVars will get printed as ~Type
+        eval_annot = eval_annot.replace("~", "")
+
     # use non-eval path if possible, only available on python 3.14 though :(
     # we make a locals set from the module, and add top-level imported modules
     # so that e.g. datetime.datetime can be found
@@ -116,7 +133,7 @@ def process_annotation(context: Any, deps: Optional[List[str]], annot: str) -> s
             from typing import ForwardRef, evaluate_forward_ref  # type: ignore
 
             dep_type = evaluate_forward_ref(
-                ForwardRef(annot), globals=globals(), locals=locals
+                ForwardRef(eval_annot), globals=globals(), locals=locals
             )
             break
         # if we hit a NameError this is a type that is otherwise unknown,
@@ -129,7 +146,7 @@ def process_annotation(context: Any, deps: Optional[List[str]], annot: str) -> s
         # if the import failed, we have to use eval()
         except ImportError:
             try:
-                dep_type = eval(annot, globals(), locals)
+                dep_type = eval(eval_annot, globals(), locals)
                 break
             except NameError as n:
                 name = re.findall(r"'([^']*)'", str(n))[0]
@@ -146,8 +163,20 @@ def process_annotation(context: Any, deps: Optional[List[str]], annot: str) -> s
         raise ValueError("Expected typing type in complex dependency")
 
     # add a dependency on the typing object itself
+    optional = union = False
+    # detect Optional[] / Union[]
+    if hasattr(dep_type, "__origin__") and dep_type.__origin__ is typing.Union:
+        # Union with just [x, None] is Optional
+        if type(None) in dep_type.__args__ and len(dep_type.__args__) == 2:
+            optional = True
+        else:
+            union = True
     if deps is not None:
-        if "_name" in dir(dep_type):
+        if optional:
+            deps.append(f"typing.Optional")
+        elif union:
+            deps.append(f"typing.Union")
+        elif "_name" in dir(dep_type):
             deps.append(f"typing.{dep_type._name}")
         else:
             deps.append(f"typing.{dep_type.__name__}")
@@ -160,7 +189,8 @@ def process_annotation(context: Any, deps: Optional[List[str]], annot: str) -> s
             inner.append("...")
             continue
         if a is None or a is type(None):
-            inner.append("None")
+            if not optional:
+                inner.append("None")
             continue
         if a == Any:
             inner.append("Any")
@@ -193,17 +223,23 @@ def process_annotation(context: Any, deps: Optional[List[str]], annot: str) -> s
             process_annotation(context, deps, f"{module}.{a.__name__}")
 
     # Callables must format their arguments and return type (the last argument)
-    if "Callable" in annot:
+    if callable:
         ret = inner[-1]
         del inner[-1]
         inner = ", ".join(inner)
         if "_name" in dir(dep_type):
+            assert dep_type._name is not None
             return f"{dep_type._name}[[{inner}], {ret}]"
         else:
             return f"{dep_type.__name__}[[{inner}], {ret}]"
 
     inner = ", ".join(inner)
-    if "_name" in dir(dep_type):
+    if optional:
+        return f"Optional[{inner}]"
+    elif union:
+        return f"Union[{inner}]"
+    elif "_name" in dir(dep_type):
+        assert dep_type._name is not None
         return f"{dep_type._name}[{inner}]"
     else:
         return f"{dep_type.__name__}[{inner}]"
@@ -328,12 +364,8 @@ def gen_function(file: Stream, class_parent: Any, func: Callable):
     file.indent()
     file.println('"""')
     docstring = func.__doc__.strip()
-    i = 0
+    # trim any auto-generated function signatures
     while docstring.startswith(f"{func.__name__}("):
-        i += 1
-        if i > 100:
-            print(docstring)
-        # trim any auto-generated function signatures
         try:
             docstring = docstring[docstring.index("\n") :].strip()
         except ValueError:
@@ -595,8 +627,10 @@ def gen_class(file: Stream, class_obj: Type):
     dependencies[class_obj.__name__] = deps
 
 
-def gen(module: types.ModuleType, destpath: str):
-    global dependencies, dummy_types, fwd_ref
+def gen(module: types.ModuleType, destpath: str, verbose=False):
+    global dependencies, dummy_types, fwd_ref, verbose_prints
+
+    verbose_prints = verbose
 
     begin = time.time()
 
@@ -606,11 +640,11 @@ def gen(module: types.ModuleType, destpath: str):
 
     output_basepath = os.path.join(destpath, module.__name__)
     if __file__ in dir(module):
-        print(
+        log(
             f"Generating stubs for {module.__name__} from {module.__file__}, writing to {output_basepath}"
         )
     else:
-        print(f"Generating stubs for {module.__name__}, writing to {output_basepath}")
+        log(f"Generating stubs for {module.__name__}, writing to {output_basepath}")
 
     shutil.rmtree(output_basepath, ignore_errors=True)
     os.makedirs(output_basepath, exist_ok=True)
@@ -736,7 +770,7 @@ def gen(module: types.ModuleType, destpath: str):
         if len(group) > 1:
             group.sort()
             group_list = ", ".join(group)
-            print(f"Circular dependency detected: {group_list}")
+            log(f"Circular dependency detected: {group_list}")
 
             filename = f"{module.__name__}_circular{circular}"
             circular += 1
@@ -775,10 +809,8 @@ def gen(module: types.ModuleType, destpath: str):
                 dummy_types.append(local)
 
     if len(dummy_types) > 0:
-        print(
-            f"WARNING: Some types could not be found, and were mapped to dummy types:"
-        )
-        print("    " + ", ".join(list(dummy_types)))
+        log(f"WARNING: Some types could not be found, and were mapped to dummy types:")
+        log("    " + ", ".join(list(dummy_types)))
 
     for dummy in dummy_types:
         dependencies[dummy] = set()
@@ -910,5 +942,5 @@ def gen(module: types.ModuleType, destpath: str):
             init.merge(stream)
 
     end = time.time()
-    print(f"Generated in {int((end-begin)*1000)} ms")
-    print("")
+    log(f"Generated in {int((end-begin)*1000)} ms")
+    log("")

@@ -1,5 +1,4 @@
 import rdtest
-import renderdoc as rd
 
 
 class VK_Postponed(rdtest.TestCase):
@@ -10,33 +9,33 @@ class VK_Postponed(rdtest.TestCase):
     def check_capture(self):
         tex = self.get_resource_by_name("offimg").resourceId
 
-        action: rd.ActionDescription = self.find_action("Pre-Copy")
-        self.controller.SetFrameEvent(action.eventId, True)
+        action = self.find_action("Pre-Copy")
+        self.set_event(action.eventId, True)
 
         # starts off cleared
         self.check_pixel_value(tex, 1, 1, [0.2, 0.2, 0.2, 1.0])
 
-        action: rd.ActionDescription = self.find_action("Post-Copy", action.eventId)
-        self.controller.SetFrameEvent(action.eventId, True)
+        action = self.find_action("Post-Copy", action.eventId)
+        self.set_event(action.eventId, True)
 
         # Gets green from first postponed image copy
         self.check_pixel_value(tex, 1, 1, [0.2, 1.0, 0.2, 1.0])
 
-        action: rd.ActionDescription = self.find_action("Pre-Copy", action.eventId)
-        self.controller.SetFrameEvent(action.eventId, True)
+        action = self.find_action("Pre-Copy", action.eventId)
+        self.set_event(action.eventId, True)
 
         # Cleared to black before second copy
         self.check_pixel_value(tex, 1, 1, [0.0, 0.0, 0.0, 1.0])
 
-        action: rd.ActionDescription = self.find_action("Post-Copy", action.eventId)
-        self.controller.SetFrameEvent(action.eventId, True)
+        action = self.find_action("Post-Copy", action.eventId)
+        self.set_event(action.eventId, True)
 
         self.check_pixel_value(tex, 1, 1, [0.2, 1.0, 0.2, 1.0])
 
         rdtest.log.success("Image copies are all correct")
 
-        action: rd.ActionDescription = self.find_action("Post-Draw", action.eventId)
-        self.controller.SetFrameEvent(action.eventId, True)
+        action = self.find_action("Post-Draw", action.eventId)
+        self.set_event(action.eventId, True)
 
         pipe = self.controller.GetPipelineState()
         tex_details = self.get_texture(pipe.GetOutputTargets()[0].resource)

@@ -211,10 +211,11 @@ private slots:
   void ClearRecentCaptureFiles();
   void ClearRecentCaptureSettings();
 
-  void PythonStatusUpdate();
-
   void networkRequestFailed(QUrl url, QString error);
   void networkRequestCompleted(QUrl url, QByteArray data);
+
+public slots:
+  void PythonStatusBarUpdate();
 
 signals:
   void networkRequestGet(QUrl url);
@@ -277,6 +278,8 @@ private:
   QProgressBar *statusProgress;
   RDMenu *contextChooserMenu;
   QToolButton *contextChooser;
+
+  bool m_CurPyDebug = false;
 
   QAction *updateAction = NULL;
   QMenu *m_AnalysisSuiteMenu = NULL;

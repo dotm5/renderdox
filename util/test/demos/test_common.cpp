@@ -315,8 +315,9 @@ bool SpvCompilationSupported()
   return false;
 }
 
-std::vector<uint32_t> CompileShaderToSpv(const std::string &source_text, SPIRVTarget target,
-                                         ShaderLang lang, ShaderStage stage, const char *entry_point,
+std::vector<uint32_t> CompileShaderToSpv(const char *demo_name, const std::string &source_text,
+                                         SPIRVTarget target, ShaderLang lang, ShaderStage stage,
+                                         const char *entry_point,
                                          const std::map<std::string, std::string> &macros)
 {
   std::vector<uint32_t> ret;
@@ -409,7 +410,9 @@ std::vector<uint32_t> CompileShaderToSpv(const std::string &source_text, SPIRVTa
 
   std::string path = GetExecutableName();
   path.erase(path.find_last_of("/\\"));
-  path += "/tmp";
+  path += "/tmp/";
+  MakeDir(path.c_str());
+  path += demo_name;
 
   MakeDir(path.c_str());
 
@@ -911,15 +914,16 @@ void init()
       {Vec3f(-0.4f, 0.8f, 0.33f), Vec4f(0.0f, 0.0f, -1.0f, 1.0f), Vec2f(0.0f, 0.0f)},
   });
 
-  // scissor does clip some but passes where above fails
+  // multiple fragments overlapping the same pixel where only one discards
   PerFragDiscard = makeDraw({
-      {Vec3f(-0.7f, -0.2f, 0.33f), Vec4f(-1.0f, -1.0f, -1.0f, 1.0f), Vec2f(0.0f, 1.0f)},
-      {Vec3f(-0.8f, 0.0f, 0.33f), Vec4f(-1.0f, -1.0f, -1.0f, 1.0f), Vec2f(1.0f, 0.0f)},
-      {Vec3f(-0.6f, 0.0f, 0.33f), Vec4f(-1.0f, -1.0f, -1.0f, 1.0f), Vec2f(0.0f, 0.0f)},
-
+      // for now we discard the first one, because Vulkan/D3D12 can't determine ordering
       {Vec3f(-0.7f, -0.2f, 0.33f), Vec4f(1.0f, 1.0f, 1.0f, 1.0f), Vec2f(0.0f, 1.0f)},
       {Vec3f(-0.8f, 0.0f, 0.33f), Vec4f(1.0f, 1.0f, 1.0f, 1.0f), Vec2f(1.0f, 0.0f)},
       {Vec3f(-0.6f, 0.0f, 0.33f), Vec4f(1.0f, 1.0f, 1.0f, 1.0f), Vec2f(0.0f, 0.0f)},
+
+      {Vec3f(-0.7f, -0.2f, 0.33f), Vec4f(-1.0f, -1.0f, -1.0f, 1.0f), Vec2f(0.0f, 1.0f)},
+      {Vec3f(-0.8f, 0.0f, 0.33f), Vec4f(-1.0f, -1.0f, -1.0f, 1.0f), Vec2f(1.0f, 0.0f)},
+      {Vec3f(-0.6f, 0.0f, 0.33f), Vec4f(-1.0f, -1.0f, -1.0f, 1.0f), Vec2f(0.0f, 0.0f)},
   });
 };
 

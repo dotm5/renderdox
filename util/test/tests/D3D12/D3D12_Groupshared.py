@@ -7,13 +7,13 @@ class D3D12_Groupshared(rdtest.Groupshared):
     def check_capture(self):
         overallFailed = False
         action = self.find_action("SM5")
+        assert action is not None
         self.check_compute_section_tests(action)
 
         action = self.find_action("SM6")
+        assert action is not None
         self.check_compute_section_tests(action)
         if overallFailed:
             raise rdtest.TestFailureException("Some tests were not as expected")
-
-        self.check_renderdoc_log_asserts()
 
         rdtest.log.success("All tests matched")

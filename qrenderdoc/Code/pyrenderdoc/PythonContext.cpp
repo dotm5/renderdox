@@ -405,7 +405,10 @@ void PythonContext::GenerateStubs(const rdcarray<rdcstr> &extraPaths)
     PyObject *retval = PyObject_CallObject(gen, args);
 
     if(!retval)
+    {
       qCritical() << "Didn't generate renderdoc stubs";
+      HandleException(NULL);
+    }
 
     Py_XDECREF(retval);
     Py_XDECREF(args);
@@ -415,7 +418,10 @@ void PythonContext::GenerateStubs(const rdcarray<rdcstr> &extraPaths)
     retval = PyObject_CallObject(gen, args);
 
     if(!retval)
+    {
       qCritical() << "Didn't generate qrenderdoc stubs";
+      HandleException(NULL);
+    }
 
     Py_XDECREF(retval);
     Py_XDECREF(args);
@@ -757,16 +763,16 @@ void PythonContext::GlobalInit(PersistentConfig &config)
           Py_DecRef(str);
         }
 
-        m_DebugPy = PyImport_ImportModule("debugpy");
+        PyObject *debugpy = PyImport_ImportModule("debugpy");
 
-        if(!m_DebugPy)
+        if(!debugpy)
         {
           qCritical() << "Failed to import debugpy";
           HandleException(NULL);
         }
         else
         {
-          PyObject *configure = PyObject_SafeGetAttrString(m_DebugPy, "configure");
+          PyObject *configure = PyObject_SafeGetAttrString(debugpy, "configure");
 
           // don't let debugpy create a subprocess, for obvious reasons
           if(configure)
@@ -779,8 +785,8 @@ void PythonContext::GlobalInit(PersistentConfig &config)
             {
               qCritical() << "Failed calling debugpy.configure";
               HandleException(NULL);
-              Py_XDECREF(m_DebugPy);
-              m_DebugPy = NULL;
+              Py_XDECREF(debugpy);
+              debugpy = NULL;
             }
 
             Py_XDECREF(ret);
@@ -793,9 +799,9 @@ void PythonContext::GlobalInit(PersistentConfig &config)
 
           Py_XDECREF(configure);
 
-          if(m_DebugPy)
+          if(debugpy)
           {
-            PyObject *listen = PyObject_SafeGetAttrString(m_DebugPy, "listen");
+            PyObject *listen = PyObject_SafeGetAttrString(debugpy, "listen");
 
             if(listen)
             {
@@ -810,8 +816,12 @@ void PythonContext::GlobalInit(PersistentConfig &config)
               {
                 qCritical() << "Failed calling debugpy.listen";
                 HandleException(NULL);
-                Py_XDECREF(m_DebugPy);
-                m_DebugPy = NULL;
+                Py_XDECREF(debugpy);
+                debugpy = NULL;
+              }
+              else
+              {
+                m_DebugPy = debugpy;
               }
 
               Py_XDECREF(ret);
@@ -1424,25 +1434,26 @@ QString PythonContext::LoadExtension(ICaptureContext &ctx, const rdcstr &extensi
 
     if(!valueStr.isEmpty())
     {
-      qCritical("Error importing extension module '%s'. %s: %s", extension.c_str(),
-                typeStr.toUtf8().data(), valueStr.toUtf8().data());
-      ret +=
+      QString errorStr;
+
+      errorStr +=
           tr("Error importing extension module '%1'. %2: %3\n\n").arg(extension).arg(typeStr).arg(valueStr);
 
       if(!frames.isEmpty())
       {
-        qCritical() << "Traceback (most recent call last):";
-        ret += tr("Traceback (most recent call last):\n");
+        errorStr += tr("Traceback (most recent call last):\n");
         for(const QString &f : frames)
         {
           QStringList lines = f.split(QLatin1Char('\n'));
           for(const QString &line : lines)
           {
-            qCritical("  %s", line.toUtf8().data());
-            ret += line + lit("\n");
+            errorStr += lit("  %1\n").arg(line);
           }
         }
       }
+
+      qCritical("%s", errorStr.toUtf8().data());
+      ret += errorStr;
     }
 
     if(!ret.isEmpty())

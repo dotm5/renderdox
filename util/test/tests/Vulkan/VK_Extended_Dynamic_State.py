@@ -6,11 +6,13 @@ class VK_Extended_Dynamic_State(rdtest.TestCase):
     demos_test_name = 'VK_Extended_Dynamic_State'
 
     def check_capture(self):
-        action: rd.ActionDescription = self.find_action("Draw")
+        action = self.find_action("Draw")
 
-        self.controller.SetFrameEvent(action.eventId, True)
+        assert action is not None
 
-        vsin_ref = {
+        self.set_event(action.eventId, True)
+
+        vsin_ref: rdtest.MeshReference = {
             0: {
                 'vtx': 0,
                 'idx': 0,
@@ -45,7 +47,7 @@ class VK_Extended_Dynamic_State(rdtest.TestCase):
 
         postvs_data = self.get_postvs(action, rd.MeshDataStage.VSOut, 0, action.numIndices)
 
-        postvs_ref = {
+        postvs_ref: rdtest.MeshReference = {
             0: {
                 'vtx': 0,
                 'idx': 0,
@@ -78,7 +80,7 @@ class VK_Extended_Dynamic_State(rdtest.TestCase):
 
         self.check_mesh_data(postvs_ref, postvs_data)
 
-        pipe: rd.PipeState = self.controller.GetPipelineState()
+        pipe = self.controller.GetPipelineState()
 
         self.check_pixel_value(pipe.GetOutputTargets()[0].resource, 100, 200, [0.0, 1.0, 0.0, 1.0])
         self.check_pixel_value(pipe.GetOutputTargets()[0].resource, 300, 200, [0.0, 0.0, 1.0, 1.0])
@@ -93,31 +95,31 @@ class VK_Extended_Dynamic_State(rdtest.TestCase):
 
         # check that the state listed is the dynamic state, not the static state
 
-        vkpipe: rd.VKState = self.controller.GetVulkanPipelineState()
+        vkpipe = self.controller.GetVulkanPipelineState()
 
-        self.check(vkpipe.inputAssembly.topology == rd.Topology.TriangleList)
+        assert vkpipe.inputAssembly.topology == rd.Topology.TriangleList
 
-        self.check(vkpipe.depthStencil.depthTestEnable == True)
-        self.check(vkpipe.depthStencil.depthWriteEnable == True)
-        self.check(vkpipe.depthStencil.depthBoundsEnable == False)
-        self.check(vkpipe.depthStencil.depthFunction == rd.CompareFunction.LessEqual)
+        assert vkpipe.depthStencil.depthTestEnable == True
+        assert vkpipe.depthStencil.depthWriteEnable == True
+        assert vkpipe.depthStencil.depthBoundsEnable == False
+        assert vkpipe.depthStencil.depthFunction == rd.CompareFunction.LessEqual
 
-        self.check(vkpipe.rasterizer.frontCCW == False)
-        self.check(vkpipe.rasterizer.cullMode == rd.CullMode.Back)
-        self.check(vkpipe.rasterizer.rasterizerDiscardEnable == False)
+        assert vkpipe.rasterizer.frontCCW == False
+        assert vkpipe.rasterizer.cullMode == rd.CullMode.Back
+        assert vkpipe.rasterizer.rasterizerDiscardEnable == False
 
-        self.check(vkpipe.depthStencil.stencilTestEnable == True)
-        self.check(vkpipe.depthStencil.frontFace.passOperation == rd.StencilOperation.IncSat)
-        self.check(vkpipe.depthStencil.frontFace.failOperation == rd.StencilOperation.IncSat)
-        self.check(vkpipe.depthStencil.frontFace.depthFailOperation == rd.StencilOperation.IncSat)
-        self.check(vkpipe.depthStencil.frontFace.function == rd.CompareFunction.AlwaysTrue)
-        self.check(vkpipe.depthStencil.backFace.passOperation == rd.StencilOperation.Keep)
-        self.check(vkpipe.depthStencil.backFace.failOperation == rd.StencilOperation.Keep)
-        self.check(vkpipe.depthStencil.backFace.depthFailOperation == rd.StencilOperation.Keep)
-        self.check(vkpipe.depthStencil.backFace.function == rd.CompareFunction.AlwaysTrue)
+        assert vkpipe.depthStencil.stencilTestEnable == True
+        assert vkpipe.depthStencil.frontFace.passOperation == rd.StencilOperation.IncSat
+        assert vkpipe.depthStencil.frontFace.failOperation == rd.StencilOperation.IncSat
+        assert vkpipe.depthStencil.frontFace.depthFailOperation == rd.StencilOperation.IncSat
+        assert vkpipe.depthStencil.frontFace.function == rd.CompareFunction.AlwaysTrue
+        assert vkpipe.depthStencil.backFace.passOperation == rd.StencilOperation.Keep
+        assert vkpipe.depthStencil.backFace.failOperation == rd.StencilOperation.Keep
+        assert vkpipe.depthStencil.backFace.depthFailOperation == rd.StencilOperation.Keep
+        assert vkpipe.depthStencil.backFace.function == rd.CompareFunction.AlwaysTrue
 
-        self.check(len(vkpipe.viewportScissor.viewportScissors) == 1)
-        self.check(vkpipe.viewportScissor.viewportScissors[0].vp.width == 400)
-        self.check(vkpipe.viewportScissor.viewportScissors[0].scissor.width == 400)
+        assert len(vkpipe.viewportScissor.viewportScissors) == 1
+        assert vkpipe.viewportScissor.viewportScissors[0].vp.width == 400
+        assert vkpipe.viewportScissor.viewportScissors[0].scissor.width == 400
 
-        self.check(vkpipe.vertexInput.vertexBuffers[0].byteStride == 36)
+        assert vkpipe.vertexInput.vertexBuffers[0].byteStride == 36

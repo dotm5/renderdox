@@ -7,23 +7,9 @@ class GL_Resource_Lifetimes(rdtest.TestCase):
     demos_frame_cap = 200
 
     def check_capture(self):
-        action: rd.ActionDescription = self.find_action("glDraw")
+        action = self.find_action("glDraw")
 
-        self.controller.SetFrameEvent(action.eventId, True)
-
-        pipe = self.controller.GetPipelineState()
-
-        rw = pipe.GetReadWriteResources(rd.ShaderStage.Vertex)
-        location = self.controller.GetDescriptorLocations(rw[0].access.descriptorStore, [rd.DescriptorRange(rw[0].access)])[0]
-        self.check_eq(location.fixedBindNumber, 3)
-
-        rw = pipe.GetReadWriteResources(rd.ShaderStage.Pixel)
-        location = self.controller.GetDescriptorLocations(rw[0].access.descriptorStore, [rd.DescriptorRange(rw[0].access)])[0]
-        self.check_eq(location.fixedBindNumber, 3)
-
-        action: rd.ActionDescription = self.find_action("glDraw", action.eventId+1)
-
-        self.controller.SetFrameEvent(action.eventId, True)
+        self.set_event(action.eventId, True)
 
         pipe = self.controller.GetPipelineState()
 
@@ -35,10 +21,24 @@ class GL_Resource_Lifetimes(rdtest.TestCase):
         location = self.controller.GetDescriptorLocations(rw[0].access.descriptorStore, [rd.DescriptorRange(rw[0].access)])[0]
         self.check_eq(location.fixedBindNumber, 3)
 
+        action = self.find_action("glDraw", action.eventId+1)
 
-        last_action: rd.ActionDescription = self.get_last_action()
+        self.set_event(action.eventId, True)
 
-        self.controller.SetFrameEvent(last_action.eventId, True)
+        pipe = self.controller.GetPipelineState()
+
+        rw = pipe.GetReadWriteResources(rd.ShaderStage.Vertex)
+        location = self.controller.GetDescriptorLocations(rw[0].access.descriptorStore, [rd.DescriptorRange(rw[0].access)])[0]
+        self.check_eq(location.fixedBindNumber, 3)
+
+        rw = pipe.GetReadWriteResources(rd.ShaderStage.Pixel)
+        location = self.controller.GetDescriptorLocations(rw[0].access.descriptorStore, [rd.DescriptorRange(rw[0].access)])[0]
+        self.check_eq(location.fixedBindNumber, 3)
+
+
+        last_action = self.get_last_action()
+
+        self.set_event(last_action.eventId, True)
 
         tex = last_action.copyDestination
 
@@ -84,5 +84,5 @@ class GL_Resource_Lifetimes(rdtest.TestCase):
         # Check for resource leaks
         if len(self.controller.GetResources()) > 75:
             raise rdtest.TestFailureException(
-                "Too many resources found: {}".format(len(self.controller.GetResources())))
+                f"Too many resources found: {len(self.controller.GetResources())}")
 

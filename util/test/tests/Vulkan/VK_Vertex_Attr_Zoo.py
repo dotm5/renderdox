@@ -9,11 +9,11 @@ class VK_Vertex_Attr_Zoo(rdtest.TestCase):
     def check_capture(self):
         action = self.find_action("Draw")
 
-        self.check(action is not None)
+        assert action is not None
 
-        self.controller.SetFrameEvent(action.eventId, False)
+        self.set_event(action.eventId, False)
 
-        ref = {
+        ref: rdtest.MeshReference = {
             0: {
                 'SNorm': [1.0, -1.0, 1.0, -1.0],
                 'UNorm': [12345.0/65535.0, 6789.0/65535.0, 1234.0/65535.0, 567.0/65535.0],
@@ -65,7 +65,7 @@ class VK_Vertex_Attr_Zoo(rdtest.TestCase):
         longs = self.find_action('LongsEnabled') is not None
 
         # Copy the ref values and prepend 'In'
-        in_ref = {}
+        in_ref: rdtest.MeshReference = {}
         for idx in ref:
             in_ref[idx] = {}
             for key in ref[idx]:
@@ -77,10 +77,16 @@ class VK_Vertex_Attr_Zoo(rdtest.TestCase):
                     continue
                 in_ref[idx]['In' + key] = ref[idx][key]
 
-            in_ref[idx]['InUInt'] = ref[idx]['UInt'] + ref[idx]['UInt1'] + ref[idx]['UInt2']
+            # reassure the type checker that we put lists in above
+            uint0 = ref[idx]['UInt']
+            uint1 = ref[idx]['UInt1']
+            uint2 = ref[idx]['UInt2']
+            assert isinstance(uint0, list) and isinstance(uint1, list) and isinstance(uint2, list)
+
+            in_ref[idx]['InUInt'] = uint0 + uint1 + uint2
 
         # Copy the ref values and prepend 'Out'
-        out_ref = {}
+        out_ref: rdtest.MeshReference = {}
         for idx in ref:
             out_ref[idx] = {}
             for key in ref[idx]:
@@ -118,16 +124,16 @@ class VK_Vertex_Attr_Zoo(rdtest.TestCase):
         else:
             rdtest.log.print("Geometry output not tested")
 
-        pipe: rd.PipeState = self.controller.GetPipelineState()
+        pipe = self.controller.GetPipelineState()
 
         self.check_pixel_value(pipe.GetOutputTargets()[0].resource, 0.5, 0.5, [0.0, 1.0, 0.0, 1.0])
 
         rdtest.log.success("Triangle picked value is as expected")
 
         # Step to the next action with awkward struct/array outputs
-        self.controller.SetFrameEvent(action.nextAction.eventId, False)
+        self.set_event(action.nextAction.eventId, False)
 
-        ref = {
+        ref: rdtest.MeshReference = {
             0: {
                 'outData.outStruct.a': [1.1],
                 'outData.outStruct.c.foo[0]': [4.4],

@@ -1,9 +1,11 @@
+from __future__ import annotations
+from typing import Dict, List, Tuple
+
 import rdtest
 import struct
 import renderdoc as rd
-from typing import List
 
-def real_action_children(action):
+def real_action_children(action: rd.ActionDescription):
     return [c for c in action.children if not c.flags & rd.ActionFlags.PopMarker]
 
 
@@ -61,17 +63,17 @@ class VK_Indirect(rdtest.TestCase):
     ]
 
     def check_pixel_history_succeeds(self, eid: int, x: int, y: int):
-        pipe: rd.PipeState = self.controller.GetPipelineState()
+        pipe = self.controller.GetPipelineState()
         rt = pipe.GetOutputTargets()[0]
         tex = rt.resource
         sub = rd.Subresource()
-        modifs: List[rd.PixelModification] = self.controller.PixelHistory(tex, x, y, sub, rt.format.compType)
-        if len(modifs) < 2:
-            raise rdtest.TestFailureException(f"EID: {eid} No pixel history found at ({x}, {y})")
-        rdtest.log.success(f"EID: {eid} Pixel History {x}, {y} Worked")
+        with self.pixel_history(tex, x, y, sub, rt.format.compType) as history:
+            if len(history.modifs) < 2:
+                raise rdtest.TestFailureException(f"No pixel history found at ({x}, {y})")
+            rdtest.log.success(f"Pixel History {x}, {y} Worked")
 
-    def check_overlay(self, pass_samples, *, no_overlay = False):
-        pipe: rd.PipeState = self.controller.GetPipelineState()
+    def check_overlay(self, pass_samples: List[Tuple[int,int]], *, no_overlay = False):
+        pipe = self.controller.GetPipelineState()
 
         tex = rd.TextureDisplay()
         tex.overlay = rd.DebugOverlay.Drawcall
@@ -87,7 +89,7 @@ class VK_Indirect(rdtest.TestCase):
         off_alpha = 0.5
         # If the overlay isn't even for a action, it will be cleared to black
         if no_overlay:
-            self.check(len(pass_samples) == 0)
+            assert len(pass_samples) == 0
         for s in [s for s in self.samples if s not in pass_samples]:
             self.check_pixel_value(overlay_id, s[0], s[1], [0.0, 0.0, 0.0, off_alpha], eps=1.0/256.0)
 
@@ -101,26 +103,26 @@ class VK_Indirect(rdtest.TestCase):
         tex.overlay = overlay
         tex.subresource.sample = 0
 
-        out: rd.ReplayOutput = self.controller.CreateOutput(rd.CreateHeadlessWindowingData(100, 100), rd.ReplayOutputType.Texture)
+        out = self.controller.CreateOutput(rd.CreateHeadlessWindowingData(100, 100), rd.ReplayOutputType.Texture)
         out.SetTextureDisplay(tex)
         out.Display()
-        overlayTex: rd.ResourceId = out.GetDebugOverlayTexID()
+        overlayTex = out.GetDebugOverlayTexID()
         if overlay == rd.DebugOverlay.ClearBeforeDraw:
             overlayTex = col_tex
         if overlay == rd.DebugOverlay.ClearBeforePass:
             overlayTex = col_tex
 
-        picked = self.controller.PickPixel(overlayTex, x, y, rd.Subresource(), rd.CompType.Typeless)
+        picked = self.pick_pixel(overlayTex, x, y, rd.Subresource(), rd.CompType.Typeless)
         out.Shutdown()
         return picked
 
     def check_overlays(self, eid: int, x: int, y: int):
         with rdtest.log.auto_section(f'EID {eid} Checking Overlays at {x}, {y}'):
-            pipe: rd.PipeState = self.controller.GetPipelineState()
+            pipe = self.controller.GetPipelineState()
             if len(pipe.GetOutputTargets()) == 0:
                 raise rdtest.TestFailureException("No output targets found")
 
-            col_tex: rd.ResourceId = pipe.GetOutputTargets()[0].resource
+            col_tex = pipe.GetOutputTargets()[0].resource
 
             for overlay in rd.DebugOverlay:
                 if overlay == rd.DebugOverlay.NoOverlay:
@@ -145,8 +147,8 @@ class VK_Indirect(rdtest.TestCase):
             if pickedDraw.floatValue != pickedPass.floatValue:
                 raise rdtest.TestFailureException(f"Triangle Size Draw and Pass do not match: {pickedDraw.floatValue} vs {pickedPass.floatValue}")
 
-    def check_overlay_and_pixel_history(self, eid, coords):
-        self.controller.SetFrameEvent(eid, False)
+    def check_overlay_and_pixel_history(self, eid: int, coords: List[Tuple[int,int]]):
+        self.set_event(eid, False)
         for c in coords:
             x = c[0]
             y = c[1]
@@ -260,10 +262,10 @@ class VK_Indirect(rdtest.TestCase):
         with rdtest.log.auto_section('Checking Empty Draws'):
             for level in ["Primary", "Secondary"]:
                 empties = self.find_action(f"{level}: Empty count draws")
-                action: rd.ActionDescription
+                assert empties is not None
                 for action in real_action_children(empties):
                     eid = action.eventId
-                    self.controller.SetFrameEvent(eid, False)
+                    self.set_event(eid, False)
                     pipe = self.controller.GetPipelineState()
                     for overlay in rd.DebugOverlay:
                         if overlay == rd.DebugOverlay.NoOverlay:
@@ -275,14 +277,14 @@ class VK_Indirect(rdtest.TestCase):
                         if overlay == rd.DebugOverlay.Wireframe:
                             continue
                         tex = rd.TextureDisplay()
-                        col_tex: rd.ResourceId = pipe.GetOutputTargets()[0].resource
+                        col_tex = pipe.GetOutputTargets()[0].resource
                         tex.resourceId = col_tex
                         tex.overlay = overlay
                         tex.subresource.sample = 0
-                        out: rd.ReplayOutput = self.controller.CreateOutput(rd.CreateHeadlessWindowingData(100, 100), rd.ReplayOutputType.Texture)
+                        out = self.controller.CreateOutput(rd.CreateHeadlessWindowingData(100, 100), rd.ReplayOutputType.Texture)
                         out.SetTextureDisplay(tex)
                         out.Display()
-                        overlayTex: rd.ResourceId = out.GetDebugOverlayTexID()
+                        overlayTex = out.GetDebugOverlayTexID()
                         expectEmpty = True
                         if overlay == rd.DebugOverlay.ClearBeforeDraw:
                             overlayTex = col_tex
@@ -303,17 +305,18 @@ class VK_Indirect(rdtest.TestCase):
                         for s in self.samples:
                             x = s[0]
                             y = s[1]
-                            picked = self.controller.PickPixel(overlayTex, x, y, rd.Subresource(), rd.CompType.Typeless)
+                            picked = self.pick_pixel(overlayTex, x, y, rd.Subresource(), rd.CompType.Typeless)
                             if picked.floatValue != emptyPixel:
                                 empty = False
                             if expectEmpty and not empty:
                                 raise rdtest.TestFailureException(f"EID {eid} {overlay.name} {x}, {y} {picked.floatValue} is not as expected {emptyPixel}")
                         if expectEmpty != empty:
                             raise rdtest.TestFailureException(f"EID {eid} {overlay.name} is not as expected")
-                        
+
                         out.Shutdown()
 
     def check_capture(self):
+        assert self.controller is not None
 
         with rdtest.log.auto_section("Checking Indirect Action Names"):
             if not self.check_indirect_action_name_consistency(self.controller):
@@ -321,12 +324,11 @@ class VK_Indirect(rdtest.TestCase):
 
         fill = self.find_action("vkCmdFillBuffer")
 
-        self.check(fill is not None)
+        assert fill is not None
 
-        buffer_usage = {}
+        buffer_usage: Dict[int, List[rd.ResourceUsage]] = {}
 
         for usage in self.controller.GetUsage(fill.copyDestination):
-            usage: rd.EventUsage
             if usage.eventId not in buffer_usage:
                 buffer_usage[usage.eventId] = []
             buffer_usage[usage.eventId].append(usage.usage)
@@ -335,13 +337,13 @@ class VK_Indirect(rdtest.TestCase):
         tex = self.get_last_action().copyDestination
 
         for level in ["Primary", "Secondary"]:
-            rdtest.log.print("Checking {} indirect calls".format(level))
+            rdtest.log.print(f"Checking {level} indirect calls")
 
-            final = self.find_action("{}: Final".format(level))
+            final = self.find_action(f"{level}: Final")
 
-            indirect_count_root = self.find_action("{}: KHR_draw_indirect_count".format(level))
+            indirect_count_root = self.find_action(f"{level}: KHR_draw_indirect_count")
 
-            self.controller.SetFrameEvent(final.eventId, False)
+            self.set_event(final.eventId, False)
 
             # Check the top row, non indirect count and always present
             self.check_pixel_value(tex, 60, 60, [1.0, 0.0, 0.0, 1.0])
@@ -360,42 +362,43 @@ class VK_Indirect(rdtest.TestCase):
                 self.check_pixel_value(tex, 340, 115, [1.0, 0.5, 0.5, 1.0])
                 self.check_pixel_value(tex, 340, 190, [1.0, 0.0, 0.5, 1.0])
 
-            dispatches = self.find_action("{}: Dispatches".format(level))
+            dispatches = self.find_action(f"{level}: Dispatches")
 
             # Set up a ReplayOutput and TextureSave for quickly testing the action highlight overlay
-            self.out: rd.ReplayOutput = self.controller.CreateOutput(rd.CreateHeadlessWindowingData(100, 100),
-                                                                     rd.ReplayOutputType.Texture)
+            self.out = self.controller.CreateOutput(
+                rd.CreateHeadlessWindowingData(100, 100), rd.ReplayOutputType.Texture
+            )
 
-            self.check(self.out is not None)
+            assert self.out is not None
 
             # Rewind to the start of the capture
-            action: rd.ActionDescription = dispatches.children[0]
+            action = dispatches.children[0]
             while action.previousAction is not None:
                 action = action.previousAction
 
             # Ensure we can select all actions
             while action is not None:
-                self.controller.SetFrameEvent(action.eventId, False)
+                self.set_event(action.eventId, False)
                 action = action.nextAction
 
-            rdtest.log.success("Selected all {} actions".format(level))
+            rdtest.log.success(f"Selected all {level} actions")
 
-            self.check(dispatches and len(real_action_children(dispatches)) == 3)
+            assert dispatches and len(real_action_children(dispatches)) == 3
 
-            self.check(dispatches.children[0].dispatchDimension == (0, 0, 0))
-            self.check(dispatches.children[1].dispatchDimension == (1, 1, 1))
-            self.check(dispatches.children[2].dispatchDimension == (3, 4, 5))
+            assert dispatches.children[0].dispatchDimension == (0, 0, 0)
+            assert dispatches.children[1].dispatchDimension == (1, 1, 1)
+            assert dispatches.children[2].dispatchDimension == (3, 4, 5)
 
-            rdtest.log.success("{} Indirect dispatches are the correct dimensions".format(level))
+            rdtest.log.success(f"{level} Indirect dispatches are the correct dimensions")
 
-            self.controller.SetFrameEvent(dispatches.children[2].eventId, False)
+            self.set_event(dispatches.children[2].eventId, False)
 
-            pipe: rd.PipeState = self.controller.GetPipelineState()
+            pipe = self.controller.GetPipelineState()
 
             ssbo = pipe.GetReadWriteResources(rd.ShaderStage.Compute)[0].descriptor
-            data: bytes = self.controller.GetBufferData(ssbo.resource, 0, 0)
+            data = self.controller.GetBufferData(ssbo.resource, 0, 0)
 
-            rdtest.log.print("Got {} bytes of uints".format(len(data)))
+            rdtest.log.print(f"Got {len(data)} bytes of uints")
 
             uints = [struct.unpack_from('=4L', data, offs) for offs in range(0, len(data), 16)]
 
@@ -405,102 +408,100 @@ class VK_Indirect(rdtest.TestCase):
                         idx = 100 + z*8*6 + y*6 + x
                         if not rdtest.value_compare(uints[idx], [x, y, z, 12345]):
                             raise rdtest.TestFailureException(
-                                'expected thread index data @ {},{},{}: {} is not as expected: {}'
-                                    .format(x, y, z, uints[idx], [x, y, z, 12345]))
+                                f'expected thread index data @ {x},{y},{z}: {uints[idx]} is not as expected: {[x, y, z, 12345]}')
 
-            rdtest.log.success("Dispatched buffer contents are as expected for {}".format(level))
+            rdtest.log.success(f"Dispatched buffer contents are as expected for {level}")
 
-            empties = self.find_action("{}: Empty draws".format(level))
+            empties = self.find_action(f"{level}: Empty draws")
 
-            self.check(empties and len(real_action_children(empties)) == 2)
+            assert empties and len(real_action_children(empties)) == 2
 
-            action: rd.ActionDescription
             for action in real_action_children(empties):
-                self.check(action.numIndices == 0)
-                self.check(action.numInstances == 0)
+                assert action.numIndices == 0
+                assert action.numInstances == 0
 
-                self.controller.SetFrameEvent(action.eventId, False)
+                self.set_event(action.eventId, False)
 
                 # Check that we have empty PostVS
                 postvs_data = self.get_postvs(action, rd.MeshDataStage.VSOut, 0, 1)
-                self.check(len(postvs_data) == 0)
+                assert len(postvs_data) == 0
 
                 # No samples should be passing in the empties
                 self.check_overlay([])
 
-            rdtest.log.success("{} empty actions are empty".format(level))
+            rdtest.log.success(f"{level} empty actions are empty")
 
-            indirects = self.find_action("{}: Indirect draws".format(level))
+            indirects = self.find_action(f"{level}: Indirect draws")
 
-            self.check('vkCmdDrawIndirect' in indirects.children[0].customName)
-            self.check('vkCmdDrawIndexedIndirect' in indirects.children[1].customName)
-            self.check(len(real_action_children(indirects.children[1])) == 2)
+            assert 'vkCmdDrawIndirect' in indirects.children[0].customName
+            assert 'vkCmdDrawIndexedIndirect' in indirects.children[1].customName
+            assert len(real_action_children(indirects.children[1])) == 2
 
-            rdtest.log.success("Correct number of {} indirect draws".format(level))
+            rdtest.log.success(f"Correct number of {level} indirect draws")
 
             # vkCmdDrawIndirect(...)
             action = indirects.children[0]
-            self.check(action.numIndices == 3)
-            self.check(action.numInstances == 2)
+            assert action.numIndices == 3
+            assert action.numInstances == 2
 
-            self.controller.SetFrameEvent(action.eventId, False)
+            self.set_event(action.eventId, False)
 
-            self.check(rd.ResourceUsage.Indirect in buffer_usage[action.eventId])
+            assert rd.ResourceUsage.Indirect in buffer_usage[action.eventId]
 
             # Check that we have PostVS as expected
             postvs_data = self.get_postvs(action, rd.MeshDataStage.VSOut)
 
-            postvs_ref = {
+            postvs_ref: rdtest.MeshReference = {
                 0: {'vtx': 0, 'idx': 0, 'gl_Position': [-0.8, -0.5, 0.0, 1.0]},
                 1: {'vtx': 1, 'idx': 1, 'gl_Position': [-0.7, -0.8, 0.0, 1.0]},
                 2: {'vtx': 2, 'idx': 2, 'gl_Position': [-0.6, -0.5, 0.0, 1.0]},
             }
 
             self.check_mesh_data(postvs_ref, postvs_data)
-            self.check(len(postvs_data) == len(postvs_ref))  # We shouldn't have any extra vertices
+            assert len(postvs_data) == len(postvs_ref)  # We shouldn't have any extra vertices
 
             self.check_overlay([(60, 40)])
 
-            rdtest.log.success("{} {} is as expected".format(level, action.customName))
+            rdtest.log.success(f"{level} {action.customName} is as expected")
 
-            self.check(rd.ResourceUsage.Indirect in buffer_usage[indirects.children[1].eventId])
+            assert rd.ResourceUsage.Indirect in buffer_usage[indirects.children[1].eventId]
 
             # vkCmdDrawIndexedIndirect[0](...)
             action = indirects.children[1].children[0]
-            self.check(action.numIndices == 3)
-            self.check(action.numInstances == 3)
+            assert action.numIndices == 3
+            assert action.numInstances == 3
 
-            self.controller.SetFrameEvent(action.eventId, False)
+            self.set_event(action.eventId, False)
 
             # Check that we have PostVS as expected
             postvs_data = self.get_postvs(action, rd.MeshDataStage.VSOut)
 
             # These indices are the *output* indices, which have been rebased/remapped, so are not the same as the input
             # indices
-            postvs_ref = {
+            postvs_ref: rdtest.MeshReference = {
                 0: {'vtx': 0, 'idx': 6, 'gl_Position': [-0.6, -0.5, 0.0, 1.0]},
                 1: {'vtx': 1, 'idx': 7, 'gl_Position': [-0.5, -0.8, 0.0, 1.0]},
                 2: {'vtx': 2, 'idx': 8, 'gl_Position': [-0.4, -0.5, 0.0, 1.0]},
             }
 
             self.check_mesh_data(postvs_ref, postvs_data)
-            self.check(len(postvs_data) == len(postvs_ref))  # We shouldn't have any extra vertices
+            assert len(postvs_data) == len(postvs_ref)  # We shouldn't have any extra vertices
 
             self.check_overlay([(100, 40)])
 
-            rdtest.log.success("{} {} is as expected".format(level, action.customName))
+            rdtest.log.success(f"{level} {action.customName} is as expected")
 
             # vkCmdDrawIndexedIndirect[1](...)
             action = indirects.children[1].children[1]
-            self.check(action.numIndices == 6)
-            self.check(action.numInstances == 2)
+            assert action.numIndices == 6
+            assert action.numInstances == 2
 
-            self.controller.SetFrameEvent(action.eventId, False)
+            self.set_event(action.eventId, False)
 
             # Check that we have PostVS as expected
             postvs_data = self.get_postvs(action, rd.MeshDataStage.VSOut)
 
-            postvs_ref = {
+            postvs_ref: rdtest.MeshReference = {
                 0: {'vtx': 0, 'idx': 9, 'gl_Position': [-0.4, -0.5, 0.0, 1.0]},
                 1: {'vtx': 1, 'idx': 10, 'gl_Position': [-0.3, -0.8, 0.0, 1.0]},
                 2: {'vtx': 2, 'idx': 11, 'gl_Position': [-0.2, -0.8, 0.0, 1.0]},
@@ -511,125 +512,124 @@ class VK_Indirect(rdtest.TestCase):
             }
 
             self.check_mesh_data(postvs_ref, postvs_data)
-            self.check(len(postvs_data) == len(postvs_ref))  # We shouldn't have any extra vertices
+            assert len(postvs_data) == len(postvs_ref)  # We shouldn't have any extra vertices
 
             self.check_overlay([(140, 40), (200, 40)])
 
-            rdtest.log.success("{} {} is as expected".format(level, action.customName))
+            rdtest.log.success(f"{level} {action.customName} is as expected")
 
             if indirect_count_root is not None:
                 rdtest.log.print(f"Testing {indirect_count_root.customName}")
-                self.check(indirect_count_root.children[0].customName == '{}: Empty count draws'.format(level))
-                self.check(indirect_count_root.children[1].customName == '{}: Indirect count draws'.format(level))
+                assert indirect_count_root.children[0].customName == f'{level}: Empty count draws'
+                assert indirect_count_root.children[1].customName == f'{level}: Indirect count draws'
 
                 empties = indirect_count_root.children[0]
 
-                self.check(empties and len(real_action_children(empties)) == 3)
+                assert empties and len(real_action_children(empties)) == 3
 
-                action: rd.ActionDescription
                 for action in real_action_children(empties):
-                    self.check(action.numIndices == 0)
-                    self.check(action.numInstances == 0)
+                    assert action.numIndices == 0
+                    assert action.numInstances == 0
 
-                    self.controller.SetFrameEvent(action.eventId, False)
+                    self.set_event(action.eventId, False)
 
                     # Check that we have empty PostVS
                     postvs_data = self.get_postvs(action, rd.MeshDataStage.VSOut, 0, 1)
-                    self.check(len(postvs_data) == 0)
+                    assert len(postvs_data) == 0
 
                     self.check_overlay([], no_overlay=True)
 
                 # vkCmdDrawIndirectCountKHR
                 action_indirect = indirect_count_root.children[1].children[0]
 
-                self.check(rd.ResourceUsage.Indirect in buffer_usage[action_indirect.eventId])
+                assert rd.ResourceUsage.Indirect in buffer_usage[action_indirect.eventId]
 
-                self.check(action_indirect and len(real_action_children(action_indirect)) == 1)
+                assert action_indirect and len(real_action_children(action_indirect)) == 1
 
                 # vkCmdDrawIndirectCountKHR[0]
                 action = action_indirect.children[0]
 
-                self.check(action.numIndices == 3)
-                self.check(action.numInstances == 4)
+                assert action.numIndices == 3
+                assert action.numInstances == 4
 
-                self.controller.SetFrameEvent(action.eventId, False)
+                self.set_event(action.eventId, False)
 
                 # Check that we have PostVS as expected
                 postvs_data = self.get_postvs(action, rd.MeshDataStage.VSOut)
 
                 # These indices are the *output* indices, which have been rebased/remapped, so are not the same as the input
                 # indices
-                postvs_ref = {
+                postvs_ref: rdtest.MeshReference = {
                     0: {'vtx': 0, 'idx': 0, 'gl_Position': [-0.8, 0.5, 0.0, 1.0]},
                     1: {'vtx': 1, 'idx': 1, 'gl_Position': [-0.7, 0.2, 0.0, 1.0]},
                     2: {'vtx': 2, 'idx': 2, 'gl_Position': [-0.6, 0.5, 0.0, 1.0]},
                 }
 
                 self.check_mesh_data(postvs_ref, postvs_data)
-                self.check(len(postvs_data) == len(postvs_ref))  # We shouldn't have any extra vertices
+                assert len(postvs_data) == len(postvs_ref)  # We shouldn't have any extra vertices
 
                 self.check_overlay([(60, 190)])
 
-                rdtest.log.success("{} {} is as expected".format(level, action.customName))
+                rdtest.log.success(f"{level} {action.customName} is as expected")
 
                 # vkCmdDrawIndexedIndirectCountKHR
                 action_indirect = indirect_count_root.children[1].children[1]
 
-                self.check(action_indirect and len(real_action_children(action_indirect)) == 3)
+                assert action_indirect and len(real_action_children(action_indirect)) == 3
 
                 # vkCmdDrawIndirectCountKHR[0]
                 action = action_indirect.children[0]
-                self.check(action.numIndices == 3)
-                self.check(action.numInstances == 1)
+                assert action.numIndices == 3
+                assert action.numInstances == 1
 
-                self.controller.SetFrameEvent(action.eventId, False)
+                self.set_event(action.eventId, False)
 
                 # Check that we have PostVS as expected
                 postvs_data = self.get_postvs(action, rd.MeshDataStage.VSOut)
 
                 # These indices are the *output* indices, which have been rebased/remapped, so are not the same as the input
                 # indices
-                postvs_ref = {
+                postvs_ref: rdtest.MeshReference = {
                     0: {'vtx': 0, 'idx': 15, 'gl_Position': [-0.6, 0.5, 0.0, 1.0]},
                     1: {'vtx': 1, 'idx': 16, 'gl_Position': [-0.5, 0.2, 0.0, 1.0]},
                     2: {'vtx': 2, 'idx': 17, 'gl_Position': [-0.4, 0.5, 0.0, 1.0]},
                 }
 
                 self.check_mesh_data(postvs_ref, postvs_data)
-                self.check(len(postvs_data) == len(postvs_ref))  # We shouldn't have any extra vertices
+                assert len(postvs_data) == len(postvs_ref)  # We shouldn't have any extra vertices
 
                 self.check_overlay([(100, 190)])
 
-                rdtest.log.success("{} {} is as expected".format(level, action.customName))
+                rdtest.log.success(f"{level} {action.customName} is as expected")
 
                 # vkCmdDrawIndirectCountKHR[1]
                 action = action_indirect.children[1]
-                self.check(action.numIndices == 0)
-                self.check(action.numInstances == 0)
+                assert action.numIndices == 0
+                assert action.numInstances == 0
 
-                self.controller.SetFrameEvent(action.eventId, False)
+                self.set_event(action.eventId, False)
 
                 postvs_data = self.get_postvs(action, rd.MeshDataStage.VSOut)
 
-                self.check(len(postvs_data) == 0)
+                assert len(postvs_data) == 0
 
                 self.check_overlay([])
 
-                rdtest.log.success("{} {} is as expected".format(level, action.customName))
+                rdtest.log.success(f"{level} {action.customName} is as expected")
 
                 # vkCmdDrawIndirectCountKHR[2]
                 action = action_indirect.children[2]
-                self.check(action.numIndices == 6)
-                self.check(action.numInstances == 2)
+                assert action.numIndices == 6
+                assert action.numInstances == 2
 
-                self.controller.SetFrameEvent(action.eventId, False)
+                self.set_event(action.eventId, False)
 
                 # Check that we have PostVS as expected
                 postvs_data = self.get_postvs(action, rd.MeshDataStage.VSOut)
 
                 # These indices are the *output* indices, which have been rebased/remapped, so are not the same as the input
                 # indices
-                postvs_ref = {
+                postvs_ref: rdtest.MeshReference = {
                     0: {'vtx': 0, 'idx': 18, 'gl_Position': [-0.4, 0.5, 0.0, 1.0]},
                     1: {'vtx': 1, 'idx': 19, 'gl_Position': [-0.3, 0.2, 0.0, 1.0]},
                     2: {'vtx': 2, 'idx': 20, 'gl_Position': [-0.2, 0.2, 0.0, 1.0]},
@@ -640,18 +640,18 @@ class VK_Indirect(rdtest.TestCase):
                 }
 
                 self.check_mesh_data(postvs_ref, postvs_data)
-                self.check(len(postvs_data) == len(postvs_ref))  # We shouldn't have any extra vertices
+                assert len(postvs_data) == len(postvs_ref)  # We shouldn't have any extra vertices
 
                 self.check_overlay([(140, 190), (200, 190)])
 
-                rdtest.log.success("{} {} is as expected".format(level, action.customName))
+                rdtest.log.success(f"{level} {action.customName} is as expected")
 
                 # Now check that the draws post-count are correctly highlighted
-                self.controller.SetFrameEvent(self.find_action("{}: Post-count 1".format(level)).children[0].eventId, False)
+                self.set_event(self.find_action(f"{level}: Post-count 1").children[0].eventId, False)
                 self.check_overlay([(340, 40)])
-                self.controller.SetFrameEvent(self.find_action("{}: Post-count 2".format(level)).children[0].eventId, False)
+                self.set_event(self.find_action(f"{level}: Post-count 2").children[0].eventId, False)
                 self.check_overlay([(340, 190)])
-                self.controller.SetFrameEvent(self.find_action("{}: Post-count 3".format(level)).children[0].eventId, False)
+                self.set_event(self.find_action(f"{level}: Post-count 3").children[0].eventId, False)
                 self.check_overlay([(340, 115)])
             else:
                 rdtest.log.print("KHR_draw_indirect_count not tested")
@@ -661,19 +661,19 @@ class VK_Indirect(rdtest.TestCase):
 
         with rdtest.log.auto_section('Checking All Overlays'):
             for eid in range(self.get_first_action().eventId, self.get_last_action().eventId + 1):
-                self.controller.SetFrameEvent(eid, False)
+                self.set_event(eid, False)
                 pipe = self.controller.GetPipelineState()
                 if len(pipe.GetOutputTargets()) == 0:
                     continue
                 rdtest.log.print(f"EID: {eid}")
                 for overlay in rd.DebugOverlay:
                     tex = rd.TextureDisplay()
-                    col_tex: rd.ResourceId = pipe.GetOutputTargets()[0].resource
+                    col_tex = pipe.GetOutputTargets()[0].resource
                     tex.resourceId = col_tex
                     tex.overlay = overlay
                     tex.subresource.sample = 0
 
-                    out: rd.ReplayOutput = self.controller.CreateOutput(rd.CreateHeadlessWindowingData(100, 100), rd.ReplayOutputType.Texture)
+                    out = self.controller.CreateOutput(rd.CreateHeadlessWindowingData(100, 100), rd.ReplayOutputType.Texture)
                     out.SetTextureDisplay(tex)
                     out.Display()
                     out.Shutdown()

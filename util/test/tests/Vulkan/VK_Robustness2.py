@@ -6,15 +6,17 @@ class VK_Robustness2(rdtest.TestCase):
     demos_test_name = 'VK_Robustness2'
 
     def check_capture(self):
-        action: rd.ActionDescription = self.find_action('vkCmdDraw')
+        action = self.find_action('vkCmdDraw')
 
-        self.controller.SetFrameEvent(action.eventId, True)
+        assert action is not None
+
+        self.set_event(action.eventId, True)
 
         self.check_triangle()
 
         rdtest.log.success('Triangle is rendered correctly')
 
-        vsin_ref = {
+        vsin_ref: rdtest.MeshReference = {
             0: {
                 'vtx': 0,
                 'idx': 0,
@@ -44,7 +46,7 @@ class VK_Robustness2(rdtest.TestCase):
 
         postvs_data = self.get_postvs(action, rd.MeshDataStage.VSOut, 0, action.numIndices)
 
-        postvs_ref = {
+        postvs_ref: rdtest.MeshReference = {
             0: {
                 'vtx': 0,
                 'idx': 0,
@@ -96,5 +98,4 @@ class VK_Robustness2(rdtest.TestCase):
                     val[0] = val[1] = 1000000
                 var_check.check('coord').type(rd.VarType.SInt).rows(1).cols(4).value(val)
 
-            rdtest.log.success('CBuffer {} at bindpoint {}.{}[0] contains the correct contents'
-                               .format(cb.name, cb.fixedBindSetOrSpace, cb.fixedBindNumber))
+            rdtest.log.success(f'CBuffer {cb.name} at bindpoint {cb.fixedBindSetOrSpace}.{cb.fixedBindNumber}[0] contains the correct contents')

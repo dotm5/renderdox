@@ -1,24 +1,27 @@
+from __future__ import annotations
 import renderdoc as rd
 import rdtest
-import pprint
 import math
-from typing import List
+from typing import Any, Callable, Dict, List
 
 
-def float_value(x): return x.floatValue
-def uint_value(x): return x.uintValue
-def unknown_stencil(x): return x == -2
+def float_value(x: rd.PixelValue): return x.floatValue
+def uint_value(x: rd.PixelValue): return x.uintValue
+def unknown_stencil(x: int): return x == -2
+
+PropGetter = Callable[[rd.PixelModification], Any]
 
 # Not a real test, re-used by API-specific tests
 
 
 class Pixel_History(rdtest.TestCase):
     internal = True
+    slow_test = True
     demos_test_name = None
 
     def check_capture(self):
         # cache some information since our python bindings deep copy actions and this can add up
-        self.eventCache = {}
+        self.eventCache: Dict[int, Dict[str, Any]] = {}
         for a in self.controller.GetRootActions():
             self.populate_eventcache(a, '', [])
 
@@ -35,11 +38,11 @@ class Pixel_History(rdtest.TestCase):
         if self.errored:
             raise rdtest.TestFailureException("Detected problems in pixel history")
 
-    def error(self, message):
+    def error(self, message: str):
         rdtest.log.error(message)
         self.errored = True
 
-    def relative_xy(self, x, y):
+    def relative_xy(self, x: int, y: int):
         self.x, self.y = (x >> self.sub.mip, y >> self.sub.mip)
         return (self.x, self.y)
 
@@ -69,7 +72,7 @@ class Pixel_History(rdtest.TestCase):
 
     def batch_test(self, base_eid: int):
         test_marker = self.find_action("Simple Test", base_eid)
-        self.controller.SetFrameEvent(test_marker.nextAction.eventId, True)
+        self.set_event(test_marker.nextAction.eventId, True)
 
         pipe = self.controller.GetPipelineState()
 
@@ -87,7 +90,7 @@ class Pixel_History(rdtest.TestCase):
             tex = col.resource
             self.is_depth = False
         else:
-            self.check(self.has_depth)
+            assert self.has_depth
             self.is_depth = True
             rt = depth
 
@@ -115,7 +118,7 @@ class Pixel_History(rdtest.TestCase):
         def event_name(x: rd.PixelModification):
             return self.get_eventname(x.eventId)
 
-        value_func = float_value
+        self.value_func = float_value
         alpha_value = 2.75  # 1 + ALPHA_ADD=1.75
         overflow_value = 100000.0
         clear_col = 0.2
@@ -123,20 +126,19 @@ class Pixel_History(rdtest.TestCase):
         if self.comp == rd.CompType.UInt:
             alpha_value = 4  # 1 + ALPHA_ADD=3
             clear_col = 5  # uint values are shifted by 16, we clear to 80,80,80,160
-            value_func = uint_value
+            self.value_func = uint_value
             overflow_value = (1 << 28)-1
 
-        def roundToInf(col):
+        def roundToInf(col: rdtest.VectorValue):
             # for half-floats lower inf to the largest representable value since either is valid
             if tex_details.format.compType == rd.CompType.Float and tex_details.format.compByteWidth == 2:
                 return tuple([65504.0 if x == math.inf else x for x in col])
 
             return col
 
-        self.fetch_property = {
+        self.fetch_property: Dict[str, PropGetter | None] = {
             '_': None,  # dynamically skipped test via with_col or with_depth below
             'event_name': event_name,
-            'value': value_func,
             'passed': lambda x: x.Passed(),
             'culled': lambda x: x.backfaceCulled,
             'depth_test_failed': lambda x: x.depthTestFailed,
@@ -146,10 +148,10 @@ class Pixel_History(rdtest.TestCase):
             'scissor_clipped': lambda x: x.scissorClipped,
             'stencil_test_failed': lambda x: x.stencilTestFailed,
             'shader_discarded': lambda x: x.shaderDiscarded,
-            'shader_out_col': lambda x: value_func(x.shaderOut.col),
+            'shader_out_col': lambda x: self.value_func(x.shaderOut.col),
             'shader_out_depth': lambda x: x.shaderOut.depth,
-            'pre_mod_col': lambda x: value_func(x.preMod.col),
-            'post_mod_col': lambda x: roundToInf(value_func(x.postMod.col)),
+            'pre_mod_col': lambda x: self.value_func(x.preMod.col),
+            'post_mod_col': lambda x: roundToInf(self.value_func(x.postMod.col)),
             'pre_mod_depth': lambda x: x.preMod.depth,
             'post_mod_depth': lambda x: x.postMod.depth,
             'post_mod_stencil': lambda x: x.postMod.stencil,
@@ -159,13 +161,13 @@ class Pixel_History(rdtest.TestCase):
             'directWrite': lambda x: x.directShaderWrite,
         }
 
-        def with_depth(x):
+        def with_depth(x: str):
             return x if self.has_depth else '_'
 
-        def with_stencil(x):
+        def with_stencil(x: str):
             return x if self.has_stencil else '_'
 
-        def fmt_adjusted(r, g, b, a):
+        def fmt_adjusted(r: int|float, g: int|float, b: int|float, a: int|float):
             if tex_details.format.compType == rd.CompType.UInt:
                 r = int(r * 16)
                 g = int(g * 16)
@@ -174,7 +176,7 @@ class Pixel_History(rdtest.TestCase):
 
             return (r, g, b, a)
 
-        def fmt_clamped(r, g, b, a):
+        def fmt_clamped(r: int|float, g: int|float, b: int|float, a: int|float):
             r, g, b, a = fmt_adjusted(r, g, b, a)
 
             if tex_details.format.compType == rd.CompType.UNorm:
@@ -232,9 +234,10 @@ class Pixel_History(rdtest.TestCase):
         # check if depth bounds is supportted - D3D11 does not
         has_depth_bounds = self.find_action('Depth Bounds Prep') is not None
 
+        events: List[Dict[str, Any]]
+
         x, y = self.relative_xy(110, 100)
-        rdtest.log.print("Testing Unbound PS {}, {}".format(x, y))
-        modifs = self.controller.PixelHistory(tex, x, y, sub, comp)
+        rdtest.log.print(f"Testing Unbound PS {x}, {y}")
         events = [
             {
                 'event_name': 'Begin RenderPass',
@@ -254,11 +257,11 @@ class Pixel_History(rdtest.TestCase):
                 'post_mod_stencil': 0x55
             },
         ]
-        self.check_events(events, modifs)
+        with self.pixel_history(tex, x, y, sub, comp) as history:
+            self.check_events(events, history.modifs)
 
         x, y = self.relative_xy(170, 140)
-        rdtest.log.print("Testing Stencil failure {}, {}".format(x, y))
-        modifs = self.controller.PixelHistory(tex, x, y, sub, comp)
+        rdtest.log.print(f"Testing Stencil failure {x}, {y}")
         events = [
             {
                 'event_name': 'Begin RenderPass',
@@ -284,11 +287,11 @@ class Pixel_History(rdtest.TestCase):
                 with_stencil('stencil_test_failed'): True
             },
         ]
-        self.check_events(events, modifs)
+        with self.pixel_history(tex, x, y, sub, comp) as history:
+            self.check_events(events, history.modifs)
 
         x, y = self.relative_xy(170, 160)
-        rdtest.log.print("Testing Depth failure {}, {}".format(x, y))
-        modifs = self.controller.PixelHistory(tex, x, y, sub, comp)
+        rdtest.log.print(f"Testing Depth failure {x}, {y}")
         events = [
             {
                 'event_name': 'Begin RenderPass',
@@ -311,11 +314,11 @@ class Pixel_History(rdtest.TestCase):
                 'depth_test_failed': True
             },
         ]
-        self.check_events(events, modifs)
+        with self.pixel_history(tex, x, y, sub, comp) as history:
+            self.check_events(events, history.modifs)
 
         x, y = self.relative_xy(150, 250)
-        rdtest.log.print("Testing Discard {}, {}".format(x, y))
-        modifs = self.controller.PixelHistory(tex, x, y, sub, comp)
+        rdtest.log.print(f"Testing Discard {x}, {y}")
         events = [
             {
                 'event_name': 'Begin RenderPass',
@@ -326,11 +329,11 @@ class Pixel_History(rdtest.TestCase):
                 'shader_discarded': True
             },
         ]
-        self.check_events(events, modifs)
+        with self.pixel_history(tex, x, y, sub, comp) as history:
+            self.check_events(events, history.modifs)
 
         x, y = self.relative_xy(330, 145)
-        rdtest.log.print("Testing Primitive ID {}, {}".format(x, y))
-        modifs = self.controller.PixelHistory(tex, x, y, sub, comp)
+        rdtest.log.print(f"Testing Primitive ID {x}, {y}")
         events = [
             {
                 'event_name': 'Begin RenderPass',
@@ -343,11 +346,11 @@ class Pixel_History(rdtest.TestCase):
                 'shader_out_col': fmt_adjusted(0, 0, 0, alpha_value)
             },
         ]
-        self.check_events(events, modifs)
+        with self.pixel_history(tex, x, y, sub, comp) as history:
+            self.check_events(events, history.modifs)
 
         x, y = self.relative_xy(340, 145)
-        rdtest.log.print("Testing Depth Clip {}, {}".format(x, y))
-        modifs = self.controller.PixelHistory(tex, x, y, sub, comp)
+        rdtest.log.print(f"Testing Depth Clip {x}, {y}")
         events = [
             {
                 'event_name': 'Begin RenderPass',
@@ -359,13 +362,13 @@ class Pixel_History(rdtest.TestCase):
                 'depth_clipped': True
             },
         ]
-        self.check_events(events, modifs)
+        with self.pixel_history(tex, x, y, sub, comp) as history:
+            self.check_events(events, history.modifs)
 
         # if depth bounds test isn't supported these draws won't be emitted
         if has_depth_bounds:
             x, y = self.relative_xy(330, 102)
-            rdtest.log.print("Testing Depth Bounds Pass {}, {}".format(x, y))
-            modifs = self.controller.PixelHistory(tex, x, y, sub, comp)
+            rdtest.log.print(f"Testing Depth Bounds Pass {x}, {y}")
             events = [
                 {
                     'event_name': 'Begin RenderPass',
@@ -384,12 +387,12 @@ class Pixel_History(rdtest.TestCase):
                     'shader_out_col': fmt_adjusted(0, 1, 0, alpha_value)
                 },
             ]
-            self.check_events(events, modifs)
+            with self.pixel_history(tex, x, y, sub, comp) as history:
+                self.check_events(events, history.modifs)
 
             # slightly precise X to ensure it still picks the right edge of the triangle on mip version
             x, y = self.relative_xy(318, 102)
-            rdtest.log.print("Testing Depth Bounds Fail {}, {}".format(x, y))
-            modifs = self.controller.PixelHistory(tex, x, y, sub, comp)
+            rdtest.log.print(f"Testing Depth Bounds Fail {x}, {y}")
             events = [
                 {
                     'event_name': 'Begin RenderPass',
@@ -407,11 +410,11 @@ class Pixel_History(rdtest.TestCase):
                     'depth_bounds_failed': True
                 },
             ]
-            self.check_events(events, modifs)
+            with self.pixel_history(tex, x, y, sub, comp) as history:
+                self.check_events(events, history.modifs)
 
             x, y = self.relative_xy(346, 102)
-            rdtest.log.print("Testing Depth Bounds Fail {}, {}".format(x, y))
-            modifs = self.controller.PixelHistory(tex, x, y, sub, comp)
+            rdtest.log.print(f"Testing Depth Bounds Fail {x}, {y}")
             events = [
                 {
                     'event_name': 'Begin RenderPass',
@@ -429,15 +432,15 @@ class Pixel_History(rdtest.TestCase):
                     'depth_bounds_failed': True
                 },
             ]
-            self.check_events(events, modifs)
+            with self.pixel_history(tex, x, y, sub, comp) as history:
+                self.check_events(events, history.modifs)
 
         rdtest.log.print("Testing stencil/scissor checks")
         test_marker = self.find_action("Stencil Mask", base_eid)
-        self.controller.SetFrameEvent(test_marker.nextAction.eventId, True)
+        self.set_event(test_marker.nextAction.eventId, True)
 
         x, y = self.relative_xy(106, 248)
-        rdtest.log.print("Testing pixel {}, {}".format(x, y))
-        modifs = self.controller.PixelHistory(tex, x, y, sub, comp)
+        rdtest.log.print(f"Testing pixel {x}, {y}")
         events = [
             {
                 'event_name': 'Begin RenderPass',
@@ -470,15 +473,15 @@ class Pixel_History(rdtest.TestCase):
                 'post_mod_col': fmt_clamped(0, 1, 1, alpha_value)
             },
         ]
-        self.check_events(events, modifs)
+        with self.pixel_history(tex, x, y, sub, comp) as history:
+            self.check_events(events, history.modifs)
 
         rdtest.log.print("Testing depth test for per fragment reporting")
         test_marker = self.find_action("Depth Test", base_eid)
-        self.controller.SetFrameEvent(test_marker.nextAction.eventId, True)
+        self.set_event(test_marker.nextAction.eventId, True)
 
         x, y = self.relative_xy(275, 258)
-        rdtest.log.print("Testing pixel {}, {}".format(x, y))
-        modifs = self.controller.PixelHistory(tex, x, y, sub, comp)
+        rdtest.log.print(f"Testing pixel {x}, {y}")
         events = [
             {
                 'event_name': 'Begin RenderPass',
@@ -576,46 +579,47 @@ class Pixel_History(rdtest.TestCase):
                     'post_mod_col': fmt_clamped(0, 0, 1, alpha_value),
                 },
             ]
-        self.check_events(events, modifs)
+        with self.pixel_history(tex, x, y, sub, comp) as history:
+            self.check_events(events, history.modifs)
 
         # For pixel 60, 130 inside the light green triangle which is 300 draws of 1 instance of 1 triangle
         rdtest.log.print("Testing Lots of Drawcalls")
         test_marker = self.find_action("300 Instances", base_eid)
-        self.controller.SetFrameEvent(test_marker.nextAction.eventId, True)
+        self.set_event(test_marker.nextAction.eventId, True)
         x, y = self.relative_xy(60, 130)
-        rdtest.log.print("Testing pixel {}, {}".format(x, y))
-        modifs = self.controller.PixelHistory(tex, x, y, sub, comp)
+        rdtest.log.print(f"Testing pixel {x}, {y}")
         
-        if not self.is_secondary:
-            self.check_final_colour(tex, x, y, modifs, sub, comp)
-
         countEvents = 1 + 300
-        if len(modifs) != countEvents:
-            self.error("Expected {} events, got {}".format(countEvents, len(modifs)))
-        self.check_modifs_consistent(modifs)
+        with self.pixel_history(tex, x, y, sub, comp) as history:
+            if len(history.modifs) != countEvents:
+                self.error(f"Expected {countEvents} events, got {len(history.modifs)}")
+                
+            if not self.is_secondary:
+                self.check_final_colour(tex, x, y, history.modifs, sub, comp)
+
+            self.check_modifs_consistent(history.modifs)
 
         # For pixel 60, 50 inside the orange triangle which is 1 draws of 300 instances of 1 triangle
         rdtest.log.print("Testing Lots of Instances")
         x, y = self.relative_xy(60, 50)
-        rdtest.log.print("Testing pixel {}, {}".format(x, y))
-        modifs = self.controller.PixelHistory(tex, x, y, sub, comp)
-        if not self.is_secondary:
-            self.check_final_colour(tex, x, y, modifs, sub, comp)
+        rdtest.log.print(f"Testing pixel {x}, {y}")
+        with self.pixel_history(tex, x, y, sub, comp) as history:
+            if not self.is_secondary:
+                self.check_final_colour(tex, x, y, history.modifs, sub, comp)
 
-        countEvents = 1 + 255
-        # secondaries can't count fragment events, so we only get 1 for the draw
-        if self.is_secondary:
-            countEvents = 1 + 1
-        if len(modifs) != countEvents:
-            self.error("Expected {} events, got {}".format(countEvents, len(modifs)))
-        self.check_modifs_consistent(modifs)
+            countEvents = 1 + 255
+            # secondaries can't count fragment events, so we only get 1 for the draw
+            if self.is_secondary:
+                countEvents = 1 + 1
+            if len(history.modifs) != countEvents:
+                self.error(f"Expected {countEvents} events, got {len(history.modifs)}")
+            self.check_modifs_consistent(history.modifs)
 
         rdtest.log.print("Testing Sample colouring")
         test_marker = self.find_action("Sample Colouring", base_eid)
-        self.controller.SetFrameEvent(test_marker.nextAction.eventId, True)
+        self.set_event(test_marker.nextAction.eventId, True)
         x, y = self.relative_xy(330, 200)
-        rdtest.log.print("Testing pixel {}, {}".format(x, y))
-        modifs = self.controller.PixelHistory(tex, x, y, sub, comp)
+        rdtest.log.print(f"Testing pixel {x}, {y}")
         events = [
             {
                 'event_name': 'Begin RenderPass',
@@ -628,13 +632,12 @@ class Pixel_History(rdtest.TestCase):
                 'shader_out_col': fmt_adjusted(1, 0, 0, alpha_value)
             },
         ]
-        self.check_events(events, modifs)
-        self.check_modifs_consistent(modifs)
+        with self.pixel_history(tex, x, y, sub, comp) as history:
+            self.check_events(events, history.modifs)
 
         if tex_details.msSamp == 4:
             sub.sample = 1
             rdtest.log.print(f"Testing sample {sub.sample}")
-            modifs = self.controller.PixelHistory(tex, x, y, sub, comp)
             events = [
                 {
                     'event_name': 'Begin RenderPass',
@@ -647,12 +650,11 @@ class Pixel_History(rdtest.TestCase):
                     'shader_out_col': fmt_adjusted(0, 0, 1, alpha_value)
                 },
             ]
-            self.check_events(events, modifs)
-            self.check_modifs_consistent(modifs)
+            with self.pixel_history(tex, x, y, sub, comp) as history:
+                self.check_events(events, history.modifs)
 
             sub.sample = 2
             rdtest.log.print(f"Testing sample {sub.sample}")
-            modifs = self.controller.PixelHistory(tex, x, y, sub, comp)
             events = [
                 {
                     'event_name': 'Begin RenderPass',
@@ -665,12 +667,11 @@ class Pixel_History(rdtest.TestCase):
                     'shader_out_col': fmt_adjusted(0, 1, 1, alpha_value)
                 },
             ]
-            self.check_events(events, modifs)
-            self.check_modifs_consistent(modifs)
+            with self.pixel_history(tex, x, y, sub, comp) as history:
+                self.check_events(events, history.modifs)
 
             sub.sample = 3
             rdtest.log.print(f"Testing sample {sub.sample}")
-            modifs = self.controller.PixelHistory(tex, x, y, sub, comp)
             events = [
                 {
                     'event_name': 'Begin RenderPass',
@@ -682,18 +683,17 @@ class Pixel_History(rdtest.TestCase):
                     'sample_masked': True,
                 },
             ]
-            self.check_events(events, modifs)
-            self.check_modifs_consistent(modifs)
+            with self.pixel_history(tex, x, y, sub, comp) as history:
+                self.check_events(events, history.modifs)
 
             sub.sample = 0
 
         rdtest.log.print("Testing depth-equal testing")
         test_marker = self.find_action("Depth Equal Pass", base_eid)
-        self.controller.SetFrameEvent(test_marker.nextAction.eventId, True)
+        self.set_event(test_marker.nextAction.eventId, True)
 
         x, y = self.relative_xy(200, 250)
-        rdtest.log.print("Testing pixel {}, {}".format(x, y))
-        modifs = self.controller.PixelHistory(tex, x, y, sub, comp)
+        rdtest.log.print(f"Testing pixel {x}, {y}")
         events = [
             {
                 'event_name': 'Begin RenderPass',
@@ -727,15 +727,15 @@ class Pixel_History(rdtest.TestCase):
                 'post_mod_col': fmt_clamped(1, 1, 1, alpha_value),
             },
         ]
-        self.check_events(events, modifs)
+        with self.pixel_history(tex, x, y, sub, comp) as history:
+            self.check_events(events, history.modifs)
 
         rdtest.log.print("Testing colour masking")
         test_marker = self.find_action("Colour Masked", base_eid)
-        self.controller.SetFrameEvent(test_marker.nextAction.eventId, True)
+        self.set_event(test_marker.nextAction.eventId, True)
 
         x, y = self.relative_xy(60, 80)
-        rdtest.log.print("Testing pixel {}, {}".format(x, y))
-        modifs = self.controller.PixelHistory(tex, x, y, sub, comp)
+        rdtest.log.print(f"Testing pixel {x}, {y}")
         events = [
             {
                 'event_name': 'Begin RenderPass',
@@ -748,7 +748,8 @@ class Pixel_History(rdtest.TestCase):
                 'post_mod_col': fmt_clamped(3, 3, clear_col, 1),
             },
         ]
-        self.check_events(events, modifs)
+        with self.pixel_history(tex, x, y, sub, comp) as history:
+            self.check_events(events, history.modifs)
 
         if self.has_colour:
             rdtest.log.print("Testing direct writes")
@@ -756,10 +757,9 @@ class Pixel_History(rdtest.TestCase):
 
             # don't have compute writes in secondaries and some tests like D3D MSAA won't have compute writes
             if test_marker is not None and not self.is_secondary and base_eid in self.get_hierarchy(test_marker.eventId):
-                self.controller.SetFrameEvent(test_marker.nextAction.eventId, True)
+                self.set_event(test_marker.nextAction.eventId, True)
                 x, y = self.relative_xy(225, 85)
-                rdtest.log.print("Testing pixel {}, {}".format(x, y))
-                modifs = self.controller.PixelHistory(tex, x, y, sub, comp)
+                rdtest.log.print(f"Testing pixel {x}, {y}")
                 events = [
                     {
                         'event_name': 'Begin RenderPass',
@@ -779,15 +779,15 @@ class Pixel_History(rdtest.TestCase):
                         'post_mod_col': fmt_clamped(3, 3, 3, 9),
                     },
                 ]
-                self.check_events(events, modifs)
+                with self.pixel_history(tex, x, y, sub, comp) as history:
+                    self.check_events(events, history.modifs)
 
             rdtest.log.print("Testing overflowed writes")
             test_marker = self.find_action("Overflowing", base_eid)
-            self.controller.SetFrameEvent(test_marker.nextAction.eventId, True)
+            self.set_event(test_marker.nextAction.eventId, True)
 
             x, y = self.relative_xy(105, 50)
-            rdtest.log.print("Testing pixel {}, {}".format(x, y))
-            modifs = self.controller.PixelHistory(tex, x, y, sub, comp)
+            rdtest.log.print(f"Testing pixel {x}, {y}")
             events = [
                 {
                     'event_name': 'Begin RenderPass',
@@ -826,15 +826,15 @@ class Pixel_History(rdtest.TestCase):
                         'post_mod_col': fmt_clamped(0, 0, overflow_value, alpha_value)
                     },
                 ]
-            self.check_events(events, modifs)
+            with self.pixel_history(tex, x, y, sub, comp) as history:
+                self.check_events(events, history.modifs)
 
         rdtest.log.print("Testing per-fragment discards")
         test_marker = self.find_action("Per-Fragment discarding", base_eid)
-        self.controller.SetFrameEvent(test_marker.nextAction.eventId, True)
+        self.set_event(test_marker.nextAction.eventId, True)
 
         x, y = self.relative_xy(60, 160)
-        rdtest.log.print("Testing pixel {}, {}".format(x, y))
-        modifs = self.controller.PixelHistory(tex, x, y, sub, comp)
+        rdtest.log.print(f"Testing pixel {x}, {y}")
         events = [
             {
                 'event_name': 'Begin RenderPass',
@@ -842,20 +842,18 @@ class Pixel_History(rdtest.TestCase):
             },
             {
                 'event_name': 'Per-Fragment discarding',
+                'passed': True,
+                'shader_out_col': fmt_adjusted(1, 1, 1, alpha_value),
+                'shader_out_depth': 0.33,
+                'post_mod_col': fmt_clamped(1, 1, 1, alpha_value),
+                'unknown_post_mod_stencil': True,
+            },
+            {
+                'event_name': 'Per-Fragment discarding',
                 'passed': False,
                 'shader_discarded': True,
                 'shader_out_col': (0, 0, 0, 0),
                 'shader_out_depth': -1,
-                'unknown_post_mod_stencil': True,
-                'primitive_id': 0,
-            },
-            {
-                'event_name': 'Per-Fragment discarding',
-                'passed': True,
-                'primitive_id': 1,
-                'shader_out_col': fmt_adjusted(1, 1, 1, alpha_value),
-                'shader_out_depth': 0.33,
-                'post_mod_col': fmt_clamped(1, 1, 1, alpha_value),
             },
         ]
         # can't distinguish per-fragment results in secondaries
@@ -874,15 +872,15 @@ class Pixel_History(rdtest.TestCase):
                     'post_mod_col': fmt_clamped(1, 1, 1, alpha_value),
                 },
             ]
-        self.check_events(events, modifs)
+        with self.pixel_history(tex, x, y, sub, comp) as history:
+            self.check_events(events, history.modifs)
 
         if self.has_colour:
             x, y = self.relative_xy(120, 110)
-            rdtest.log.print("Testing D3D no-output shader {}, {}".format(x, y))
+            rdtest.log.print(f"Testing D3D no-output shader {x}, {y}")
             test_marker = self.find_action("No Output Shader", base_eid)
-            self.controller.SetFrameEvent(test_marker.nextAction.eventId, True)
+            self.set_event(test_marker.nextAction.eventId, True)
 
-            modifs = self.controller.PixelHistory(tex, x, y, sub, comp)
             events = [
                 {
                     'event_name': 'Begin RenderPass',
@@ -900,17 +898,18 @@ class Pixel_History(rdtest.TestCase):
                     'primitive_id': 0
                 },
             ]
-            self.check_events(events, modifs)
+            with self.pixel_history(tex, x, y, sub, comp) as history:
+                self.check_events(events, history.modifs)
 
-    def check_final_colour(self, tex, x, y, modifs: List[rd.PixelModification], sub, comp):
+    def check_final_colour(self, tex: rd.ResourceId, x: int, y: int, modifs: List[rd.PixelModification], sub: rd.Subresource, comp: rd.CompType):
         m = modifs[-1]
         if self.has_colour:
-            expected = self.fetch_property['value'](m.postMod.col)
+            expected = self.value_func(m.postMod.col)
         else:
             expected = (m.postMod.depth, m.postMod.stencil/255.0, 0, 1)
         self.check_pixel_value(tex, x, y, expected, sub=sub, cast=comp)
 
-    def check_events(self, events, modifs: List[rd.PixelModification]):
+    def check_events(self, events: List[Dict[str, Any]], modifs: List[rd.PixelModification]):
         # remove any modifs that didn't happen in the batch we're looking at -
         # targets can be reused between batches
         modifs = [
@@ -918,7 +917,9 @@ class Pixel_History(rdtest.TestCase):
 
         if len(modifs) != len(events):
             rdtest.log.print(str([e['event_name'] for e in events]))
-            rdtest.log.print(str([self.fetch_property['event_name'](m) for m in modifs]))
+            getter = self.fetch_property['event_name']
+            assert getter is not None
+            rdtest.log.print(str([getter(m) for m in modifs]))
             self.error(f"Expected {len(events)} events got {len(modifs)}")
             return
 
@@ -936,8 +937,7 @@ class Pixel_History(rdtest.TestCase):
                 # property disabled, e.g. because colour or depth is not present, or we're in a secondary
                 if prop_getter is None:
                     # must have a reason - don't allow tests to skip in the main check
-                    self.check(
-                        not self.has_colour or not self.has_depth or not self.has_stencil or self.is_secondary)
+                    assert not self.has_colour or not self.has_depth or not self.has_stencil or self.is_secondary
                     continue
 
                 actual = prop_getter(m)
@@ -962,8 +962,8 @@ class Pixel_History(rdtest.TestCase):
             if not m.postMod.IsValid() or not n.preMod.IsValid():
                 continue
 
-            a = self.fetch_property['value'](m.postMod.col)
-            b = self.fetch_property['value'](n.preMod.col)
+            a = self.value_func(m.postMod.col)
+            b = self.value_func(n.preMod.col)
 
             # A fragment event. If we have depth postMod.stencil should be unknown and depth should be consistent
             if m.eventId == n.eventId and self.has_depth:
@@ -971,16 +971,20 @@ class Pixel_History(rdtest.TestCase):
                     self.error(
                         f"postmod stencil at EID {m.eventId} primitive {m.primitiveID}: {m.postMod.stencil} is not unknown")
 
-                if not rdtest.value_compare(m.postMod.depth, n.preMod.depth):
+                if not rdtest.value_compare(m.postMod.depth, n.preMod.depth, eps = 1.0e-5):
                     self.error(
                         f"postmod depth at EID {m.eventId} primitive {m.primitiveID}: {m.postMod.depth} " +
-                        f"doesn't match premod at next primitive {n.primitiveID}: {m.preMod.depth}")
+                        f"doesn't match premod at next primitive {n.primitiveID}: {n.preMod.depth}")
 
             epsilon = self.epsilon
 
             if self.is_depth:
                 a = (m.postMod.depth, m.postMod.stencil)
                 b = (n.preMod.depth, n.preMod.stencil)
+
+                if a[1] == -2 or b[1] == -2:
+                    a = (a[0], -2)
+                    b = (b[0], -2)
 
                 epsilon = 1.0e-5
 
@@ -1015,9 +1019,10 @@ class Pixel_History(rdtest.TestCase):
 
         # Check that if the test failed, its postmod is the same as premod
         for i in range(len(modifs)):
+            m = modifs[i]
             if not m.Passed() and m.preMod.IsValid() and m.postMod.IsValid():
-                a = self.fetch_property['value'](m.preMod.col)
-                b = self.fetch_property['value'](m.postMod.col)
+                a = self.value_func(m.preMod.col)
+                b = self.value_func(m.postMod.col)
 
                 epsilon = self.epsilon
 

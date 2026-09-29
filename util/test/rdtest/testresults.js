@@ -199,7 +199,7 @@ document.body.onload = function() {
             }
           }
 
-          test_name = words[1];
+          test_name = words.slice(1).join(" ");
           test_list.push(test_name)
           html += start ? '<div class="expandable test" id="' + test_name + '"><span class="expandtoggle"></span><div class="title">Test: ' + test_name + '</div><div class="contents">' : '</div></div>';
 
@@ -252,12 +252,6 @@ document.body.onload = function() {
     var test = document.getElementById(last_test);
     test.classList.add('expanded');
   }
-
-  var h1s = document.getElementsByTagName('h1');
-  var summary = h1s[h1s.length-1];
-
-  // move failed tests to the end
-  [].slice.call(document.getElementsByClassName('failed test')).forEach((x) => {document.body.removeChild(x); document.body.insertBefore(x, summary);})
 
   // do a pure javascript query and add a summary table of test timings
   {
@@ -336,7 +330,17 @@ document.body.onload = function() {
     contents.appendChild(table);
 
     document.body.appendChild(div);
+
+    summary = div;
   }
+  
+  var h1s = document.getElementsByTagName('h1');
+  if(h1s[h1s.length-1].innerText.includes("summary:")) {
+  	summary = h1s[h1s.length-1];
+  }
+
+  // move failed tests to the end
+  [].slice.call(document.getElementsByClassName('failed test')).forEach((x) => {document.body.removeChild(x); document.body.insertBefore(x, summary);})
 
   var toggles = document.getElementsByClassName('expandtoggle');
   

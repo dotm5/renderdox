@@ -274,6 +274,15 @@ bool Program::ParseDebugMetaRecord(MetadataList &metadata, const LLVMBC::BlockOr
 
     meta.dwarf = expr;
   }
+  else if(id == LLVMBC::MetaDataRecord::LEXICAL_BLOCK_FILE)
+  {
+    meta.isDistinct = (metaRecord.ops[0] & 0x1);
+
+    meta.dwarf = new DILexicalBlockFile(metadata.getOrNULL(metaRecord.ops[1]),
+                                        metadata.getOrNULL(metaRecord.ops[2]), metaRecord.ops[3]);
+
+    meta.children = {metadata.getOrNULL(metaRecord.ops[1]), metadata.getOrNULL(metaRecord.ops[2])};
+  }
   else
   {
     return false;
@@ -288,6 +297,8 @@ const Metadata *Program::GetDebugScopeParent(const DIBase *d) const
     return d->As<DISubprogram>()->scope;
   else if(d->type == DIBase::LexicalBlock)
     return d->As<DILexicalBlock>()->scope;
+  else if(d->type == DIBase::LexicalBlockFile)
+    return d->As<DILexicalBlockFile>()->scope;
   else if(d->type == DIBase::CompositeType)
     return d->As<DICompositeType>()->file;
   else if(d->type == DIBase::Namespace)
@@ -302,6 +313,8 @@ uint64_t Program::GetDebugScopeLine(const DIBase *d) const
     return d->As<DISubprogram>()->line;
   else if(d->type == DIBase::LexicalBlock)
     return d->As<DILexicalBlock>()->line;
+  else if(d->type == DIBase::LexicalBlockFile)
+    return 0;
   else if(d->type == DIBase::File)
     return 0;
 
@@ -343,6 +356,10 @@ rdcstr Program::GetDebugScopeFilePath(const DIBase *d) const
       case DIBase::LexicalBlock:
         scope = dwarf->As<DILexicalBlock>()->scope;
         newFileMD = dwarf->As<DILexicalBlock>()->file;
+        break;
+      case DIBase::LexicalBlockFile:
+        scope = dwarf->As<DILexicalBlockFile>()->scope;
+        newFileMD = dwarf->As<DILexicalBlockFile>()->file;
         break;
       case DIBase::Namespace:
         scope = dwarf->As<DINamespace>()->scope;
@@ -430,6 +447,8 @@ rdcstr Program::GetFunctionScopeName(const DIBase *d) const
     scope = d->As<DIGlobalVariable>()->scope;
   else if(d->type == DIBase::LexicalBlock)
     scope = d->As<DILexicalBlock>()->scope;
+  else if(d->type == DIBase::LexicalBlockFile)
+    scope = d->As<DILexicalBlockFile>()->scope;
 
   while(scope && scope->dwarf)
   {
@@ -441,6 +460,11 @@ rdcstr Program::GetFunctionScopeName(const DIBase *d) const
     else if(scope->dwarf->type == DIBase::LexicalBlock)
     {
       scope = scope->dwarf->As<DILexicalBlock>()->scope;
+      continue;
+    }
+    else if(scope->dwarf->type == DIBase::LexicalBlockFile)
+    {
+      scope = scope->dwarf->As<DILexicalBlockFile>()->scope;
       continue;
     }
 
@@ -728,6 +752,20 @@ rdcstr DILexicalBlock::toString(bool dxcStyleFormatting) const
     ret += StringFormat::Fmt(", line: %llu", line);
   if(column)
     ret += StringFormat::Fmt(", column: %llu", column);
+  ret += ")";
+  return ret;
+}
+
+rdcstr DILexicalBlockFile::toString(bool dxcStyleFormatting) const
+{
+  rdcstr ret = "!DILexicalBlockFile(";
+  if(scope)
+    ret += StringFormat::Fmt("scope: %s", scope->refString(dxcStyleFormatting).c_str());
+  else
+    ret += "scope: null";
+  if(file)
+    ret += StringFormat::Fmt(", file: %s", file->refString(dxcStyleFormatting).c_str());
+  ret += StringFormat::Fmt(", discriminator: %llu", discriminator);
   ret += ")";
   return ret;
 }
