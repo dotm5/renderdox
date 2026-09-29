@@ -306,6 +306,10 @@ struct DllHookset
   // GetProcAddress requests. In particular, a local dxgi.dll proxy remains a matched module while
   // original calls resolve directly against the already-loaded System32 DXGI.
   HMODULE originalModule = NULL;
+  // Remember only pointers this hookset actually published. This lets an unloaded module be
+  // rebound without taking ownership of a slot won by an earlier hookset or an inline trampoline.
+  std::map<void **, void *> originalValues;
+  bool originalInvalidated = false;
   bool hooksfetched = false;
   // if we have multiple copies of the dll loaded (unlikely), the other module handles will be
   // stored here
@@ -371,11 +375,11 @@ static void RefreshOriginalModule(const rdcstr &libraryName, DllHookset &hookset
 {
   // The caller must hold CachedHookData::lock while selecting and rebinding original pointers.
   HMODULE selected = GetPreferredOriginalModule(libraryName, fallback);
-  if(selected == NULL || selected == hookset.originalModule)
+  if(selected == NULL || (selected == hookset.originalModule && !hookset.originalInvalidated))
     return;
 
   HMODULE previous = hookset.originalModule;
-  bool previousIsLoaded = ModuleHandleIsLoaded(previous);
+  bool previousIsLoaded = !hookset.originalInvalidated && ModuleHandleIsLoaded(previous);
 
   for(FunctionHook &hook : hookset.FunctionHooks)
   {
@@ -385,23 +389,38 @@ static void RefreshOriginalModule(const rdcstr &libraryName, DllHookset &hookset
     if(previous == NULL)
     {
       if(*hook.orig == NULL)
-        *hook.orig = GetProcAddress(selected, hook.function.c_str());
+      {
+        void *resolved = GetProcAddress(selected, hook.function.c_str());
+        *hook.orig = resolved;
+        hookset.originalValues[hook.orig] = resolved;
+      }
     }
     else if(!previousIsLoaded)
     {
       // The old module was unloaded, so its export address cannot be queried safely.
-      *hook.orig = GetProcAddress(selected, hook.function.c_str());
+      auto published = hookset.originalValues.find(hook.orig);
+      if(published != hookset.originalValues.end() && *hook.orig == published->second)
+      {
+        void *resolved = GetProcAddress(selected, hook.function.c_str());
+        *hook.orig = resolved;
+        published->second = resolved;
+      }
     }
     else
     {
       // Preserve first-hook precedence when multiple hooks intentionally share an original pointer.
       void *previousFunction = GetProcAddress(previous, hook.function.c_str());
       if(*hook.orig == previousFunction)
-        *hook.orig = GetProcAddress(selected, hook.function.c_str());
+      {
+        void *resolved = GetProcAddress(selected, hook.function.c_str());
+        *hook.orig = resolved;
+        hookset.originalValues[hook.orig] = resolved;
+      }
     }
   }
 
   hookset.originalModule = selected;
+  hookset.originalInvalidated = false;
 }
 
 struct CachedHookData
@@ -409,6 +428,17 @@ struct CachedHookData
   bool hookAll = true;
 
   std::map<rdcstr, DllHookset> DllHooks;
+  // A handle can name several API-set aliases. Keep the std::map registration order within each
+  // bucket so a shared original pointer keeps its existing first-hook precedence.
+  using HookIterator = std::map<rdcstr, DllHookset>::iterator;
+  std::map<HMODULE, rdcarray<HookIterator>> ModuleIndex;
+  volatile LONG moduleGeneration = 0;
+  LONG indexedGeneration = -1;
+  void *moduleNotificationCookie = NULL;
+  rdcarray<rdcwstr> notificationNames;
+  volatile LONG unloadWriteIndex = 0;
+  LONG processedUnloadIndex = 0;
+  void *volatile unloadedModules[64] = {};
   HMODULE ownmodule = NULL;
   Threading::CriticalSection lock;
 
@@ -418,6 +448,80 @@ struct CachedHookData
   std::function<HMODULE(const rdcstr &, HANDLE, DWORD)> libraryIntercept;
 
   int32_t posthooking = 0;
+
+  // Called with lock held. Module notifications only mark the cache dirty; all loader queries and
+  // original-pointer writes happen here, outside the notification callback.
+  int RefreshModuleIndex()
+  {
+    const LONG generation = InterlockedCompareExchange(&moduleGeneration, 0, 0);
+    if(indexedGeneration == generation)
+      return 0;
+
+    HMODULE unloaded[ARRAY_COUNT(unloadedModules)] = {};
+    size_t unloadCount = 0;
+    const LONG unloadEnd = InterlockedCompareExchange(&unloadWriteIndex, 0, 0);
+    const bool unloadOverflow =
+        (uint32_t)(unloadEnd - processedUnloadIndex) > ARRAY_COUNT(unloadedModules);
+    for(size_t i = 0; i < ARRAY_COUNT(unloadedModules); i++)
+    {
+      void *base = InterlockedExchangePointer(&unloadedModules[i], NULL);
+      if(base != NULL)
+        unloaded[unloadCount++] = (HMODULE)base;
+    }
+    processedUnloadIndex = unloadEnd;
+    auto wasUnloaded = [&](HMODULE module) {
+      if(module == NULL)
+        return false;
+      if(unloadOverflow)
+        return true;
+      for(size_t i = 0; i < unloadCount; i++)
+        if(unloaded[i] == module)
+          return true;
+      return false;
+    };
+
+    int refreshCalls = 0;
+    ModuleIndex.clear();
+    for(auto &entry : DllHooks)
+    {
+      DllHookset &hookset = entry.second;
+      if(wasUnloaded(hookset.originalModule))
+        hookset.originalInvalidated = true;
+
+      bool needOrdinals = false;
+      if(hookset.module == NULL || wasUnloaded(hookset.module) ||
+         !ModuleHandleIsLoaded(hookset.module))
+      {
+        hookset.module = GetModuleHandleA(entry.first.c_str());
+        hookset.OrdinalBase = 0;
+        hookset.OrdinalNames.clear();
+        needOrdinals = hookset.module != NULL;
+      }
+
+      rdcarray<HMODULE> validAlternates;
+      for(HMODULE alternate : hookset.altmodules)
+        if(alternate != hookset.module && !wasUnloaded(alternate) && ModuleHandleIsLoaded(alternate))
+          validAlternates.push_back(alternate);
+      hookset.altmodules.swap(validAlternates);
+
+      if(hookset.module != NULL)
+      {
+        refreshCalls++;
+        RefreshOriginalModule(entry.first, hookset, hookset.module);
+        if(needOrdinals)
+          hookset.FetchOrdinalNames();
+      }
+
+      if(hookset.module != NULL)
+        ModuleIndex[hookset.module].push_back(DllHooks.find(entry.first));
+      for(HMODULE alternate : hookset.altmodules)
+        if(alternate != NULL && alternate != hookset.module)
+          ModuleIndex[alternate].push_back(DllHooks.find(entry.first));
+    }
+
+    indexedGeneration = generation;
+    return refreshCalls;
+  }
 
   bool ShouldSkipImportPatching(const char *lowername)
   {
@@ -482,6 +586,7 @@ struct CachedHookData
         if(it->second.module == NULL)
         {
           it->second.module = module;
+          InterlockedIncrement(&moduleGeneration);
 
           it->second.hooksfetched = true;
 
@@ -520,6 +625,7 @@ struct CachedHookData
           {
             // previous module is still loaded, add this to the alt modules list
             it->second.altmodules.push_back(module);
+            InterlockedIncrement(&moduleGeneration);
           }
           else
           {
@@ -528,16 +634,14 @@ struct CachedHookData
             RDCWARN("%s moved from %p to %p, re-initialising orig pointers", it->first.c_str(),
                     it->second.module, module);
 
-            // we also need to re-initialise the hooks as the orig pointers are now stale
-            HMODULE originalModule = GetPreferredOriginalModule(it->first, module);
-            for(FunctionHook &hook : it->second.FunctionHooks)
-            {
-              if(hook.orig)
-                *hook.orig = GetProcAddress(originalModule, hook.function.c_str());
-            }
-
             it->second.module = module;
-            it->second.originalModule = originalModule;
+            if(!ModuleHandleIsLoaded(it->second.originalModule))
+              it->second.originalInvalidated = true;
+            RefreshOriginalModule(it->first, it->second, module);
+            it->second.OrdinalBase = 0;
+            it->second.OrdinalNames.clear();
+            it->second.FetchOrdinalNames();
+            InterlockedIncrement(&moduleGeneration);
           }
         }
       }
@@ -988,6 +1092,57 @@ struct CachedHookData
 };
 
 static CachedHookData *s_HookData = NULL;
+
+struct HookModuleNotificationData
+{
+  ULONG flags;
+  const UNICODE_STRING *fullName;
+  const UNICODE_STRING *baseName;
+  void *base;
+  ULONG imageSize;
+};
+
+static void NTAPI HookModuleNotification(ULONG reason, const HookModuleNotificationData *data,
+                                         void *context)
+{
+  // Called under the loader lock. Do not take CachedHookData::lock or query exports here.
+  if((reason != 1 && reason != 2) || data == NULL || data->baseName == NULL || context == NULL)
+    return;
+
+  const UNICODE_STRING &baseName = *data->baseName;
+  CachedHookData *hooks = (CachedHookData *)context;
+  for(const rdcwstr &name : hooks->notificationNames)
+  {
+    if(name.length() != baseName.Length / sizeof(wchar_t))
+      continue;
+
+    bool equal = true;
+    for(size_t i = 0; i < name.length(); i++)
+    {
+      wchar_t c = baseName.Buffer[i];
+      if(c >= L'A' && c <= L'Z')
+        c += L'a' - L'A';
+      if(c != name[i])
+      {
+        equal = false;
+        break;
+      }
+    }
+
+    if(equal)
+    {
+      if(reason == 2 && data->base != NULL)
+      {
+        const LONG index = InterlockedIncrement(&hooks->unloadWriteIndex) - 1;
+        InterlockedExchangePointer(
+            &hooks->unloadedModules[(uint32_t)index % ARRAY_COUNT(hooks->unloadedModules)],
+            data->base);
+      }
+      InterlockedIncrement(&hooks->moduleGeneration);
+      break;
+    }
+  }
+}
 
 #if defined(DCOMP_INLINE_GRAPHICS_HOOKS) && DCOMP_INLINE_GRAPHICS_HOOKS
 // Length of the jump written at a chained entry point, and therefore of the
@@ -1779,6 +1934,22 @@ static void HookAllModules()
   if(!s_HookData->hookAll)
     return;
 
+  struct HookAllTiming
+  {
+    LARGE_INTEGER start;
+    HookAllTiming() { QueryPerformanceCounter(&start); }
+    ~HookAllTiming()
+    {
+      const DWORD error = GetLastError();
+      LARGE_INTEGER end, frequency;
+      QueryPerformanceCounter(&end);
+      QueryPerformanceFrequency(&frequency);
+      RDCLOG("[hook-perf] hook_all_ms=%.3f", 1000.0 * double(end.QuadPart - start.QuadPart) /
+                                               double(frequency.QuadPart));
+      SetLastError(error);
+    }
+  } timing;
+
   rdcarray<MODULEENTRY32> modules;
   ForAllModules([&modules](const MODULEENTRY32 &me32) { modules.push_back(me32); });
 
@@ -1968,10 +2139,50 @@ static bool OrdinalAsString(void *func)
   return uint64_t(func) <= 0xffff;
 }
 
+static volatile LONG64 s_GetProcCalls = 0;
+static volatile LONG64 s_GetProcTicks = 0;
+static volatile LONG64 s_GetProcHits = 0;
+static volatile LONG64 s_GetProcRefreshCalls = 0;
+
+struct GetProcTiming
+{
+  LARGE_INTEGER start;
+  bool hit = false;
+  int refreshCalls = 0;
+
+  GetProcTiming() { QueryPerformanceCounter(&start); }
+  ~GetProcTiming()
+  {
+    const DWORD error = GetLastError();
+    LARGE_INTEGER end;
+    QueryPerformanceCounter(&end);
+    InterlockedAdd64(&s_GetProcTicks, end.QuadPart - start.QuadPart);
+    if(hit)
+      InterlockedIncrement64(&s_GetProcHits);
+    if(refreshCalls)
+      InterlockedAdd64(&s_GetProcRefreshCalls, refreshCalls);
+    const LONG64 calls = InterlockedIncrement64(&s_GetProcCalls);
+    if((calls & (calls - 1)) == 0 || calls % 4096 == 0)
+    {
+      LARGE_INTEGER frequency;
+      QueryPerformanceFrequency(&frequency);
+      const LONG64 ticks = InterlockedCompareExchange64(&s_GetProcTicks, 0, 0);
+      const double totalUS = 1000000.0 * double(ticks) / double(frequency.QuadPart);
+      RDCLOG("[hook-perf] calls=%lld total_us=%.1f avg_us=%.3f hits=%lld refresh_calls=%lld",
+             (long long)calls, totalUS, totalUS / double(calls),
+             (long long)InterlockedCompareExchange64(&s_GetProcHits, 0, 0),
+             (long long)InterlockedCompareExchange64(&s_GetProcRefreshCalls, 0, 0));
+    }
+    SetLastError(error);
+  }
+};
+
 FARPROC WINAPI Hooked_GetProcAddress(HMODULE mod, const LPCSTR func)
 {
   if(mod == NULL || func == NULL || mod == s_HookData->ownmodule)
     return GetProcAddress(mod, func);
+
+  GetProcTiming timing;
 
 #if ENABLED(VERBOSE_DEBUG_HOOK)
   if(OrdinalAsString((void *)func))
@@ -1980,97 +2191,77 @@ FARPROC WINAPI Hooked_GetProcAddress(HMODULE mod, const LPCSTR func)
     RDCDEBUG("Hooked_GetProcAddress(%p, %s)", mod, func);
 #endif
 
-  for(auto it = s_HookData->DllHooks.begin(); it != s_HookData->DllHooks.end(); ++it)
   {
+    SCOPED_LOCK(s_HookData->lock);
+    if(s_HookData->moduleNotificationCookie == NULL)
+      InterlockedIncrement(&s_HookData->moduleGeneration);
+    timing.refreshCalls += s_HookData->RefreshModuleIndex();
+    auto matches = s_HookData->ModuleIndex.find(mod);
+    if(matches != s_HookData->ModuleIndex.end())
     {
-      SCOPED_LOCK(s_HookData->lock);
-
-      if(it->second.module == NULL)
+      for(auto it : matches->second)
       {
-        it->second.module = GetModuleHandleA(it->first.c_str());
-        if(it->second.module)
-        {
-          // Fill original pointers even when no import was patched.
-          RefreshOriginalModule(it->first, it->second, it->second.module);
+        timing.hit = true;
+#if ENABLED(VERBOSE_DEBUG_HOOK)
+        RDCDEBUG("Located module %s", it->first.c_str());
+#endif
 
-          it->second.FetchOrdinalNames();
+        LPCSTR searchFunc = func;
+
+        if(OrdinalAsString((void *)func))
+        {
+#if ENABLED(VERBOSE_DEBUG_HOOK)
+          RDCDEBUG("Ordinal hook");
+#endif
+
+          uint32_t ordinal = (uint16_t)(uintptr_t(func) & 0xffff);
+
+          if(ordinal < it->second.OrdinalBase)
+          {
+            RDCERR("Unexpected ordinal - lower than ordinalbase %u for %s",
+                   (uint32_t)it->second.OrdinalBase, it->first.c_str());
+
+            SetLastError(S_OK);
+            return GetProcAddress(mod, func);
+          }
+
+          ordinal -= it->second.OrdinalBase;
+
+          if(ordinal >= it->second.OrdinalNames.size())
+          {
+            RDCERR("Unexpected ordinal - higher than fetched ordinal names (%u) for %s",
+                   (uint32_t)it->second.OrdinalNames.size(), it->first.c_str());
+
+            SetLastError(S_OK);
+            return GetProcAddress(mod, func);
+          }
+
+          searchFunc = it->second.OrdinalNames[ordinal].c_str();
+
+#if ENABLED(VERBOSE_DEBUG_HOOK)
+          RDCDEBUG("found ordinal %s", searchFunc);
+#endif
         }
-      }
-      else
-      {
-        RefreshOriginalModule(it->first, it->second, it->second.module);
-      }
-    }
 
-    bool match = (mod == it->second.module);
+        FunctionHook search(searchFunc, NULL, NULL);
 
-    if(!match && !it->second.altmodules.empty())
-    {
-      for(size_t i = 0; !match && i < it->second.altmodules.size(); i++)
-        match = (mod == it->second.altmodules[i]);
-    }
-
-    if(match)
-    {
-#if ENABLED(VERBOSE_DEBUG_HOOK)
-      RDCDEBUG("Located module %s", it->first.c_str());
-#endif
-
-      LPCSTR searchFunc = func;
-
-      if(OrdinalAsString((void *)func))
-      {
-#if ENABLED(VERBOSE_DEBUG_HOOK)
-        RDCDEBUG("Ordinal hook");
-#endif
-
-        uint32_t ordinal = (uint16_t)(uintptr_t(func) & 0xffff);
-
-        if(ordinal < it->second.OrdinalBase)
+        auto found = std::lower_bound(it->second.FunctionHooks.begin(),
+                                      it->second.FunctionHooks.end(), search);
+        if(found != it->second.FunctionHooks.end() && !(search < *found))
         {
-          RDCERR("Unexpected ordinal - lower than ordinalbase %u for %s",
-                 (uint32_t)it->second.OrdinalBase, it->first.c_str());
+          FARPROC realfunc = GetProcAddress(mod, func);
+
+#if ENABLED(VERBOSE_DEBUG_HOOK)
+          RDCDEBUG("Found hooked function, returning hook pointer %p", found->hook);
+#endif
 
           SetLastError(S_OK);
-          return GetProcAddress(mod, func);
+
+          if(realfunc == NULL)
+            return NULL;
+
+          return (FARPROC)found->hook;
         }
-
-        ordinal -= it->second.OrdinalBase;
-
-        if(ordinal >= it->second.OrdinalNames.size())
-        {
-          RDCERR("Unexpected ordinal - higher than fetched ordinal names (%u) for %s",
-                 (uint32_t)it->second.OrdinalNames.size(), it->first.c_str());
-
-          SetLastError(S_OK);
-          return GetProcAddress(mod, func);
-        }
-
-        searchFunc = it->second.OrdinalNames[ordinal].c_str();
-
-#if ENABLED(VERBOSE_DEBUG_HOOK)
-        RDCDEBUG("found ordinal %s", searchFunc);
-#endif
-      }
-
-      FunctionHook search(searchFunc, NULL, NULL);
-
-      auto found =
-          std::lower_bound(it->second.FunctionHooks.begin(), it->second.FunctionHooks.end(), search);
-      if(found != it->second.FunctionHooks.end() && !(search < *found))
-      {
-        FARPROC realfunc = GetProcAddress(mod, func);
-
-#if ENABLED(VERBOSE_DEBUG_HOOK)
-        RDCDEBUG("Found hooked function, returning hook pointer %p", found->hook);
-#endif
-
-        SetLastError(S_OK);
-
-        if(realfunc == NULL)
-          return NULL;
-
-        return (FARPROC)found->hook;
       }
     }
   }
@@ -2164,7 +2355,21 @@ void LibraryHooks::BeginHookRegistration()
 void LibraryHooks::EndHookRegistration()
 {
   for(auto it = s_HookData->DllHooks.begin(); it != s_HookData->DllHooks.end(); ++it)
+  {
     std::sort(it->second.FunctionHooks.begin(), it->second.FunctionHooks.end());
+    s_HookData->notificationNames.push_back(StringFormat::UTF82Wide(it->first));
+  }
+  // API-set library-loader exports can resolve to kernelbase instead of an API-set image.
+  s_HookData->notificationNames.push_back(L"kernelbase.dll");
+
+  HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
+  typedef NTSTATUS(NTAPI * RegisterNotification)(ULONG, void *, void *, void **);
+  RegisterNotification reg = ntdll ? (RegisterNotification)GetProcAddress(
+                                          ntdll, "LdrRegisterDllNotification")
+                                   : NULL;
+  if(reg != NULL)
+    reg(0, (void *)&HookModuleNotification, s_HookData,
+        &s_HookData->moduleNotificationCookie);
 
 #if ENABLED(VERBOSE_DEBUG_HOOK)
   RDCDEBUG("Applying hooks");
@@ -2184,7 +2389,6 @@ void LibraryHooks::EndHookRegistration()
 
     s_HookData->missedOrdinals = false;
   }
-
 }
 
 void LibraryHooks::Refresh()
@@ -2198,6 +2402,18 @@ void LibraryHooks::ReplayInitialise()
 
 void LibraryHooks::RemoveHooks()
 {
+  if(s_HookData->moduleNotificationCookie != NULL)
+  {
+    HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
+    typedef NTSTATUS(NTAPI * UnregisterNotification)(void *);
+    UnregisterNotification unreg = ntdll ? (UnregisterNotification)GetProcAddress(
+                                              ntdll, "LdrUnregisterDllNotification")
+                                         : NULL;
+    if(unreg != NULL)
+      unreg(s_HookData->moduleNotificationCookie);
+    s_HookData->moduleNotificationCookie = NULL;
+  }
+
 #if defined(DCOMP_INLINE_GRAPHICS_HOOKS) && DCOMP_INLINE_GRAPHICS_HOOKS
   RemoveInlineGraphicsHooks();
 #endif
@@ -2263,13 +2479,19 @@ void Win32_ManualHookModule(rdcstr modName, HMODULE module)
 
     DllHookset &hookset = s_HookData->DllHooks[modName];
     hookset.module = module;
+    InterlockedIncrement(&s_HookData->moduleGeneration);
     hookset.originalModule = GetPreferredOriginalModule(modName, module);
 
     for(FunctionHook &hook : hookset.FunctionHooks)
     {
       if(hook.orig)
-        *hook.orig = GetProcAddress(hookset.originalModule, hook.function.c_str());
+      {
+        void *resolved = GetProcAddress(hookset.originalModule, hook.function.c_str());
+        *hook.orig = resolved;
+        hookset.originalValues[hook.orig] = resolved;
+      }
     }
+    hookset.originalInvalidated = false;
   }
 
   s_HookData->ApplyHooks(modName.c_str(), module);
