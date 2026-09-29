@@ -73,7 +73,7 @@ jobs:
             core.setFailed(`Timed out waiting for CMake to validate ${sha}`);
 
       - name: Download the attested MSBuild artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: renderdox-windows-release
           path: ${{ runner.temp }}/release-assets

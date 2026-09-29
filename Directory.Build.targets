@@ -64,6 +64,15 @@
     <DCompPassthroughAllNonInjectedChildren Condition="'$(DCompPassthroughAllNonInjectedChildren)'==''">0</DCompPassthroughAllNonInjectedChildren>
     <DCompDisableWSAHooks Condition="'$(DCompDisableWSAHooks)'==''">0</DCompDisableWSAHooks>
     <DCompDiagnosticTargetInitStage Condition="'$(DCompDiagnosticTargetInitStage)'==''">0</DCompDiagnosticTargetInitStage>
+    <!--
+      ProxyOnly (DCOMP_SetHookMode(0)) normally skips every IAT patch *and* the
+      inline graphics entry detours. A target that resolves graphics entry points
+      from export tables rather than through imports needs the entry detours even
+      when all IAT patching is skipped, so the two can be separated explicitly.
+      Default 0 keeps the existing ProxyOnly semantics.
+    -->
+    <DCompInlineGraphicsHooksInProxyOnly
+        Condition="'$(DCompInlineGraphicsHooksInProxyOnly)'==''">0</DCompInlineGraphicsHooksInProxyOnly>
   </PropertyGroup>
 
   <!--
@@ -74,7 +83,7 @@
   -->
   <ItemDefinitionGroup Condition="'$(MSBuildProjectName)'=='renderdoc'">
     <ClCompile>
-      <PreprocessorDefinitions>DCOMP_DEFAULT_HOOK_INTO_CHILDREN=$(DCompHookIntoChildrenDefault);DCOMP_INLINE_GRAPHICS_HOOKS=$(DCompInlineGraphicsHooks);DCOMP_SINGLE_GENERATION_CHILD_HOOK=$(DCompSingleGenerationChildHook);DCOMP_DIAGNOSTIC_VARIANT_ID=$(DCompDiagnosticVariantId);DCOMP_DIAGNOSTIC_TARGET_INIT_STAGE=$(DCompDiagnosticTargetInitStage);DCOMP_DIAGNOSTIC_DISABLE_ALL_HOOKS=$(DCompDisableAllHooks);DCOMP_DIAGNOSTIC_DISABLE_WIN32_SYSTEM_HOOKS=$(DCompDisableWin32SystemHooks);DCOMP_DIAGNOSTIC_DISABLE_TARGET_CONTROL=$(DCompDisableTargetControl);DCOMP_DIAGNOSTIC_DISABLE_OVERLAY=$(DCompDisableOverlay);DCOMP_DIAGNOSTIC_PASSTHROUGH_NONINJECTED_CHILDREN=$(DCompPassthroughNonInjectedChildren);DCOMP_DIAGNOSTIC_PASSTHROUGH_ALL_NONINJECTED_CHILDREN=$(DCompPassthroughAllNonInjectedChildren);DCOMP_DIAGNOSTIC_DISABLE_WSA_HOOKS=$(DCompDisableWSAHooks);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DCOMP_DEFAULT_HOOK_INTO_CHILDREN=$(DCompHookIntoChildrenDefault);DCOMP_INLINE_GRAPHICS_HOOKS=$(DCompInlineGraphicsHooks);DCOMP_SINGLE_GENERATION_CHILD_HOOK=$(DCompSingleGenerationChildHook);DCOMP_DIAGNOSTIC_VARIANT_ID=$(DCompDiagnosticVariantId);DCOMP_DIAGNOSTIC_TARGET_INIT_STAGE=$(DCompDiagnosticTargetInitStage);DCOMP_DIAGNOSTIC_DISABLE_ALL_HOOKS=$(DCompDisableAllHooks);DCOMP_DIAGNOSTIC_DISABLE_WIN32_SYSTEM_HOOKS=$(DCompDisableWin32SystemHooks);DCOMP_DIAGNOSTIC_DISABLE_TARGET_CONTROL=$(DCompDisableTargetControl);DCOMP_DIAGNOSTIC_DISABLE_OVERLAY=$(DCompDisableOverlay);DCOMP_DIAGNOSTIC_PASSTHROUGH_NONINJECTED_CHILDREN=$(DCompPassthroughNonInjectedChildren);DCOMP_DIAGNOSTIC_PASSTHROUGH_ALL_NONINJECTED_CHILDREN=$(DCompPassthroughAllNonInjectedChildren);DCOMP_DIAGNOSTIC_DISABLE_WSA_HOOKS=$(DCompDisableWSAHooks);DCOMP_INLINE_GRAPHICS_HOOKS_IN_PROXYONLY=$(DCompInlineGraphicsHooksInProxyOnly);%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
 

@@ -29,6 +29,7 @@
 
 #include <delayimp.h>
 #include <tlhelp32.h>
+#include <psapi.h>
 #include <algorithm>
 #include <functional>
 #include <map>
@@ -989,6 +990,10 @@ struct CachedHookData
 static CachedHookData *s_HookData = NULL;
 
 #if defined(DCOMP_INLINE_GRAPHICS_HOOKS) && DCOMP_INLINE_GRAPHICS_HOOKS
+// Length of the jump written at a chained entry point, and therefore of the
+// prologue bytes that have to be kept to restore it.
+#define ENTRY_JUMP_LENGTH 5
+
 struct InlineGraphicsHook
 {
   void *target = NULL;
@@ -996,6 +1001,18 @@ struct InlineGraphicsHook
   void *trampoline = NULL;
   rdcarray<void **> originalSlots;
   Win32InlineHook *hook = NULL;
+  HMODULE ownerModule = NULL;
+
+  // Set when the entry point already carried another component's detour and we
+  // chained behind it. The jump is then written and restored by hand: there is
+  // no trampoline to own, and `trampoline` holds the foreign detour so every
+  // slot that shares this target continues into it.
+  bool chained = false;
+  unsigned char savedPrologue[ENTRY_JUMP_LENGTH] = {};
+
+  // Kept so the hook can be moved onto a provider that loads later than we do.
+  rdcstr library;
+  rdcstr function;
 };
 
 static std::map<void *, InlineGraphicsHook> s_InlineGraphicsHooks;
@@ -1019,10 +1036,518 @@ static void RememberOriginalSlot(InlineGraphicsHook &installed, void **slot)
   installed.originalSlots.push_back(slot);
 }
 
+// ---------------------------------------------------------------------------
+// Foreign entry detours.
+//
+// A graphics entry point may already carry a detour placed by another component
+// before we arrive. NVIDIA Streamline's sl.interposer exports and patches the
+// same DXGI/D3D11/D3D12 entry points we do, and so do overlay injectors,
+// app-local proxy DLLs and anti-cheat modules. Overwriting that prologue leaves
+// two hooks fighting over one function, so when we find one we chain behind it
+// instead: our detour continues into theirs, theirs continues into the real
+// implementation, and both stay on the chain. Chaining also puts us outermost,
+// which is the side a capture wants - we wrap whatever they produced.
+//
+// Only a branch that leaves the target's own module counts. A jump inside the
+// same module is ordinary compiler output.
+// ---------------------------------------------------------------------------
+
+static bool IsExecutableAddress(void *addr)
+{
+  MEMORY_BASIC_INFORMATION info = {};
+
+  if(addr == NULL || VirtualQuery(addr, &info, sizeof(info)) != sizeof(info))
+    return false;
+
+  if(info.State != MEM_COMMIT || (info.Protect & PAGE_GUARD) != 0)
+    return false;
+
+  switch(info.Protect & 0xff)
+  {
+    case PAGE_EXECUTE:
+    case PAGE_EXECUTE_READ:
+    case PAGE_EXECUTE_READWRITE:
+    case PAGE_EXECUTE_WRITECOPY: return true;
+    default: return false;
+  }
+}
+
+static void *ModuleBaseForAddress(void *addr)
+{
+  HMODULE module = NULL;
+
+  if(GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                            GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                        (LPCSTR)addr, &module))
+    return (void *)module;
+
+  return NULL;
+}
+
+static bool IsReadableAddress(void *addr)
+{
+  MEMORY_BASIC_INFORMATION info = {};
+
+  if(addr == NULL || VirtualQuery(addr, &info, sizeof(info)) != sizeof(info))
+    return false;
+
+  if(info.State != MEM_COMMIT || (info.Protect & PAGE_GUARD) != 0)
+    return false;
+
+  switch(info.Protect & 0xff)
+  {
+    case PAGE_READONLY:
+    case PAGE_READWRITE:
+    case PAGE_WRITECOPY:
+    case PAGE_EXECUTE_READ:
+    case PAGE_EXECUTE_READWRITE:
+    case PAGE_EXECUTE_WRITECOPY: return true;
+    default: return false;
+  }
+}
+
+struct ForeignEntryDetour
+{
+  void *detour = NULL;      // where the existing jump goes
+  const char *shape = NULL; // which jump form was recognised
+  char module[MAX_PATH] = {};
+  uintptr_t offset = 0; // offset of the detour inside its own module
+};
+
+// Reports the detour another component already placed at `target`, if any.
+static bool FindForeignEntryDetour(void *target, ForeignEntryDetour &found)
+{
+  if(target == NULL)
+    return false;
+
+  const unsigned char *code = (const unsigned char *)target;
+  const char *shape = NULL;
+  void *dest = NULL;
+
+  if(code[0] == 0xE9)
+  {
+    int rel = 0;
+    memcpy(&rel, code + 1, sizeof(rel));
+    dest = (void *)(code + 5 + rel);
+    shape = "jmp rel32";
+  }
+  else if(code[0] == 0xFF && code[1] == 0x25)
+  {
+    int rel = 0;
+    memcpy(&rel, code + 2, sizeof(rel));
+    void **slot = (void **)(code + 6 + rel);
+    shape = "jmp [rip+rel32]";
+    if(!IsReadableAddress(slot))
+      return false;
+    dest = *slot;
+  }
+  else if(code[0] == 0x48 && code[1] == 0xB8 && code[10] == 0xFF && code[11] == 0xE0)
+  {
+    memcpy(&dest, code + 2, sizeof(dest));
+    shape = "mov rax,imm64; jmp rax";
+  }
+
+  if(dest == NULL || dest == target || !IsExecutableAddress(dest))
+    return false;
+
+  // A branch that stays inside the target's own module is not a detour.
+  void *destModule = ModuleBaseForAddress(dest);
+  if(destModule == NULL || destModule == ModuleBaseForAddress(target))
+    return false;
+
+  if(GetModuleFileNameA((HMODULE)destModule, found.module, MAX_PATH) == 0)
+    found.module[0] = 0;
+
+  found.detour = dest;
+  found.shape = shape;
+  found.offset = (uintptr_t)dest - (uintptr_t)destModule;
+  return true;
+}
+
+// Writes a 5-byte jmp by hand. Used only when chaining behind a foreign detour,
+// where no trampoline is needed and the hook engine has nothing to trampoline
+// from. `saved` must hold the 5 bytes that get overwritten.
+static bool WriteChainJump(void *target, void *dest, unsigned char *saved)
+{
+  DWORD oldProtect = 0;
+
+  if(!VirtualProtect(target, ENTRY_JUMP_LENGTH, PAGE_EXECUTE_READWRITE, &oldProtect))
+  {
+    RDCERR("Could not make graphics entry %p writable for chaining", target);
+    return false;
+  }
+
+  memcpy(saved, target, ENTRY_JUMP_LENGTH);
+
+  unsigned char patch[ENTRY_JUMP_LENGTH];
+  memcpy(patch, saved, ENTRY_JUMP_LENGTH);
+  patch[0] = 0xE9;
+  int rel = (int)((uintptr_t)dest - ((uintptr_t)target + ENTRY_JUMP_LENGTH));
+  memcpy(patch + 1, &rel, sizeof(rel));
+  memcpy(target, patch, ENTRY_JUMP_LENGTH);
+
+  DWORD ignored = 0;
+  VirtualProtect(target, ENTRY_JUMP_LENGTH, oldProtect, &ignored);
+  FlushInstructionCache(GetCurrentProcess(), target, ENTRY_JUMP_LENGTH);
+
+  return true;
+}
+
+static void RestoreChainJump(void *target, const unsigned char *saved)
+{
+  DWORD oldProtect = 0;
+
+  if(!VirtualProtect(target, ENTRY_JUMP_LENGTH, PAGE_EXECUTE_READWRITE, &oldProtect))
+    return;
+
+  memcpy(target, saved, ENTRY_JUMP_LENGTH);
+
+  DWORD ignored = 0;
+  VirtualProtect(target, ENTRY_JUMP_LENGTH, oldProtect, &ignored);
+  FlushInstructionCache(GetCurrentProcess(), target, ENTRY_JUMP_LENGTH);
+}
+
+// ---------------------------------------------------------------------------
+// In-process dump blocking.
+//
+// A minidump written from inside the process suspends every thread except the
+// writer for the whole write. A dumper that stalls therefore freezes the whole
+// application, and a diagnostic handler that dumps repeatedly makes that
+// permanent - which is exactly what NVIDIA Streamline's handler does here, one
+// dump at a time, at first frame.
+//
+// Nothing about capture needs an in-process dump, and crash reporters that run
+// out of process (Windows Error Reporting, a dump taken from a debugger) use
+// their own dbghelp and are unaffected. So the in-process entry point is
+// detoured to fail fast, and the caller takes its documented failure path
+// instead of stopping the world.
+// ---------------------------------------------------------------------------
+static BOOL WINAPI BlockedMiniDumpWriteDump(void *hProcess, unsigned long pid, void *hFile,
+                                            unsigned int dumpType, void *exceptionParam,
+                                            void *userStreamParam, void *callbackParam)
+{
+  (void)hProcess;
+  (void)pid;
+  (void)hFile;
+  (void)dumpType;
+  (void)exceptionParam;
+  (void)userStreamParam;
+  (void)callbackParam;
+
+  RDCWARN("Blocked an in-process MiniDumpWriteDump: writing one suspends every other thread");
+
+  SetLastError(ERROR_CALL_NOT_IMPLEMENTED);
+  return FALSE;
+}
+
+// Every dbghelp loaded in the process is patched: the system copy and whatever
+// a redistributable dropped next to the application both expose the same entry
+// point, and either can be the one a component resolves.
+static void InstallInProcessDumpBlock()
+{
+#if (!defined(DCOMP_BLOCK_IN_PROCESS_DUMPS) || DCOMP_BLOCK_IN_PROCESS_DUMPS) && \
+    defined(DCOMP_INLINE_GRAPHICS_HOOKS) && DCOMP_INLINE_GRAPHICS_HOOKS
+  static volatile LONG s_blocked = 0;
+  if(InterlockedCompareExchange(&s_blocked, 1, 0) != 0)
+    return;
+
+  SCOPED_LOCK(s_InlineGraphicsHookLock);
+
+  HMODULE modules[512];
+  DWORD needed = 0;
+  if(!EnumProcessModules(GetCurrentProcess(), modules, sizeof(modules), &needed))
+    return;
+
+  DWORD count = needed / sizeof(HMODULE);
+  if(count > 512)
+    count = 512;
+
+  int patched = 0;
+  for(DWORD i = 0; i < count; ++i)
+  {
+    wchar_t path[MAX_PATH] = {};
+    if(GetModuleFileNameW(modules[i], path, MAX_PATH) == 0)
+      continue;
+
+    const wchar_t *base = wcsrchr(path, L'\\');
+    base = base ? base + 1 : path;
+    if(_wcsicmp(base, L"dbghelp.dll") != 0)
+      continue;
+
+    void *target = (void *)GetProcAddress(modules[i], "MiniDumpWriteDump");
+    if(target == NULL || target == (void *)&BlockedMiniDumpWriteDump)
+      continue;
+
+    // A copy that is already detoured by somebody else is left alone: whatever
+    // they do with it is their business, ours is only to stop the freeze.
+    ForeignEntryDetour ignored;
+    if(FindForeignEntryDetour(target, ignored))
+    {
+      RDCLOG("Skipping in-process dump block at %p: already detoured into %s", target,
+             ignored.module);
+      continue;
+    }
+
+    InlineGraphicsHook installed;
+    installed.target = target;
+    installed.detour = (void *)&BlockedMiniDumpWriteDump;
+
+    if(!GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCSTR)target,
+                           &installed.ownerModule))
+      continue;
+
+    installed.hook = Win32CreateInlineHook(target, installed.detour, &installed.trampoline);
+    if(installed.hook == NULL)
+    {
+      FreeLibrary(installed.ownerModule);
+      continue;
+    }
+
+    if(!Win32EnableInlineHook(installed.hook))
+    {
+      Win32DestroyInlineHook(installed.hook);
+      FreeLibrary(installed.ownerModule);
+      continue;
+    }
+
+    s_InlineGraphicsHooks[target] = installed;
+    patched++;
+
+    RDCWARN("Blocked in-process dumps by detouring MiniDumpWriteDump at %p in %ls", target, path);
+  }
+
+  if(patched == 0)
+    RDCLOG("No in-process dbghelp MiniDumpWriteDump found to block");
+#endif
+}
+
+// ---------------------------------------------------------------------------
+// Topmost provider lookup.
+//
+// The module an application calls is not always the system DLL that implements
+// the function. An interposer, overlay or app-local proxy can stand in front of
+// it and re-export the same entry points from its own code - NVIDIA
+// Streamline's sl.interposer does exactly that for the DXGI/D3D11/D3D12
+// creation functions, and it reaches the real implementation by walking the
+// export directory rather than through the import table, so IAT and
+// GetProcAddress hooks never see it.
+//
+// Inline-detouring the system DLL in that situation puts our hook *below* the
+// interposer: it hands the application its own object, and hands the
+// interposer - which believes it is calling the real API - a wrapped object of
+// ours instead, which is what makes it report the device as busy.
+//
+// Detouring the module the application actually reaches instead keeps every
+// layer underneath us seeing only real objects. Nothing here is specific to
+// any product: it is just "hook the topmost provider".
+// ---------------------------------------------------------------------------
+static HMODULE FindTopmostProvider(const char *function, HMODULE fallback)
+{
+  HMODULE modules[512];
+  DWORD needed = 0;
+
+  if(!EnumProcessModules(GetCurrentProcess(), modules, sizeof(modules), &needed))
+    return NULL;
+
+  DWORD count = needed / sizeof(HMODULE);
+  if(count > 512)
+    count = 512;
+
+  wchar_t systemDir[MAX_PATH] = {};
+  GetSystemDirectoryW(systemDir, MAX_PATH);
+
+  HMODULE self = NULL;
+  GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                         GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                     (LPCSTR)FindTopmostProvider, &self);
+
+  HMODULE best = NULL;
+
+  for(DWORD i = 0; i < count; ++i)
+  {
+    if(modules[i] == fallback || modules[i] == self)
+      continue;
+
+    void *address = (void *)GetProcAddress(modules[i], function);
+    if(address == NULL)
+      continue;
+
+    // Only a module whose export resolves to code inside itself provides the
+    // function. A forwarder resolves into the real DLL and is not a provider.
+    if(ModuleBaseForAddress(address) != (void *)modules[i])
+      continue;
+
+    wchar_t path[MAX_PATH] = {};
+    if(GetModuleFileNameW(modules[i], path, MAX_PATH) == 0)
+      continue;
+
+    // System32 ships the real implementation; anything installed alongside it
+    // is the thing the application actually reaches.
+    if(_wcsnicmp(path, systemDir, wcslen(systemDir)) == 0)
+      continue;
+
+    // EnumProcessModules lists modules in load order, and an interposer has to
+    // be in place before the application can call through it, so the first
+    // match is the outermost provider.
+    best = modules[i];
+    break;
+  }
+
+  return best;
+}
+
+// ---------------------------------------------------------------------------
+// Moving an installed entry hook onto a provider that appeared later.
+//
+// The interposer is loaded by the application's own plugin, well after we have
+// installed our hooks, so at installation time the topmost provider does not
+// exist yet and the hook lands on the system DLL. Every module load is a chance
+// for that to change, so the hooks are re-pointed when a provider shows up:
+// the jump moves to the provider's export and the system DLL is restored, which
+// puts us in front of the interposer instead of behind it.
+// ---------------------------------------------------------------------------
+// True for a module that sits in the application's own directory. The loader
+// searches there first, so such a module is the one the application's imports
+// already resolve to: an app-local proxy, part of the application's own
+// deployment, whose forwarding is resolved cooperatively with us. A module that
+// re-exports the graphics entry points from anywhere else has been loaded
+// explicitly to interpose, and that is the one the hook belongs in front of.
+static bool IsInApplicationDirectory(HMODULE module)
+{
+  wchar_t appPath[MAX_PATH] = {};
+  if(GetModuleFileNameW(NULL, appPath, MAX_PATH) == 0)
+    return false;
+
+  wchar_t *slash = wcsrchr(appPath, L'\\');
+  if(slash == NULL)
+    return false;
+  slash[1] = 0;
+
+  wchar_t modulePath[MAX_PATH] = {};
+  if(GetModuleFileNameW(module, modulePath, MAX_PATH) == 0)
+    return false;
+
+  return _wcsnicmp(modulePath, appPath, wcslen(appPath)) == 0;
+}
+
+static bool TargetIsInSystemDirectory(void *target)
+{
+  wchar_t systemDir[MAX_PATH] = {};
+  GetSystemDirectoryW(systemDir, MAX_PATH);
+
+  HMODULE module = (HMODULE)ModuleBaseForAddress(target);
+  if(module == NULL)
+    return false;
+
+  wchar_t path[MAX_PATH] = {};
+  if(GetModuleFileNameW(module, path, MAX_PATH) == 0)
+    return false;
+
+  return _wcsnicmp(path, systemDir, wcslen(systemDir)) == 0;
+}
+
+static void MoveInlineGraphicsHooksToTopmostProviders()
+{
+  SCOPED_LOCK(s_InlineGraphicsHookLock);
+
+  rdcarray<void *> toMove;
+  for(auto &hookIt : s_InlineGraphicsHooks)
+  {
+    InlineGraphicsHook &installed = hookIt.second;
+
+    if(installed.function.empty() || !TargetIsInSystemDirectory(installed.target))
+      continue;
+
+    if(FindTopmostProvider(installed.function.c_str(), NULL) != NULL)
+      toMove.push_back(installed.target);
+  }
+
+  for(void *target : toMove)
+  {
+    auto hookIt = s_InlineGraphicsHooks.find(target);
+    if(hookIt == s_InlineGraphicsHooks.end())
+      continue;
+
+    InlineGraphicsHook installed = hookIt->second;
+
+    HMODULE provider = FindTopmostProvider(installed.function.c_str(), NULL);
+    if(provider == NULL)
+      continue;
+
+    // A provider in the application's own directory is the application's own
+    // proxy and keeps the existing arrangement. Anywhere else it is an
+    // interposing layer, and the hook belongs in front of it.
+    if(IsInApplicationDirectory(provider))
+      continue;
+
+    void *newTarget = (void *)GetProcAddress(provider, installed.function.c_str());
+    if(newTarget == NULL || newTarget == installed.target)
+      continue;
+
+    if(s_InlineGraphicsHooks.find(newTarget) != s_InlineGraphicsHooks.end())
+      continue;
+
+    InlineGraphicsHook moved;
+    moved.target = newTarget;
+    moved.detour = installed.detour;
+    moved.library = installed.library;
+    moved.function = installed.function;
+
+    if(!GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCSTR)newTarget,
+                           &moved.ownerModule))
+      continue;
+
+    moved.hook = Win32CreateInlineHook(newTarget, moved.detour, &moved.trampoline);
+    if(moved.hook == NULL)
+    {
+      FreeLibrary(moved.ownerModule);
+      continue;
+    }
+
+    if(!Win32EnableInlineHook(moved.hook))
+    {
+      Win32DestroyInlineHook(moved.hook);
+      FreeLibrary(moved.ownerModule);
+      continue;
+    }
+
+    // Every slot that pointed at the old trampoline has to follow the move, or
+    // a detour would keep calling into the previous location.
+    for(void **slot : installed.originalSlots)
+      if(slot && *slot == installed.trampoline)
+        *slot = moved.trampoline;
+
+    // Restores the system DLL's bytes, leaving the far side untouched.
+    if(installed.chained)
+      RestoreChainJump(installed.target, installed.savedPrologue);
+    else
+      Win32DestroyInlineHook(installed.hook);
+
+    s_InlineGraphicsHooks.erase(hookIt);
+    s_InlineGraphicsHooks[newTarget] = moved;
+
+    wchar_t providerPath[MAX_PATH] = {};
+    GetModuleFileNameW(provider, providerPath, MAX_PATH);
+
+    RDCLOG("Moved graphics entry hook for %s!%s from the system DLL to the provider %ls (%p)",
+           moved.library.c_str(), moved.function.c_str(), providerPath, newTarget);
+
+    FreeLibrary(installed.ownerModule);
+  }
+}
+
 static void InstallInlineGraphicsHooks()
 {
+  InstallInProcessDumpBlock();
+
+#if !(defined(DCOMP_INLINE_GRAPHICS_HOOKS_IN_PROXYONLY) && DCOMP_INLINE_GRAPHICS_HOOKS_IN_PROXYONLY)
   if(IsProxyOnly())
     return;
+#endif
+  // With DCOMP_INLINE_GRAPHICS_HOOKS_IN_PROXYONLY=1 the entry detours stay
+  // installed under ProxyOnly: a self-resolving target needs them while every
+  // IAT patch stays skipped, and IAT patching is both useless there and the
+  // surface that anti-tamper import-table checks react to.
 
   SCOPED_LOCK(s_InlineGraphicsHookLock);
 
@@ -1065,10 +1590,54 @@ static void InstallInlineGraphicsHooks()
       InlineGraphicsHook installed;
       installed.target = target;
       installed.detour = hook.hook;
+      installed.library = libraryIt->first;
+      installed.function = hook.function;
+
+      // Keep the target code mapped until SafetyHook has restored its original bytes. Without
+      // this reference, a FreeLibrary between installation and RemoveHooks can leave the hook
+      // handle pointing into an unloaded (or reused) module.
+      if(!GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCSTR)target,
+                             &installed.ownerModule))
+      {
+        RDCERR("Could not retain graphics entry module for %s!%s at %p", libraryIt->first.c_str(),
+               hook.function.c_str(), target);
+        continue;
+      }
+
+      // If another component already detoured this entry point, chain behind it
+      // rather than replacing it. Nothing here is Streamline-specific: any
+      // interposer, overlay or app-local proxy is detected the same way.
+      ForeignEntryDetour foreign;
+      if(FindForeignEntryDetour(target, foreign))
+      {
+        if(!WriteChainJump(target, hook.hook, installed.savedPrologue))
+        {
+          FreeLibrary(installed.ownerModule);
+          continue;
+        }
+
+        installed.chained = true;
+
+        // Slots that share this target continue into the foreign detour exactly
+        // as they would continue into a trampoline of our own.
+        installed.trampoline = foreign.detour;
+        *hook.orig = foreign.detour;
+        RememberOriginalSlot(installed, hook.orig);
+
+        s_InlineGraphicsHooks[target] = installed;
+
+        RDCLOG("Chained graphics entry hook for %s!%s at %p: existing %s detour into %s+0x%llx",
+               libraryIt->first.c_str(), hook.function.c_str(), target,
+               foreign.shape ? foreign.shape : "unknown", foreign.module,
+               (unsigned long long)foreign.offset);
+        continue;
+      }
+
       installed.hook = Win32CreateInlineHook(target, hook.hook, &installed.trampoline);
 
       if(installed.hook == NULL)
       {
+        FreeLibrary(installed.ownerModule);
         RDCERR("Could not create graphics entry hook for %s!%s at %p", libraryIt->first.c_str(),
                hook.function.c_str(), target);
         continue;
@@ -1083,38 +1652,66 @@ static void InstallInlineGraphicsHooks()
       {
         *hook.orig = target;
         Win32DestroyInlineHook(installed.hook);
+        FreeLibrary(installed.ownerModule);
         RDCERR("Could not enable graphics entry hook for %s!%s at %p", libraryIt->first.c_str(),
                hook.function.c_str(), target);
         continue;
       }
 
       s_InlineGraphicsHooks[target] = installed;
-      RDCLOG("Installed graphics entry hook for %s!%s at %p", libraryIt->first.c_str(),
-             hook.function.c_str(), target);
+      wchar_t hookedModulePath[MAX_PATH] = {};
+      GetModuleFileNameW(module, hookedModulePath, MAX_PATH);
+
+      RDCLOG("Installed graphics entry hook for %s!%s at %p in %ls", libraryIt->first.c_str(),
+             hook.function.c_str(), target, hookedModulePath);
     }
   }
+
+  // An entry point that a re-exporting layer now provides is moved onto it,
+  // which removes the hook from the real DLL underneath at the same time.
+  // Leaving both in place would put the layer's own calls back through our
+  // detour, which is the arrangement this exists to avoid.
+  MoveInlineGraphicsHooksToTopmostProviders();
 }
 
 static void RemoveInlineGraphicsHooks()
 {
-  SCOPED_LOCK(s_InlineGraphicsHookLock);
+  rdcarray<HMODULE> ownerModules;
 
-  if(s_InlineGraphicsHooks.empty())
-    return;
-
-  for(auto &hookIt : s_InlineGraphicsHooks)
   {
-    InlineGraphicsHook &installed = hookIt.second;
+    SCOPED_LOCK(s_InlineGraphicsHookLock);
 
-    Win32DestroyInlineHook(installed.hook);
-    installed.hook = NULL;
+    for(auto &hookIt : s_InlineGraphicsHooks)
+    {
+      InlineGraphicsHook &installed = hookIt.second;
 
-    for(void **slot : installed.originalSlots)
-      if(slot && *slot == installed.trampoline)
-        *slot = installed.target;
+      if(installed.chained)
+      {
+        // Hand-written jump: restore the foreign detour's bytes, which is what
+        // leaves the other component's hook intact and working.
+        RestoreChainJump(installed.target, installed.savedPrologue);
+      }
+      else
+      {
+        Win32DestroyInlineHook(installed.hook);
+        installed.hook = NULL;
+      }
+
+      for(void **slot : installed.originalSlots)
+        if(slot && *slot == installed.trampoline)
+          *slot = installed.target;
+
+      ownerModules.push_back(installed.ownerModule);
+      installed.ownerModule = NULL;
+    }
+
+    s_InlineGraphicsHooks.clear();
   }
 
-  s_InlineGraphicsHooks.clear();
+  // Releasing the last reference can run DLL detach callbacks. Do that after dropping the hook
+  // lock so a callback that loads a module cannot re-enter HookAllModules while it is held.
+  for(HMODULE module : ownerModules)
+    FreeLibrary(module);
 }
 #endif
 
@@ -1226,6 +1823,11 @@ static void HookAllModules()
 
 #if defined(DCOMP_INLINE_GRAPHICS_HOOKS) && DCOMP_INLINE_GRAPHICS_HOOKS
   InstallInlineGraphicsHooks();
+
+  // A module that re-exports the graphics entry points can load after we have
+  // already hooked the system DLL. Re-checked on every module load so the hook
+  // ends up in front of it rather than behind it.
+  MoveInlineGraphicsHooksToTopmostProviders();
 #endif
 
   Atomic::CmpExch32(&s_HookData->posthooking, 1, 0);
