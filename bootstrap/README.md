@@ -5,7 +5,8 @@ explicitly authorised Windows application whose graphics imports must be
 intercepted before normal DComp injection or attachment can run.
 
 The bootstrap is intentionally separate from `renderdoc.sln` and is not
-installed or enabled by default. Each proxy performs only these steps:
+installed or enabled by default. The three system-DLL proxies perform these
+steps:
 
 1. `DllMain` records its own module and the original `GetProcAddress`, then
    disables thread notifications.
@@ -17,8 +18,9 @@ installed or enabled by default. Each proxy performs only these steps:
 4. If loading, the API handshake, or hook verification fails, it restores the
    cached System32 targets and remains a plain forwarder.
 
-No executable-specific checks, PEB edits, file renaming, entry-point patches,
-or bundled detour library are part of this implementation.
+The Aftermath proxy loads a renamed original from its own directory and starts
+the optional Core on a worker thread. Its forwarding path does not depend on
+the Core handshake. Deployment requires renaming the original DLL.
 
 ## Build
 
@@ -36,8 +38,9 @@ MSVC and ClangCL outputs are isolated under the normal configuration root:
 - `bootstrap\dxgi_proxy\dxgi.dll`
 - `bootstrap\d3d11_proxy\d3d11.dll`
 - `bootstrap\d3d12_proxy\d3d12.dll`
+- `bootstrap\aftermath_proxy\GFSDK_Aftermath_Lib.x64.dll` (see below)
 
-All three DLLs use the static MSVC runtime. They are built after the Core, but
+All bootstrap DLLs use the static MSVC runtime. They are built after the Core, but
 remain standalone projects so an ordinary solution build stays aligned with
 upstream RenderDoc.
 
@@ -48,11 +51,20 @@ the application executable:
 
 - D3D11: `dxgi.dll`, `d3d11.dll`, and `dgcore.dll`.
 - D3D12: `dxgi.dll`, `d3d12.dll`, and `dgcore.dll`.
+- Aftermath slot: rename the application's own `GFSDK_Aftermath_Lib.x64.dll` to
+  `GFSDK_Aftermath_Lib_orig.dll`, then copy the built
+  `GFSDK_Aftermath_Lib.x64.dll` and `dgcore.dll` beside it.
 
-Set `DCOMP_BOOTSTRAP_LOG` to an absolute path for diagnostics. The historical
-`UE_GRAPHICS_DEBUG` and `UE_GRAPHICS_LOG` names remain compatibility aliases.
+The Aftermath proxy uses an application-local original. Rename that original
+beside the proxy so forwarding resolves it without searching System32. It
+covers 43 names found across the inspected original
+libraries. A called name absent from the installed original fails explicitly.
+Its output is therefore not compared against System32 by the export check.
 
-Proxy export names and ordinals are tied to a Windows SDK/runtime baseline.
+The three system-DLL proxies accept `DCOMP_BOOTSTRAP_LOG` for diagnostics.
+`UE_GRAPHICS_DEBUG` and `UE_GRAPHICS_LOG` remain compatibility aliases.
+
+System-DLL proxy export names and ordinals are tied to a Windows SDK/runtime baseline.
 Compare them with the target machine's System32 and SysWOW64 DLLs before using
 the binaries on a different Windows generation. Release builds that include
 the bootstrap run `check_windows_bootstrap_exports.ps1` against the build

@@ -164,7 +164,8 @@ if($IncludeBootstrap)
   $runtimeFiles += @(
     'bootstrap\dxgi_proxy\dxgi.dll',
     'bootstrap\d3d11_proxy\d3d11.dll',
-    'bootstrap\d3d12_proxy\d3d12.dll'
+    'bootstrap\d3d12_proxy\d3d12.dll',
+    'bootstrap\aftermath_proxy\GFSDK_Aftermath_Lib.x64.dll'
   )
 }
 $matrix = @()
@@ -376,7 +377,7 @@ if($IncludeBootstrap)
 {
   @'
 
-The optional loader-safe DXGI, D3D11, and D3D12 bootstrap DLLs are included
+The optional DXGI, D3D11, D3D12, and x64 Aftermath bootstrap DLLs are included
 below each package's `bootstrap` directory. They are not installed or enabled
 automatically; see the included `bootstrap\README.md`.
 '@ | Add-Content -LiteralPath (Join-Path $OutputDirectory 'README.md') -Encoding utf8

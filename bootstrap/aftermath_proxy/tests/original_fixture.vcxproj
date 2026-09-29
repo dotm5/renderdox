@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{F6253B50-482A-4A72-A671-B536097A7943}</ProjectGuid>
+    <RepoRoot>$(MSBuildThisFileDirectory)..\..\..\</RepoRoot>
+    <SolutionDir Condition="'$(SolutionDir)'=='' or '$(SolutionDir)'=='*Undefined*'">$(RepoRoot)</SolutionDir>
+  </PropertyGroup>
+  <Import Project="$(RepoRoot)util\WindowsSDKTarget.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="$(RepoRoot)util\WindowsSDKFix.props" />
+  <PropertyGroup>
+    <IntDir>$(RDocOutputRoot)obj\aftermath_proxy_test_original\</IntDir>
+    <OutDir>$(RDocOutputRoot)bootstrap\aftermath_proxy\tests\</OutDir>
+    <TargetName>GFSDK_Aftermath_Lib_orig</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PrecompiledHeader></PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="original_fixture.cpp" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

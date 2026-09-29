@@ -191,6 +191,12 @@ try
       'bootstrap\d3d11_proxy\d3d11_proxy.vcxproj',
       'bootstrap\d3d12_proxy\d3d12_proxy.vcxproj'
     )
+    if($Platform -eq 'x64')
+    {
+      # Aftermath is an application-local x64 slot, not a System32 proxy.
+      $bootstrapOutputs += 'bootstrap\aftermath_proxy\GFSDK_Aftermath_Lib.x64.dll'
+      $bootstrapProjects += 'bootstrap\aftermath_proxy\aftermath_proxy.vcxproj'
+    }
 
     foreach($relativeProject in $bootstrapProjects)
     {
