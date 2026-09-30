@@ -1,5 +1,7 @@
 # RenderDoc portable MCP
 
+[项目展示](../../README.md) · [使用指南](../../USAGE.md#3-mcp-control-and-analysis)
+
 本服务通过公共 Python API 提供捕获、回放、资源调查、事件 Diff 和跨 RDC 对齐。
 RenderDoc 核心、驱动和原生数据结构没有新增依赖。服务运行时和原生 Worker 分进程，
 Worker 串行拥有 ReplayController/TargetControl；取消请求不会释放仍在执行的原生事务。
@@ -19,6 +21,30 @@ Worker 串行拥有 ReplayController/TargetControl；取消请求不会释放仍
 默认产物在 `%LOCALAPPDATA%\RenderDocMCP\data`；通过 `--output-dir` 选择持久目录。
 同一目录已由另一服务持有时，自动创建独立实例子目录，不共享原生会话。
 `mcp/component-manifest.json` 记录核心来源、ABI、服务运行时和依赖。
+
+## 实际输出示例
+
+下面是 0.2.0 通过真实 D3D11 捕获生成的产物。点击图片可查看原始尺寸。
+
+| 绘制贡献叠加 | 原始数值变化遮罩 |
+| --- | --- |
+| [![法线缓冲上的绘制贡献叠加](../../assets/readme/mcp-draw-contribution.png)](../../assets/readme/mcp-draw-contribution.png) | [![选定绘制改变的法线缓冲像素](../../assets/readme/mcp-draw-change-mask.png)](../../assets/readme/mcp-draw-change-mask.png) |
+
+示例通过 `visualize_draw_contribution` 比较同一事件启用和省略绘制时的输出，
+选定法线缓冲有 61,385 个像素发生变化。白色表示变化区域，不是整个角色的轮廓分割。
+跨 RDC 常量曲线见主 README 的 [MCP 图例](../../README.md#mcp-analysis-outputs)。
+
+## 首次连接后的捕获流程
+
+1. 用 `get_capabilities` 确认服务和原生 Worker，用 `list_targets` 发现已启用捕获的实例。
+2. 用 `connect_target(targetId=...)` 取得 connectionId。
+3. 用 `capture_sequence(connectionId=..., count=3, intervalSeconds=1, framesPerCapture=1)` 请求三轮捕获。
+4. 用 `get_job(jobId=...)` 等待完成，查看实际帧号、保存位置和捕获归属信息。
+5. 用 `open_capture(captureId=...)` 打开保存的捕获，再等其 job 完成取得 sessionId。
+6. 用 `get_capture_summary`、`find_actions` 开始调查；跨捕获比较接下节的集合与对齐流程。
+
+已有 RDC 可以直接从第 5 步开始，使用 `open_capture(path=...)`。
+`config` 生成的是客户端配置，终端单独运行 `serve --stdio` 会等待 MCP 协议输入。
 
 ## 推荐调查流程
 

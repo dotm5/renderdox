@@ -1,5 +1,7 @@
 # Optional Windows graphics bootstrap
 
+[Project showcase](../README.md) · [Usage guide](../USAGE.md#capture-workflows)
+
 These standalone projects provide a loader-safe bootstrap for an owned or
 explicitly authorised Windows application whose graphics imports must be
 intercepted before normal DComp injection or attachment can run.

@@ -1,5 +1,7 @@
 # Build scripts
 
+[Project showcase](../../README.md) · [Usage guide](../../USAGE.md#builds)
+
 ## RenderDox Windows portable releases
 
 The maintained Windows release path uses PowerShell 7 and builds matching x64
@@ -26,7 +28,7 @@ it packages existing native outputs without rebuilding RenderDoc. See the
 The final CI archives include file hashes and component manifests, and are
 expanded again to check their contents and DLL dependency closure before
 upload. Continuous releases require successful CMake and MSBuild workflows
-for the same source commit. See the [main README](../../README.md#builds).
+for the same source commit. See the [release workflow guide](../../USAGE.md#builds).
 
 ## Upstream build.sh workflow
 
