@@ -1,0 +1,8 @@
+{
+  "extension_api": 1,
+  "name": "RenderDoc MCP Bridge",
+  "version": "0.1.0",
+  "description": "Select saved captures and events through public GUI extension APIs.",
+  "author": "RenderDoc portable fork",
+  "url": "https://github.com/dotm5/renderdox"
+}

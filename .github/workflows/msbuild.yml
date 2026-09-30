@@ -99,6 +99,28 @@ jobs:
             -OutputDirectory $output `
             -IncludeBootstrap
 
+      - name: Set up portable MCP packaging Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Bundle portable MCP service and compatible worker
+        shell: pwsh
+        run: |
+          $output = Join-Path $env:RUNNER_TEMP 'dcomp-release'
+          $venv = Join-Path $env:RUNNER_TEMP 'mcp-build-venv'
+          python -m venv $venv
+          if($LASTEXITCODE -ne 0) { throw 'MCP packaging environment failed' }
+          $python = Join-Path $venv 'Scripts/python.exe'
+          & $python -m pip install --disable-pip-version-check -r tools/renderdoc-mcp/packaging/requirements.txt
+          if($LASTEXITCODE -ne 0) { throw 'MCP packaging dependencies failed' }
+          & $python tools/renderdoc-mcp/packaging/bundle.py `
+            --package-root (Join-Path $output 'msvc-release') `
+            --package-root (Join-Path $output 'clangcl-release') `
+            --build-root (Join-Path $env:RUNNER_TEMP 'mcp-freeze') `
+            --matrix-manifest (Join-Path $output 'manifest.json')
+          if($LASTEXITCODE -ne 0) { throw 'Portable MCP packaging failed' }
+
       - name: Verify packaged Python and Qt bindings
         shell: pwsh
         run: |
@@ -130,7 +152,10 @@ jobs:
                 'bootstrap\dxgi_proxy\dxgi.dll',
                 'bootstrap\d3d11_proxy\d3d11.dll',
                 'bootstrap\d3d12_proxy\d3d12.dll',
-                'bootstrap\aftermath_proxy\GFSDK_Aftermath_Lib.x64.dll'))
+                'bootstrap\aftermath_proxy\GFSDK_Aftermath_Lib.x64.dll',
+                'renderdoc-mcp.exe', 'mcp\component-manifest.json',
+                'mcp\worker-runtime\python.exe', 'mcp\source\worker\entry.py',
+                'mcp-runtime\python312.dll'))
             {
               if(-not (Test-Path -LiteralPath (Join-Path $root $relative) -PathType Leaf))
               {

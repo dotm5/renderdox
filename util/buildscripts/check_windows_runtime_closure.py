@@ -42,7 +42,7 @@ SYSTEM_MODULES = {
     "oleaut32.dll", "uxtheme.dll", "dwmapi.dll", "imm32.dll", "winmm.dll",
     "wtsapi32.dll", "version.dll", "setupapi.dll", "cfgmgr32.dll",
     "devobj.dll", "drvstore.dll", "windows.storage.dll", "kernel.appcore.dll",
-    "powrprof.dll", "umpdc.dll", "ntmarta.dll",
+    "powrprof.dll", "umpdc.dll", "ntmarta.dll", "propsys.dll", "msi.dll",
     # Networking
     "ws2_32.dll", "wsock32.dll", "iphlpapi.dll", "dnsapi.dll", "mpr.dll",
     "nsi.dll", "dsparse.dll", "winhttp.dll", "wininet.dll", "urlmon.dll",

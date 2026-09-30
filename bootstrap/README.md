@@ -18,9 +18,15 @@ steps:
 4. If loading, the API handshake, or hook verification fails, it restores the
    cached System32 targets and remains a plain forwarder.
 
+After initialization, the system-DLL proxies publish their resolved export
+targets and forward subsequent calls through assembly jump paths. Export
+resolution and Core activation are initialization work rather than repeated
+per-call work.
+
 The Aftermath proxy loads a renamed original from its own directory and starts
 the optional Core on a worker thread. Its forwarding path does not depend on
-the Core handshake. Deployment requires renaming the original DLL.
+the Core handshake. Deployment requires renaming the original DLL; see the
+[Aftermath deployment guide](aftermath_proxy/README.md) for activation and names.
 
 ## Build
 
@@ -43,6 +49,10 @@ MSVC and ClangCL outputs are isolated under the normal configuration root:
 All bootstrap DLLs use the static MSVC runtime. They are built after the Core, but
 remain standalone projects so an ordinary solution build stays aligned with
 upstream RenderDoc.
+
+MSBuild CI includes all four outputs in both the MSVC and ClangCL portable
+archives. They are optional deployment files: choose the proxy matching the
+application's import path rather than copying every proxy into one directory.
 
 ## Deployment
 

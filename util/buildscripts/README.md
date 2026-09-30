@@ -1,8 +1,38 @@
 # Build scripts
 
+## RenderDox Windows portable releases
+
+The maintained Windows release path uses PowerShell 7 and builds matching x64
+MSVC and ClangCL packages:
+
+```powershell
+pwsh -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass `
+  -File .\util\buildscripts\build_windows_release_matrix.ps1 `
+  -Target Rebuild -ChildPropagation AllGenerations -IncludeBootstrap
+```
+
+`build_windows_release.ps1` builds one toolchain. The matrix command creates
+`msvc-release`, `clangcl-release` and a matrix manifest under the output
+directory. Native packages contain the GUI, capture runtime, injection shim,
+Qt plugins, Python and PySide2/Shiboken2. `-IncludeBootstrap` adds the DXGI,
+D3D11, D3D12 and x64 Aftermath proxies.
+
+The MSBuild workflow adds the portable MCP service to both packages using
+`tools/renderdoc-mcp/packaging/bundle.py`. This step freezes the Python 3.12
+service and adds an embedded worker interpreter matching `renderdoc.pyd`;
+it packages existing native outputs without rebuilding RenderDoc. See the
+[MCP packaging guide](../../tools/renderdoc-mcp/README.md#开发和云端打包) for local use.
+
+The final CI archives include file hashes and component manifests, and are
+expanded again to check their contents and DLL dependency closure before
+upload. Continuous releases require successful CMake and MSBuild workflows
+for the same source commit. See the [main README](../../README.md#builds).
+
+## Upstream build.sh workflow
+
 The build.sh in this folder is used for building packaged builds of renderdoc on both windows and linux.
 
-On windows the only supported environment is a MSYS2 bash shell, other shells may work but modifications to support them are unlikely to be accepted.
+For this upstream script, the supported Windows environment is an MSYS2 bash shell.
 
 Running build.sh will print the usage instructions. It can be run from anywhere.
 

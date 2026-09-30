@@ -16,9 +16,30 @@ RenderDox is a downstream branch of [RenderDoc](https://github.com/baldurk/rende
 
 The current public compatibility version is **v1.46**, taken from the upstream v1.46 release tag. Reviewed maintenance patches taken after that tag do not claim the next upstream release.
 
-The project keeps RenderDoc's capture-and-replay architecture and `.rdc` workflow while adding a reproducible Windows release matrix, an isolated runtime identity, two early-capture deployment paths, controlled child-process propagation, and a modern localized desktop interface. It is independently maintained and is not supported by the upstream RenderDoc maintainers.
+The project keeps RenderDoc's capture-and-replay architecture and `.rdc` workflow while adding a reproducible Windows release matrix, an isolated runtime identity, early-capture proxies and direct injection, child-process propagation, a modern localized desktop interface, and a portable MCP service for capture and replay analysis. It is independently maintained and is not supported by the upstream RenderDoc maintainers.
 
 Use RenderDox only with software you own or are explicitly authorised to analyse. It does not provide or document protection bypasses.
+
+Getting started
+---------------
+
+- **Desktop capture and replay:** extract a complete [portable release](https://github.com/dotm5/renderdox/releases) and start `dgcoreui.exe`.
+- **LLM capture and analysis:** start `renderdoc-mcp.exe serve --stdio`, or generate a client configuration with `renderdoc-mcp.exe config`. See the [MCP guide](tools/renderdoc-mcp/README.md).
+- **Early capture:** follow the [bootstrap guide](bootstrap/README.md) for DXGI, D3D11, D3D12, or an application-local Aftermath slot.
+- **Build and package:** use the [Windows release scripts](util/buildscripts/README.md). MSBuild CI includes the MCP runtime and all four bootstrap DLLs in both portable packages.
+
+Recent progress
+---------------
+
+| Area | Current implementation |
+| --- | --- |
+| Upstream integration | RenderDoc v1.46 compatibility, with maintenance commits integrated through `2e32b910d` |
+| Windows hooks | SafetyHook inline hooks and Zydis decoding; GetProcAddress lookups use a loaded-module index and loader notifications while preserving first-binding priority and unload/reload handling |
+| Proxy forwarding | DXGI/D3D proxies publish resolved export targets after initialization and use direct assembly forwarding; the x64 Aftermath proxy forwards to the renamed application-local original |
+| Portable packages | MSVC and ClangCL packages include Python, PySide2/Shiboken2, Qt plugins and four bootstrap DLLs; extracted archive contents are checked against manifest hashes and DLL dependencies |
+| Portable MCP 0.2.0 | 66 tools for runtime capture, replay investigation, event/resource matching, numeric Diff, GPU counters, constant timelines, annotations and evidence export |
+
+The MCP service uses public Python replay and target-control APIs through dedicated native workers. It adds no dependency to the capture runtime or native replay data structures. Its capture and analysis workflows have been exercised on a live D3D11 target; individual replay features remain subject to backend support.
 
 Screenshots
 -----------
@@ -43,10 +64,10 @@ The graphics capture and replay implementation remains upstream-derived. The mai
 | Runtime API | `RENDERDOC_GetAPI` | Isolated `DCOMP_GetAPI` entry point; the upstream runtime export is intentionally absent |
 | Windows releases | Upstream build and installer layouts | Complete x64 MSVC and ClangCL portable packages from one source commit, with manifests and contract checks |
 | Injected runtime | Upstream configuration | Static MSVC runtime for `dgcore.dll`, the injection shim, and optional bootstrap DLLs |
-| Early capture | Standard launch, inject, and attach paths | Standard paths plus an opt-in DXGI/D3D import bootstrap and tool-agnostic direct DLL injection |
+| Early capture | Standard launch, inject, and attach paths | Standard paths plus opt-in DXGI/D3D and Aftermath proxies, and tool-agnostic direct DLL injection |
 | Child processes | Standard capture option | All-generation propagation by default, with a bounded one-generation build option |
 | Desktop UI | Upstream QRenderDoc interface | DComp identity, Modern Light styling, modern icon states, Chinese localisation, and compact pipeline/capture summaries |
-| Analysis extensions | Built-in replay UI and APIs | Read-only capture health/pass analysis, structured table export, action visibility, and evidence-package tooling |
+| Analysis extensions | Built-in replay UI and APIs | Capture health/pass analysis, structured export, action visibility, evidence packages, and a portable MCP service |
 
 The `.rdc` format, Qt/Python replay components, and most user-facing replay concepts intentionally stay close to upstream. A capture should still be replayed with a compatible DComp or RenderDoc build; downstream and future upstream versions are not assumed to be interchangeable without testing.
 
@@ -55,7 +76,7 @@ Capture workflows
 
 RenderDox supports two distinct Windows activation routes. Use one route per run so that loading and hook timing remain easy to diagnose.
 
-### 1. DXGI import bootstrap
+### 1. Import proxy bootstrap
 
 This route is useful when an owned application follows the normal Windows DLL search path and must load the capture runtime before its first DXGI/D3D call. The bootstrap DLLs are optional, are not part of the default solution graph, and remain plain System32 forwarders unless explicitly enabled.
 
@@ -73,6 +94,7 @@ Copy matching-architecture files from one package next to the application execut
 | --- | --- |
 | D3D11 | `bootstrap\dxgi_proxy\dxgi.dll`, `bootstrap\d3d11_proxy\d3d11.dll`, and `dgcore.dll` |
 | D3D12 | `bootstrap\dxgi_proxy\dxgi.dll`, `bootstrap\d3d12_proxy\d3d12.dll`, and `dgcore.dll` |
+| Aftermath x64 slot | `bootstrap\aftermath_proxy\GFSDK_Aftermath_Lib.x64.dll`, `dgcore.dll`, and the application's original renamed to `GFSDK_Aftermath_Lib_orig.dll` |
 
 Enable the bootstrap in the environment inherited by the application:
 
@@ -87,6 +109,7 @@ After DComp reports an active graphics API, open `dgcoreui.exe` and attach to th
 This workflow only applies when the target actually resolves the local DXGI/D3D import path. A custom loader, private graphics function table, or different RHI path can bypass the bootstrap; use direct injection instead of adding application-specific logic to the proxies. Export names and ordinals are tied to the build machine's Windows baseline, so packages for a different Windows generation must be revalidated against its System32 DLLs.
 
 See [bootstrap/README.md](bootstrap/README.md) for the loader-safety and fallback contracts.
+The [Aftermath guide](bootstrap/aftermath_proxy/README.md) describes its sibling-original layout and the optional `dgcore.enable` activation marker.
 
 ### 2. Early direct injection
 
@@ -108,6 +131,22 @@ pwsh -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass `
 
 A loaded module is not proof that capture is ready: the graphics hooks, target-control channel, active API registration, and replayable `.rdc` output are separate checkpoints. Cross-bitness child injection also requires the matching 32-bit components.
 
+### 3. MCP control and analysis
+
+The portable MCP service can discover and connect to RenderDoc-enabled targets, launch an application or inject a process, request one capture or a timed sequence, collect the resulting RDC files, and open them for analysis.
+
+```powershell
+.\renderdoc-mcp.exe config
+.\renderdoc-mcp.exe config --format codex
+.\renderdoc-mcp.exe serve --stdio
+```
+
+The complete package carries both the service runtime and the native worker interpreter. End users do not need a system Python installation, pip, or an MSI installer. Keep the package together, and regenerate the client configuration if its location changes.
+
+For a captured frame, the tools can inspect actions, bindings, constants, shaders, geometry, textures and pixel history; visualize a draw's output contribution; trace resource dependencies; and fetch replay GPU counters. Capture collections support scored EID and resource candidates, explicit alignment anchors, output Diff and constant timelines. Notes and evidence can be exported as Markdown, JSON and ZIP.
+
+See [tools/renderdoc-mcp/README.md](tools/renderdoc-mcp/README.md) for tool parameters, asynchronous jobs, concurrency behavior and the optional GUI bridge.
+
 Builds
 ------
 
@@ -125,7 +164,7 @@ Unless `-OutputDirectory` is supplied, the script creates a timestamped director
 - `clangcl-release` — ClangCL Release package with isolated outputs.
 - `manifest.json` — source commit, toolchain, file size, and SHA-256 inventory.
 
-Each package contains the GUI, command-line tools, capture runtime, injection shim, Qt plugins, Python runtime, Python modules, Vulkan descriptor, and symbol helpers. `-IncludeBootstrap` adds the optional DXGI, D3D11, and D3D12 bootstrap outputs.
+Each native package contains the GUI, command-line tools, capture runtime, injection shim, Qt plugins, Python runtime, Python modules, Vulkan descriptor, and symbol helpers. `-IncludeBootstrap` adds the optional DXGI, D3D11, D3D12 and x64 Aftermath bootstrap outputs. The MSBuild workflow then bundles `renderdoc-mcp.exe`, its service runtime and an ABI-compatible native worker into both packages, before creating and verifying the final archives. Local native build scripts can use the separate [MCP packaging step](tools/renderdoc-mcp/README.md#开发和云端打包).
 
 For a single toolchain, use `util/buildscripts/build_windows_release.ps1`. The scripts validate product identity, exports, embedded DXIL, static-runtime requirements for injected components, Vulkan descriptor identity, required runtime files, and optional bootstrap exports before declaring success.
 
@@ -162,6 +201,8 @@ Documentation and support
 
 - RenderDox issues: [github.com/dotm5/renderdox/issues](https://github.com/dotm5/renderdox/issues)
 - Upstream RenderDoc: [repository](https://github.com/baldurk/renderdoc), [documentation](https://renderdoc.org/docs), and [builds](https://renderdoc.org/builds)
+- Portable MCP: [capture and analysis guide](tools/renderdoc-mcp/README.md)
+- Windows deployment: [bootstrap guide](bootstrap/README.md) and [release scripts](util/buildscripts/README.md)
 - Contribution guide: [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)
 - Code of Conduct: [docs/CODE_OF_CONDUCT.md](docs/CODE_OF_CONDUCT.md)
 - Upstream extensions: [renderdoc-contrib](https://github.com/baldurk/renderdoc-contrib)
