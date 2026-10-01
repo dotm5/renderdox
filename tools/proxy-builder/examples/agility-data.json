@@ -1,0 +1,1 @@
+{"schemaVersion":1,"profile":"agility","provider":{"kind":"sibling","path":"d3d12_orig.dll"},"dataExports":{"D3D12DeviceRemovedExtendedData":{"type":"opaque-address"}},"activation":"first-call"}

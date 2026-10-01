@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Release|x64"><Configuration>Release</Configuration><Platform>x64</Platform></ProjectConfiguration>
+    <ProjectConfiguration Include="ClangRelease|x64"><Configuration>ClangRelease</Configuration><Platform>x64</Platform></ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals"><ProjectGuid>{C85CE204-FBB4-4E0D-9196-DCA3ABF0A33A}</ProjectGuid><WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion></PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props"/>
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset Condition="'$(Configuration)'=='Release'">v143</PlatformToolset>
+    <PlatformToolset Condition="'$(Configuration)'=='ClangRelease'">ClangCL</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props"/>
+  <PropertyGroup><OutDir>$(ProjectDir)bin\$(Configuration)\</OutDir><IntDir>$(ProjectDir)obj\$(Configuration)\</IntDir><TargetName>d3d12-order</TargetName></PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile><RuntimeLibrary>MultiThreaded</RuntimeLibrary><WarningLevel>Level4</WarningLevel><TreatWarningAsError>true</TreatWarningAsError><ExceptionHandling>Sync</ExceptionHandling><AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)..\..\renderdoc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <Link><SubSystem>Console</SubSystem><AdditionalDependencies>d3d12.lib;dxgi.lib;user32.lib;%(AdditionalDependencies)</AdditionalDependencies></Link>
+  </ItemDefinitionGroup>
+  <ItemGroup><ClCompile Include="d3d12_order.cpp"/></ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets"/>
+</Project>

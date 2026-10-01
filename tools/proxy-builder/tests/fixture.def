@@ -1,0 +1,7 @@
+LIBRARY fixture.dll
+EXPORTS
+  Sum8 @3
+  Alias=Sum8 @4
+  OrdinalOnly=Sum8 @7 NONAME
+  Float8 @10
+  ForwardSleep=KERNEL32.Sleep @15

@@ -1,0 +1,3 @@
+LIBRARY data.dll
+EXPORTS
+  ExportedData @1 DATA

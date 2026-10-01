@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<ItemGroup Label="ProjectConfigurations"><ProjectConfiguration Include="Release|x64"><Configuration>Release</Configuration><Platform>x64</Platform></ProjectConfiguration><ProjectConfiguration Include="ClangRelease|x64"><Configuration>ClangRelease</Configuration><Platform>x64</Platform></ProjectConfiguration></ItemGroup>
+<PropertyGroup Label="Globals"><ProjectGuid>{2C3FDDB5-7B56-4B6A-8468-D4E606E8ED75}</ProjectGuid><WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion></PropertyGroup>
+<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props"/>
+<PropertyGroup Label="Configuration"><ConfigurationType>Application</ConfigurationType><PlatformToolset Condition="'$(Configuration)'=='Release'">v143</PlatformToolset><PlatformToolset Condition="'$(Configuration)'=='ClangRelease'">ClangCL</PlatformToolset></PropertyGroup>
+<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props"/>
+<PropertyGroup><OutDir>$(ProjectDir)bin\$(MSBuildProjectName)\$(Configuration)\</OutDir><IntDir>$(ProjectDir)obj\$(MSBuildProjectName)\$(Configuration)\</IntDir><TargetName>proxy-smoke</TargetName></PropertyGroup>
+<ItemDefinitionGroup><ClCompile><RuntimeLibrary>MultiThreaded</RuntimeLibrary><ExceptionHandling>Sync</ExceptionHandling><WarningLevel>Level4</WarningLevel><TreatWarningAsError>true</TreatWarningAsError></ClCompile><Link><SubSystem>Console</SubSystem></Link></ItemDefinitionGroup>
+<ItemGroup><ClCompile Include="smoke.cpp"/></ItemGroup><Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets"/>
+</Project>

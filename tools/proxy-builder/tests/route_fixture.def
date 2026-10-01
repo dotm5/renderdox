@@ -1,0 +1,14 @@
+LIBRARY fixture.dll
+EXPORTS
+ Sum8 @3
+ Alias=Sum8 @4
+ OrdinalOnly=Sum8 @7 NONAME
+ Float8 @10
+ ForwardSleep=KERNEL32.Sleep @15
+ nvapi_QueryInterface @20
+ vkGetInstanceProcAddr @21
+ vkGetDeviceProcAddr @22
+ D3D12GetInterface @23
+ OriginalSawCore @24
+ ExportedData @25 DATA
+ DataAlias=ExportedData @26 DATA

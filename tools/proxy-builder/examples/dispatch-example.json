@@ -1,0 +1,1 @@
+{"schemaVersion":1,"dispatch":{"nvapi":{"0x1234":"Sum8"},"vulkan":{"vkSum8":"Sum8","vkGetInstanceProcAddr":"vkGetInstanceProcAddr","vkGetDeviceProcAddr":"vkGetDeviceProcAddr"}}}

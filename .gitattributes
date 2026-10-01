@@ -44,3 +44,6 @@
 # Specific files that should be left alone
 renderdoccmd/resource.h binary
 renderdoc/data/resource.h binary
+
+# Preserve the vendored OpenXR bytes and their upstream whitespace/hashes.
+tools/proxy-builder/vendor/openxr/** text eol=lf whitespace=-blank-at-eol

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<ItemGroup Label="ProjectConfigurations"><ProjectConfiguration Include="Release|x64"><Configuration>Release</Configuration><Platform>x64</Platform></ProjectConfiguration><ProjectConfiguration Include="ClangRelease|x64"><Configuration>ClangRelease</Configuration><Platform>x64</Platform></ProjectConfiguration></ItemGroup>
+<PropertyGroup Label="Globals"><ProjectGuid>{88F39C40-2275-4F76-B0F1-442BF565EB46}</ProjectGuid><WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion></PropertyGroup>
+<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props"/>
+<PropertyGroup Label="Configuration"><ConfigurationType>$(FixtureType)</ConfigurationType><PlatformToolset Condition="'$(Configuration)'=='Release'">v143</PlatformToolset><PlatformToolset Condition="'$(Configuration)'=='ClangRelease'">ClangCL</PlatformToolset></PropertyGroup>
+<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props"/>
+<ItemDefinitionGroup><ClCompile><RuntimeLibrary>MultiThreaded</RuntimeLibrary><LanguageStandard>stdcpp17</LanguageStandard><ExceptionHandling>Sync</ExceptionHandling><WarningLevel>Level4</WarningLevel><TreatWarningAsError>true</TreatWarningAsError><AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions><AdditionalOptions Condition="'$(Configuration)'=='ClangRelease'">/utf-8 /clang:-Wno-cast-function-type-mismatch %(AdditionalOptions)</AdditionalOptions><AdditionalIncludeDirectories>$(FixtureInclude);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories></ClCompile><Link><ModuleDefinitionFile>$(FixtureDef)</ModuleDefinitionFile><AdditionalDependencies>$(FixtureLib);%(AdditionalDependencies)</AdditionalDependencies></Link></ItemDefinitionGroup>
+<ItemGroup><ClCompile Include="$(FixtureSource)"/></ItemGroup><Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets"/>
+</Project>
