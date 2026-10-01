@@ -1,16 +1,20 @@
-# Code Explanation
+# RenderDox code layout
 
-This is a rough 'table of contents' overview of how the main code components are organised:
+[Project showcase](../../README.md) · [Development notes](../CONTRIBUTING.md)
 
-    renderdoc/ 
-        CMakeLists.txt           ; The cmake file, will recurse into subdirectories to build them
-        renderdoc.sln            ; VS2015 solution for windows building
-        renderdoc/
-            3rdparty/            ; third party utilities & libraries included
-            drivers/             ; API-specific back-ends, can be individually skipped/removed
-            ...                  ; everything else in here consists of the core renderdoc runtime
-        renderdoccmd/            ; A small C++ utility program that runs to do various little tasks
-        renderdocshim/           ; A tiny C DLL using only kernel32.dll that is used for global hooking
-        qrenderdoc/              ; The Qt UI layer built on top of renderdoc/
-        docs/                    ; source documentation for the .chm file or http://docs.renderdoc.org/
-        util/                    ; folder for utility/support files - e.g. build scripts, installers, CI config
+| Path | Role |
+| --- | --- |
+| `renderdoc/` | Capture runtime, replay controller, shader tooling and API-specific backends under `driver/` |
+| `qrenderdoc/` | Qt desktop application, GUI extensions and Python integration |
+| `renderdoccmd/` | Native command-line tools |
+| `renderdocshim/` | Windows injection shim |
+| `bootstrap/` | DXGI, D3D11, D3D12 and Aftermath proxies and loader integrations |
+| `safetyhook/`, `zydis/` | Hook and instruction-decoding components |
+| `tools/renderdoc-mcp/` | Portable MCP service, native worker adapters and analysis workflows |
+| `build/product_identity.json` | DComp product and runtime identity contract |
+| `util/buildscripts/` | Release builds, dependency packaging and artifact manifests |
+| `.github/workflows/` | Current cloud build and release workflows |
+| `docs/` | Guides and Sphinx reference sources |
+
+The native Windows solution is `renderdoc.sln`. Its historical source directory names
+remain useful when comparing with RenderDoc; packaged Windows products use the DComp identity.

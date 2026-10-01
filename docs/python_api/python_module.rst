@@ -19,7 +19,7 @@ RenderDoc by default does not ship with a python module that can be loaded into 
 
 It is however possible to build the module as long as you know the exact python version you will be using, and this page details how to do that and the limitations of this setup.
 
-The first step is to ensure that you have a local version of `RenderDoc's source <https://github.com/baldurk/renderdoc>`_ and can build it successfully. The necessary `dependencies <https://github.com/baldurk/renderdoc/blob/v1.x/docs/CONTRIBUTING/Dependencies.md>`_ and `instructions <https://github.com/baldurk/renderdoc/blob/v1.x/docs/CONTRIBUTING/Compiling.md>`_ are listed on github but e.g. on windows all that is needed is Visual Studio 2015+.
+Use the `RenderDox source <https://github.com/dotm5/renderdox>`_ and its current `build environment <https://github.com/dotm5/renderdox/blob/dgcore-main/docs/CONTRIBUTING/Dependencies.md>`_ and `build guide <https://github.com/dotm5/renderdox/blob/dgcore-main/docs/CONTRIBUTING/Compiling.md>`_. Portable MCP packages already contain a worker interpreter compatible with the native bindings; their service runtime is separate from that worker.
 
 Once you have built RenderDoc, by default you will have a version of the python module already. Depending on your platform it will be generated in a different place - on Windows to prevent filename collisions it is in a ``pymodules`` subfolder under the relevant platform and build type, on linux it will be output to the ``lib`` folder as ``renderdoc.so``.
 

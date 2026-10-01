@@ -1,18 +1,17 @@
-# RenderDoc documentation
+# RenderDox documentation
 
-This readme only covers the documentation. For general information about renderdoc check out [the main github repository](https://github.com/baldurk/renderdoc).
+[Project showcase](../README.md) · [Usage guide](../USAGE.md) · [Development notes](CONTRIBUTING.md)
 
-## Generating documentation
+The repository entry points describe the current RenderDox package, capture integrations
+and portable MCP service. The Sphinx sources in this directory document capture and replay
+concepts, desktop tools and public API details.
 
-Generating the documentation requires the same python version as was used to build the version of RenderDoc you are testing. On windows this is likely python 3.6 as that's what comes with the repository.
+## Building the reference documentation
 
-The documentation uses restructured text with [Sphinx](http://www.sphinx-doc.org/en/master/). Sphinx can be acquired via `pip install Sphinx`
+The reference sources use reStructuredText and Sphinx. `make.bat` and `make.sh` expose the
+documentation targets; run `make help` to list them. Documentation generation is separate
+from building the native runtime and portable MCP package.
 
-To generate the documentation, run make.bat or make.sh found in this folder. Run `make help` to see all options, but `make html` is a likely place to start.
+## License
 
-License
---------------
-
-RenderDoc is released under the MIT license, see [the main github repository](https://github.com/baldurk/renderdoc) for full details.
-
-The documentation uses [Sphinx](http://www.sphinx-doc.org/en/master/), which is BSD licensed.
+See the project's [MIT license](../LICENSE.md) and [third-party acknowledgements](credits_acknowledgements.rst).

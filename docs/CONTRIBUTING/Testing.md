@@ -1,5 +1,11 @@
-# Testing
+# Trying a RenderDox change
 
-At the moment the testing of any features and changes is pretty much ad-hoc. I've been working on a proper test suite that will test both API capture/replay support as well as the analysis features.
+[Development notes](../CONTRIBUTING.md) · [Usage guide](../../USAGE.md)
 
-Until then, test any changes you make around the area that you've tested - if I have any particular suggestions on testing I will probably bring it up in the pull request.
+Experiments can be checked in the way that answers the question being investigated:
+a live capture, a replay observation, a performance comparison or a GUI session.
+Record the build, target, graphics API and relevant events when they help explain the result.
+
+This project does not require every change to add a test suite or follow a public PR checklist.
+Existing build and package checks are documented in the [release scripts](../../util/buildscripts/README.md).
+They support generating complete portable artifacts from the chosen source baseline.

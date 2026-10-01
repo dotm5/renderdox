@@ -1,53 +1,39 @@
 FAQ
 ===
 
-Here is a list of commonly asked questions about RenderDoc. Feel free to `contact me <mailto:baldurk@baldurk.org?subject=RenderDoc%20question>`_ if you have another question that isn't covered here or in this document.
+This page covers RenderDox and its inherited capture and replay functionality. Project questions and findings can be shared in the `RenderDox tracker <https://github.com/dotm5/renderdox/issues>`_. The `usage guide <https://github.com/dotm5/renderdox/blob/dgcore-main/USAGE.md>`_ describes portable setup, capture activation and MCP workflows.
 
-What are the details of RenderDoc's Anonymous Analytics?
---------------------------------------------------------
+Does RenderDox send anonymous analytics?
+---------------------------------------
 
-RenderDoc has some very light anonymous analytics to allow analysis of which features and platforms are used more, to prioritise and guide future development.
-
-The complete details of the analytics can be found in the page about :doc:`../behind_scenes/analytics`, but the brief outline is that RenderDoc records data **only in the replay program** and does not record any data that is specific to any captured programs. The data recorded is primarily boolean flags indicating whether or not a given feature, API, or platform is used or not. You can see the precise list of data gathered on your current RenderDoc build in the settings menu under the :guilabel:`Anonymous Analytics` section.
-
-The analytics data is summarised and transmitted securely and anonymously to RenderDoc's server. The aggregated statistics are available for anyone to see at `the analytics homepage <https://renderdoc.org/analytics>`_.
-
-Enabling the analytics is greatly appreciated, if you have any concerns about the data gathered you can choose to manually verify each report before it's submitted.
+The current source disables the inherited analytics subsystem with ``RENDERDOC_ANALYTICS_ENABLE=0`` in ``qrenderdoc/Code/Interface/Analytics.h``. Its load, prompt and report functions are inactive. See :doc:`../behind_scenes/analytics` for the implementation reference.
 
 How do I do some particular task?
 ---------------------------------
 
 Many specific tasks or functions are detailed in the :doc:`"How Do I... ?" <../how/index>` sections. These sections each take a feature or element of a workflow and explain how it fits into the program as a whole as well as any details of how it works.
 
-If the task you have in mind isn't listed there you might find something similar, or you might find a related feature which can be used to do what you want. If you have a workflow which isn't supported at all, feel free to open an issue on github to request a new feature. Make sure to describe clearly what you are trying to do and what workflow you want to support, not just the specific feature you want. That way the problem can be better understood.
+For fork-specific capture routes and automation, see the `usage guide <https://github.com/dotm5/renderdox/blob/dgcore-main/USAGE.md>`_. Ideas for additional workflows can be recorded in the project's tracker; context and examples help describe the experiment.
 
-Why did you make RenderDoc?
----------------------------
+Why does RenderDox exist?
+------------------------
 
-Although several tools do already exist for graphics debugging, none of them quite suited the functionality I desired and I would often find myself wishing for a feature of one in another and vice versa.
+RenderDox is a personal graphics-tooling project for experimenting with capture integrations, hook performance, desktop workflows and LLM-driven investigation. It builds on RenderDoc's capture and replay engine. The engine's operation is described in :doc:`../behind_scenes/how_works`.
 
-In addition to this, although the functionality overlaps to some degree many of these tools were primarily designed around the profiling of applications rather than debugging. While being able to inspect the state and contents of resources does often suffice for debugging, it's not necessarily the ideal workflow and often it can become cumbersome.
+Which project and application names are used?
+--------------------------------------------
 
-In principle I didn't see any reason why I couldn't write a home-brew graphics debugger with some fairly simple operating principles. While there were a whole lot of caveats and little stumbling blocks along the way, the original design has pretty much stayed consistent since the project was started back in July 2012. If you're interested you might want to read about :doc:`../behind_scenes/how_works`.
-
-Where did the name come from?
------------------------------
-
-All of the good names were taken :-(.
+The repository is RenderDox. Packaged Windows applications use the DComp and DCompUI identities. Historical source directories and API names such as ``renderdoc`` remain useful for compatibility and upstream comparisons.
 
 Who can I contact about bugs, feature requests, other queries?
 --------------------------------------------------------------
 
-At the moment there's just me at the wheel - feel free to `contact me <mailto:baldurk@baldurk.org?subject=RenderDoc%20feedback>`__ if you have anything you'd like to ask or suggest. I use a `GitHub repository <https://github.com/baldurk/renderdoc>`_ for tracking bugs and feature requests so that's the best place to file an issue.
-
-I work on RenderDoc full time contracting for Valve Software, and I am happy to help with anything and work with you if you have any issues that need attention.
-
-In particular I'm used to working with people who have strong NDA protection over their projects - as long as you are able to spend time to diagnose the issue by running builds and debugging by suggestion, it's not a requirement to send me a repro case - which may be impossible.
+Use the `RenderDox tracker <https://github.com/dotm5/renderdox/issues>`_ for bugs, ideas, questions and experiment notes. This is a single-maintainer project. Freeform issues and draft pull requests are welcome; templates are optional.
 
 How can I associate RenderDoc's file extensions with the program?
 -----------------------------------------------------------------
 
-On Windows if you installed RenderDoc via the ``msi`` installer, the option is available there to associate RenderDoc's file extensions with the program.
+RenderDox Windows releases are portable ZIPs. Use Windows' :guilabel:`Open with` dialog to select the packaged ``dgcoreui.exe`` for capture files, or open them directly in DCompUI.
 
 On linux the binary tarball comes with files to place under ``/usr/share`` to associate RenderDoc with files. This obviously also requires ``qrenderdoc`` to be available in your ``PATH``.
 
@@ -62,18 +48,18 @@ Currently RenderDoc supports Vulkan 1.4, D3D11 (up to D3D11.4), D3D12, OpenGL 3.
 
 Vulkan support has :doc:`a few notes <../behind_scenes/vulkan_support>`, as does :doc:`D3D12 <../behind_scenes/d3d12_support>`.
 
-Future API support is at this point not clear; Metal, WebGL, and perhaps D3D9/D3D10 all being possible. Support for new APIs will be balanced against all other work such as features for existing APIs, bugfixes. So if you care strongly about support for a new API make sure to `file an issue on GitHub <https://github.com/baldurk/renderdoc/issues>`_ or comment on an existing issue to register your interest.
+Additional APIs and integrations can be explored within this project. There is no announced schedule for new graphics backends; ideas can be recorded in the `RenderDox tracker <https://github.com/dotm5/renderdox/issues>`_.
 
 How can I backup or restore my settings?
 ----------------------------------------
 
 RenderDoc stores data in two folders:
 
-The UI stores data in a ``qrenderdoc`` folder underneath your OS's user settings folder. On windows this is ``%APPDATA%`` and on linux this will be somewhere in your home directory, perhaps in ``~/.local/share``. Nothing in this data is machine specific aside from paths, so you can back up and restore this directory at will.
+The UI stores data under the ``DComp`` application namespace in the OS's user settings location. On Windows this is ``%APPDATA%/DComp``. Back up this directory to preserve desktop settings; saved paths may need updating when moving between machines.
 
 Deleting this folder will also reset the RenderDoc UI to the defaults - if you uninstall RenderDoc this folder will not be deleted.
 
-The core code may save cached data in a ``renderdoc`` folder - either ``%APPDATA%/renderdoc`` or ``~/.renderdoc/`` but this doesn't contain settings, so is not important to back up.
+The core code also uses platform-specific configuration and cache locations. The current namespace is defined in ``build/product_identity.json``; Windows core files use ``%APPDATA%/DComp``. Keep the desktop settings when selecting files to back up.
 
 RenderDoc doesn't install any registry keys on windows aside from those required to set up file associations.
 
@@ -87,7 +73,7 @@ RenderDoc also uses TCP and UDP ports ``39920`` for remote replay connections, f
 Where can I get the source to RenderDoc?
 ----------------------------------------
 
-RenderDoc is licensed under the MIT license and the source is available on `GitHub <https://github.com/baldurk/renderdoc>`_.
+RenderDox is licensed under the MIT license and the source is available in the `project repository <https://github.com/dotm5/renderdox>`_. Existing author and third-party acknowledgements are retained.
 
 What are the requirements for RenderDoc?
 ----------------------------------------
@@ -142,7 +128,7 @@ I can't launch my program for capture directly. Can I capture it anyway?
 
 There is an option for capturing programs using RenderDoc where you can't easily set up a direct launch of the process.
 
-More details can be found in the :ref:`capture options page <global-process-hook>` which details how to use it, however you should take care to read the warnings! The global process hooking option isn't without its risks, so you need to be sure you know what you're doing before using it. It should always be used as a last resort when there is no other option.
+The `RenderDox usage guide <https://github.com/dotm5/renderdox/blob/dgcore-main/USAGE.md>`_ describes direct injection and proxy DLL activation. The :ref:`capture options page <global-process-hook>` also describes the global process hook and how it affects process launching.
 
 .. _view-image-files:
 

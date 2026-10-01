@@ -1,8 +1,6 @@
-.. image:: imgs/logo.png
-   :align: center
+Welcome to RenderDox, a Windows-focused graphics capture and replay tool derived from RenderDoc.
+The desktop application and runtime are branded DCompUI and DComp.
 
-Welcome to RenderDoc - a graphics debugger currently available for Vulkan, D3D11, D3D12, OpenGL, and OpenGL ES development on Windows, Linux, Android, and Nintendo Switch :sup:`TM`.
-
-This document serves as reference guide, introductory document and explanation of which features are available in RenderDoc and how to best use them.
-
-The latest information and discussion is always available on the `GitHub repository <https://github.com/baldurk/renderdoc>`_.
+This reference describes capture and replay concepts and the available desktop and API tools.
+Current project features, usage and downloads are listed in the
+`RenderDox repository <https://github.com/dotm5/renderdox>`_.

@@ -87,7 +87,7 @@ Project and upstream
 
 - [RenderDox issues](https://github.com/dotm5/renderdox/issues)
 - Upstream RenderDoc: [repository](https://github.com/baldurk/renderdoc) · [documentation](https://renderdoc.org/docs)
-- [Contribution guide](docs/CONTRIBUTING.md) · [Code of Conduct](docs/CODE_OF_CONDUCT.md)
+- [Development notes](docs/CONTRIBUTING.md)
 
 License
 -------
