@@ -97,7 +97,7 @@ jobs:
           [[ $(find "${asset_root}" -maxdepth 1 -type f | wc -l) -eq 4 ]]
           (cd "${asset_root}" && sha256sum --check SHA256SUMS.txt)
 
-      - name: Create the continuous pre-release
+      - name: Publish the latest continuous release
         id: release
         shell: bash
         env:
@@ -154,14 +154,15 @@ jobs:
               --repo "${GITHUB_REPOSITORY}" \
               --title "${title}" \
               --notes-file "${notes}" \
-              --prerelease
+              --prerelease=false \
+              --latest
           else
             gh release create "${tag}" "${assets[@]}" \
               --repo "${GITHUB_REPOSITORY}" \
               --target "${HEAD_SHA}" \
               --title "${title}" \
               --notes-file "${notes}" \
-              --prerelease
+              --latest
           fi
 
           release_url=$(gh release view "${tag}" --repo "${GITHUB_REPOSITORY}" --json url --jq .url)
