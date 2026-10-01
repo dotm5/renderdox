@@ -8,6 +8,7 @@ from pathlib import Path
 
 from contracts import PROTOCOL_VERSIONS, ToolError, VERSION
 from contracts.catalog import TOOLS
+from workflows.skills import PREFIX as SKILL_PREFIX
 
 
 class StdioServer:
@@ -69,9 +70,10 @@ class StdioServer:
             self.protocol = requested if requested in PROTOCOL_VERSIONS else PROTOCOL_VERSIONS[0]
             self.negotiated = True
             return {"protocolVersion": self.protocol, "capabilities": {"tools": {"listChanged": False},
+                    "prompts": {"listChanged": False},
                     "resources": {"subscribe": False, "listChanged": False}},
                     "serverInfo": {"name": "renderdoc-portable", "version": VERSION},
-                    "instructions": "Open/capture/align operations return jobId. Poll get_job until completion. EIDs and ResourceIds are capture-local. Use get_draw_evidence for atomic investigation; Diff is observational."}
+                    "instructions": "For detailed game rendering analysis, call list_analysis_skills then get_analysis_skill. The default game-rendering-analysis SKILL.md is Chinese for TAs; game-rendering-analysis-en is English. References are available through get_analysis_skill and renderdoc://skills/ resources; analyze_game_rendering is an optional prompt. LLMs organize and explain evidence, tools supply data. Open/capture/align operations return jobId. Poll get_job until completion. EIDs and ResourceIds are capture-local. Use get_draw_evidence for atomic investigation; Diff is observational."}
         if method == "ping":
             return {}
         if not self.initialized:
@@ -89,12 +91,14 @@ class StdioServer:
                 error = exc.payload() if isinstance(exc, ToolError) else {"code": type(exc).__name__, "message": str(exc)}
                 return {"content": [{"type": "text", "text": json.dumps({"error": error}, ensure_ascii=False)}], "isError": True}
         if method == "resources/list":
-            return {"resources": [{"uri": "renderdoc://artifact/" + key, "name": Path(value["path"]).name,
+            return {"resources": self.service.analysis_skills.resources() + [{"uri": "renderdoc://artifact/" + key, "name": Path(value["path"]).name,
                                   "mimeType": value.get("mimeType", "application/octet-stream")}
                                  for key, value in self.service.db["artifacts"].items()]}
         if method == "resources/read":
             prefix = "renderdoc://artifact/"
             uri = params.get("uri", "")
+            if uri.startswith(SKILL_PREFIX):
+                return self.service.analysis_skills.read_resource(uri)
             if not uri.startswith(prefix):
                 raise ToolError("missing_artifact", uri)
             value = self.service.get(self.service.db["artifacts"], uri[len(prefix):], "artifact")
@@ -106,6 +110,10 @@ class StdioServer:
             else:
                 content["blob"] = base64.b64encode(data).decode()
             return {"contents": [content]}
+        if method == "prompts/list":
+            return self.service.analysis_skills.prompts()
+        if method == "prompts/get":
+            return self.service.analysis_skills.prompt(params.get("name"), params.get("arguments", {}))
         raise ToolError("method_not_found", method)
 
     async def handle(self, message):

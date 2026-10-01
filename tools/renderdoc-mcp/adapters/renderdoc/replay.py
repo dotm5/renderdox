@@ -7,6 +7,7 @@ import time
 from contracts import ToolError
 from .convert import artifact, enum, flags, plain, rid, status_ok
 from .inspect import Inspection
+from .debug_trace import record_trace
 
 STAGES = ("Vertex", "Hull", "Domain", "Geometry", "Pixel", "Compute", "Task", "Mesh",
           "RayGen", "Intersection", "AnyHit", "ClosestHit", "Miss", "Callable")
@@ -392,7 +393,7 @@ class Replay(Inspection):
         return {"eventId": self.event, "resourceId": args["resourceId"], "modifications": plain(values)}
 
     def debug_shader(self, args):
-        self.set_event(args["eventId"])
+        pipe = self.set_event(args["eventId"])
         trace = None
         try:
             stage = args["stage"]
@@ -411,18 +412,15 @@ class Replay(Inspection):
                 raise ToolError("unsupported_stage", "Debugging supports Pixel/Vertex/Compute here")
             if trace is None or trace.debugger is None:
                 raise ToolError("unsupported", "No debugger returned for the selected shader/fragment")
-            steps = []
-            while True:
-                batch = self.controller.ContinueDebug(trace.debugger)
-                if not batch:
-                    break
-                for state in batch:
-                    item = {"stepIndex": int(state.stepIndex), "nextInstruction": int(state.nextInstruction),
-                            "callstack": plain(state.callstack), "flags": flags(state.flags, self.rd.ShaderEvents)}
-                    item["changes"] = [{"before": self.variable(change.before), "after": self.variable(change.after)} for change in state.changes]
-                    steps.append(item)
-            payload = {"trace": plain(trace), "steps": steps}
-            return {"eventId": self.event, "stage": stage, "stepCount": len(steps),
+            ref = pipe.GetShaderReflection(self.stage(stage))
+            metadata = {"eventId": self.event, "stage": stage,
+                        "captureId": args.get("_captureId"), "sessionGeneration": args.get("_sessionGeneration"),
+                        "shaderSHA256": hashlib.sha256(bytes(ref.rawBytes)).hexdigest() if ref else None,
+                        "shaderResourceId": rid(pipe.GetShader(self.stage(stage))),
+                        "replacementState": {k: rid(v[1]) for k, v in self.replacements.items()},
+                        "inputs": {k: v for k, v in args.items() if k not in ("maxSteps", "maxBytes", "maxSeconds") and not k.startswith("_")}}
+            payload = record_trace(self.controller, trace, self.variable, plain, flags, self.rd.ShaderEvents, metadata, args)
+            return {"eventId": self.event, "stage": stage, "stepCount": len(payload["steps"]), "completion": payload["completion"],
                     "trace": artifact(self.directory, json.dumps(payload), "json", mimeType="application/json")}
         finally:
             if trace is not None:

@@ -1,5 +1,58 @@
 # RenderDoc portable MCP
 
+## 0.3.2：LLM 渲染分析 skill（默认中文）
+
+共 72 个工具。MCP 提供证据，LLM 负责归组、解释、实验设计与图文/HLSL 写作。
+按 Claude 的 `SKILL.md` 格式提供两套完整文档，中文面向 TA，并设为默认：
+
+- `list_analysis_skills()` 列出两套 skill 及参考资料。
+- `get_analysis_skill()` 默认读取 `game-rendering-analysis/SKILL.md`（中文）。
+- `get_analysis_skill(name="game-rendering-analysis-en")` 读取英文版。
+- `get_analysis_skill(path="references/replay-experiments.md")` 按需读取参考；英文参考需同时指定英文 name。
+- MCP `resources/list` / `resources/read` 显式提供 10 份 Markdown 资源，URI 为 `renderdoc://skills/<name>/<path>`。
+- MCP `prompts/get` 的 `analyze_game_rendering` 提示词默认中文，可传 `language="en"`，另支持 `objective`、`captureId` 字符串参数。
+
+初始化 instructions 指引客户端读取中文 skill。客户端仍需读取并采用这些指令；MCP 没有强制所有客户端自动执行 skill 的统一机制。
+参考资料涵盖工具路由、回放对照实验、文章组织和有日期的能力审计。两套文档随便携包部署，不依赖工作区路径，也不修改客户端全局配置。
+Shader 替换入口不等于已验证的角色重建基线；原始 HLSL 恢复、任意中间量自动插桩和通用常量缓冲覆写仍未内置。
+本版还包含分析导出器对嵌套 capture 附件的收集修复。
+
+## 0.3.1 分析与工程工具
+
+共 70 个 MCP 工具，沿用原生 Worker 串行执行和独立服务进程。
+
+- `debug_shader` 输出 schemaVersion 2 轨迹，记录输入、常量、Shader 哈希、替换状态和完成状态。
+  默认最多 16,384 步、32 MiB、30 秒；`maxSteps/maxBytes/maxSeconds` 可调整。
+  时间与取消边界在原生批次之间，单次 `ContinueDebug` 和初始 Debug 调用无法强制中断。
+- `diff_shader_traces(leftArtifactId,rightArtifactId)` 比较保存轨迹；`debug_pixel_pair(left,right)`
+  先顺序采集再比较。两侧对象分别包含 `sessionId,eventId,x,y`，可加 sample/primitive/预算。
+  首版要求 Pixel、相同 Shader 字节码、无活动 Shader 替换；旧轨迹需重新采集。
+  整数精确比较，浮点支持绝对/相对阈值；NaN 对 NaN 相等，Inf 必须符号一致。
+  返回首次初值/状态数值分歧和首次控制流分歧；控制流不一致时停止硬对齐。
+  `equal_in_recorded_scope` 仅表示记录范围内一致，失败或截断不会报告完整一致。
+- `export_profile_report(sessionId,...)` 从完整 counter 结果导出离线 HTML，支持指标切换、
+  EID 范围、名称过滤、Pass 层级和事件详情。可切换指标排行与事件顺序累计测量值。
+  累计轴随筛选重算，仅累计有效叶事件的非负指标，不表示 GPU 实际时序或完整帧时间。
+  父 marker/MultiAction 不重复加入叶事件聚合，缺失和非有限 counter 保留 unknown。
+- `export_analysis_bundle` 同时输出 REPORT.md、REPORT.html、analysis.json、图片及 ZIP。
+- `capture_doctor(connectionId/captureId/sessionId,...)` 返回已观察/失败/未知的独立证据，
+  支持按 SHA256 关联 Capture Health Checker JSON；对象包装状态缺少观测时保持未知。
+  `orderMatrixPath` 支持新版自建 D3D12 顺序矩阵，核对 Core/EXE/报告/RDC 哈希；
+  样例观测放在独立的 `orderMatrixEvidence`，不填充所选游戏的包装状态。
+
+所有新增耗时工具返回 jobId。轨迹比较在服务侧执行，产物校验 SHA256，原 RDC 不修改。
+自有 D3D12 创建顺序样例和 Proxy Builder 见便携包 `developer-tools`。
+`developer-tools/proxy-builder/proxy-builder.exe build 原DLL --output 新目录` 完成自动生成、
+编译与导出契约验收，无需 Python；可选 `--copy-original`、`--core`、`--enable-core`。
+路径用 `--route` 显式区分 system-dll、app-local、streamline-bootstrap；
+本版本 raw EAT 测试证明转发能力，完整 Streamline 图形接入仍依赖 Core 和应用时序。
+
+```json
+{"name":"debug_pixel_pair","arguments":{"left":{"sessionId":"session-...","eventId":100,"x":128,"y":64},"right":{"sessionId":"session-...","eventId":200,"x":128,"y":64}}}
+{"name":"export_profile_report","arguments":{"sessionId":"session-...","title":"GPU replay profile"}}
+{"name":"capture_doctor","arguments":{"sessionId":"session-..."}}
+```
+
 [项目展示](../../README.md) · [使用指南](../../USAGE.md#3-mcp-control-and-analysis)
 
 本服务通过公共 Python API 提供捕获、回放、资源调查、事件 Diff 和跨 RDC 对齐。
@@ -159,6 +212,9 @@ GPU 计数器来自回放采样，不能作为游戏实时 FPS 或端到端捕�
 
 ## 开发和云端打包
 
+证据包中的 HTML/Markdown 预览按不透明 RGB 显示；资源 Alpha 仍保留在原始 PNG 中。
+`analysis.json` 的 `displayImage` 记录显示副本、原件 SHA256 和处理方法，原始采样及纹理数值不受影响。
+
 服务源码位于 `tools/renderdoc-mcp`。现代服务需要 Python 3.12 和 packaging/requirements.txt；
 Worker 源码保持 Python 3.6 语法，ABI 当前为 python36.dll。
 更换上游 Python ABI 时，在 packaging/bundle.py 添加经确认的 embedded runtime 版本/哈希；
@@ -170,3 +226,14 @@ python packaging/bundle.py --package-root 'D:\cloud-package' --build-root 'D:\mc
 
 打包只冻结服务并补充 Worker，不编译 RenderDoc。MSBuild Action 在生成 MSVC/ClangCL 包后运行此步骤，
 更新包清单、矩阵清单并沿用现有 DLL closure 和 ZIP 检查。
+
+完整 Actions 便携包还包含 `developer-tools/proxy-builder/proxy-builder.exe`、生成所需模板、
+OpenXR 头文件及许可，以及 `developer-tools/capture-doctor/bin/MSVC` 和 `ClangCL` 的创建顺序样例。
+Builder 自带 Python；生成 DLL 仍需 Visual Studio C++/MASM，JVM host 还需 JDK。
+本地复现完整打包时，先用 `tools/proxy-builder/tests/run_static_acceptance.ps1` 生成两种编译器的
+fixture 验收目录，再向 `bundle.py` 传入 `--native-acceptance <目录>`。同一次构建冻结的 Builder
+会复制到两个包，并重新生成全部文件哈希。
+
+CI 会在 ZIP 解压后检查默认中文/英文 skill 的 MCP 读取，并用便携 Builder 实际生成自有 fixture
+代理，验证整数/浮点 ABI、ordinal、别名和 raw EAT 转发。内置 skill 的 Markdown 修改会触发构建；
+README、展示文档和 `docs/` 仍按文档过滤规则跳过构建。

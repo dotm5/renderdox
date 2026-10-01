@@ -52,7 +52,7 @@ SYSTEM_MODULES = {
     "directxdatabasehelper.dll", "winspool.drv", "wintab32.dll",
     "opengl32.dll", "glu32.dll", "tdh.dll", "winusb.dll",
     # Debugging support
-    "dbghelp.dll", "dbgcore.dll", "psapi.dll", "symsrv.dll",
+    "dbghelp.dll", "dbgcore.dll", "psapi.dll", "symsrv.dll", "pdh.dll",
 }
 SYSTEM_MODULE_PREFIXES = ("api-ms-win-", "ext-ms-win-")
 

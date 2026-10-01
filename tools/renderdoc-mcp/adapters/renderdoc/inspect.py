@@ -1,6 +1,7 @@
 """Public-API analysis helpers. Compatible with the packaged Python 3.6 worker."""
 import hashlib
 import json
+import math
 import struct
 
 from contracts import ToolError
@@ -240,20 +241,26 @@ class Inspection:
             desc = lookup[counter_id]
             member = "d" if desc["resultType"] == "Float" and desc["resultByteWidth"] == 8 else "f" if desc["resultType"] == "Float" else "u64" if desc["resultByteWidth"] == 8 else "u32"
             number = plain(getattr(sample.value, member))
-            invalid = not isinstance(number, (float, int)) or number < 0 or (member == "u64" and number == 2**64 - 1)
+            invalid = (not isinstance(number, (float, int)) or
+                       (isinstance(number, float) and not math.isfinite(number)) or number < 0 or
+                       (member == "u64" and number == 2**64 - 1) or (member == "u32" and number == 2**32 - 1))
             action = event_lookup.get(event_id)
+            aggregate = action and any(f in action.get("flags", "").split("|") for f in ("PushMarker", "PopMarker", "MultiAction"))
             value = {"counterId": counter_id, "value": None if invalid else number, "unit": desc["unit"], "valid": not invalid}
-            events.setdefault(event_id, {"eventId": event_id, "action": action, "counters": []})["counters"].append(value)
+            events.setdefault(event_id, {"eventId": event_id, "action": action, "aggregateAction": bool(aggregate), "counters": []})["counters"].append(value)
             if counter_id == int(self.rd.GPUCounter.EventGPUDuration) and desc["unit"] == "Seconds" and desc["resultType"] == "Float" and not invalid:
                 events[event_id]["durationMs"] = number * 1000
                 ancestry = action["ancestry"] if action else []
-                path = tuple(x["eventId"] for x in ancestry)
-                group = passes.setdefault(path, {"ancestry": ancestry, "durationMs": 0, "eventCount": 0})
-                group["durationMs"] += number * 1000
-                group["eventCount"] += 1
+                if not aggregate:
+                    path = tuple(x["eventId"] for x in ancestry)
+                    group = passes.setdefault(path, {"ancestry": ancestry, "durationMs": 0, "eventCount": 0})
+                    group["durationMs"] += number * 1000
+                    group["eventCount"] += 1
         ranked = sorted(events.values(), key=lambda x: x.get("durationMs", 0), reverse=True)
         from .convert import artifact
-        full = {"events": ranked, "passes": sorted(passes.values(), key=lambda x: x["durationMs"], reverse=True)}
+        full = {"events": ranked, "passes": sorted(passes.values(), key=lambda x: x["durationMs"], reverse=True),
+                "counters": [lookup[x] for x in requested], "actions": self.actions,
+                "interpretation": "Replay measurements; marker totals sum measured events, not live GPU wall time."}
         return {"counters": [lookup[x] for x in requested], "eventCount": len(ranked), "events": ranked[:args.get("limit", 30)],
                 "passes": full["passes"], "fullResults": artifact(self.directory, json.dumps(full), "json", mimeType="application/json"),
                 "fetchDurationMs": (time_monotonic() - started) * 1000,

@@ -15,6 +15,8 @@ def add(tool_name, description, required=(), **properties):
 
 
 add("get_capabilities", "Report package identity, worker ABI and actual backend capabilities.", sessionId=S)
+add("list_analysis_skills", "Discover bundled LLM analysis skills and references. Chinese TA skill is the default.")
+add("get_analysis_skill", "Read a bundled SKILL.md or reference. Defaults to the Chinese TA skill; choose game-rendering-analysis-en for English.", name=S, path=S)
 add("list_targets", "Discover RenderDoc-enabled targets; existing GUI connections are not taken over.", host=S)
 add("connect_target", "Connect to a discovered target. takeover=true explicitly replaces an existing controller.",
     ("targetId",), targetId=S, takeover=B, clientName=S)
@@ -76,9 +78,11 @@ for name, description in [("get_resource_usage", "API-reported resource usage ac
 add("pixel_history", "Pixel modifications with failure reasons for the current API.",
     ("sessionId", "eventId", "resourceId", "x", "y"), sessionId=S, eventId=I, resourceId=S,
     x=I, y=I, mip=I, slice=I, sample=I, typeCast=S)
-add("debug_shader", "Debug Pixel/Vertex/Compute and export the full trace; frees native trace in finally.",
+add("debug_shader", "Debug Pixel/Vertex/Compute with step/byte/time budgets; exports completion state and frees trace in finally.",
     ("sessionId", "eventId", "stage"), sessionId=S, eventId=I, stage=S, x=I, y=I,
-    vertex=I, instance=I, index=I, view=I, group=A, thread=A, sample=I, primitive=I)
+    vertex=I, instance=I, index=I, view=I, group=A, thread=A, sample=I, primitive=I,
+    maxSteps={**I, "minimum": 1, "maximum": 1000000}, maxBytes={**I, "minimum": 4096, "maximum": 268435456},
+    maxSeconds={**N, "exclusiveMinimum": 0, "maximum": 300})
 add("replace_shader", "Build and install a shader replacement. Compilation diagnostics are returned.",
     ("sessionId", "eventId", "stage", "encoding"), sessionId=S, eventId=I, stage=S,
     encoding=S, source=S, sourceFile=S, entryPoint=S, compileFlags=A)
@@ -148,8 +152,18 @@ add("export_analysis_bundle", "Export capture notes, selected evidence and regis
 add("batch_query", "Run ordered read queries through worker serial queues; project fields with dot paths and retain per-item errors. Returns jobId.",
     ("queries",), queries=A)
 
+add("diff_shader_traces", "Compare two saved Pixel traces with identical shader bytecode; distinguish value/control differences and incomplete results. Returns jobId.",
+    ("leftArtifactId", "rightArtifactId"), leftArtifactId=S, rightArtifactId=S, absoluteThreshold=N, relativeThreshold=N)
+add("debug_pixel_pair", "Record two Pixel traces serially then compare. Inputs may use different events, sessions and pixels. Returns jobId.",
+    ("left", "right"), left=O, right=O, absoluteThreshold=N, relativeThreshold=N)
+add("export_profile_report", "Export full replay counter results and marker tree as offline interactive HTML. Metric layout is not GPU execution chronology. Returns jobId.",
+    ("sessionId",), sessionId=S, counterIds=A, eventIds=A, title=S)
+add("capture_doctor", "Report observed target, collection and replay states; unobserved hook/object state remains unknown. Can attach matching Capture Health Checker evidence. Returns jobId.",
+    connectionId=S, captureId=S, sessionId=S, healthArtifactId=S, healthReportPath=S, orderMatrixPath=S)
+
 
 def validate(name, args):
+    import math
     from . import ToolError
     if name not in TOOLS:
         raise ToolError("unknown_tool", name)
@@ -170,4 +184,8 @@ def validate(name, args):
         if "minimum" in rule and value < rule["minimum"]:
             raise ToolError("invalid_arguments", "Invalid range for " + key)
         if "exclusiveMinimum" in rule and value <= rule["exclusiveMinimum"]:
+            raise ToolError("invalid_arguments", "Invalid range for " + key)
+        if rule["type"] == "number" and not math.isfinite(value):
+            raise ToolError("invalid_arguments", "Non-finite number for " + key)
+        if "maximum" in rule and value > rule["maximum"]:
             raise ToolError("invalid_arguments", "Invalid range for " + key)

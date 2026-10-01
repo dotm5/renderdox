@@ -12,6 +12,7 @@ from supervisor.process import Worker
 from workflows.alignment import align
 from workflows.diff import compare, image_artifact
 from workflows.analysis import AnalysisWorkflows, JOB_TOOLS
+from workflows.skills import SkillLibrary
 
 
 def identifier(kind):
@@ -29,6 +30,7 @@ def sha256(path):
 class Service(AnalysisWorkflows):
     def __init__(self, package_root, source_root, interpreter, output):
         self.package_root, self.source_root, self.interpreter = Path(package_root), Path(source_root), Path(interpreter)
+        self.analysis_skills = SkillLibrary(self.source_root / "skills")
         self.output = Path(output).resolve()
         self.output.mkdir(parents=True, exist_ok=True)
         # Separate native sessions also need separate mutable indexes. A second
@@ -176,6 +178,8 @@ class Service(AnalysisWorkflows):
         if session["state"] != "ready":
             raise ToolError("session_closing", args["sessionId"])
         params = {k: v for k, v in args.items() if k != "sessionId"}
+        if name == "debug_shader":
+            params.update(_captureId=session["captureId"], _sessionGeneration=session["generation"])
         result = await session["worker"].call(name, params)
         self.register(result, {"captureId": session["captureId"], "eventId": args.get("eventId"), "resourceId": args.get("resourceId")})
         if isinstance(result, dict):
@@ -426,6 +430,10 @@ class Service(AnalysisWorkflows):
 
     async def call(self, name, args):
         validate(name, args)
+        if name == "list_analysis_skills":
+            return self.analysis_skills.listing()
+        if name == "get_analysis_skill":
+            return self.analysis_skills.get(**args)
         if name in JOB_TOOLS:
             return self.analysis_job(name, args)
         if name == "annotate_capture":

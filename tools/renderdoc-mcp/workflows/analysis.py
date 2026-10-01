@@ -18,10 +18,14 @@ from PIL import Image, ImageDraw, ImageFont
 from contracts import ToolError
 from .alignment import align
 from .diff import image_artifact
+from .shader_diff import compare_traces
+from .reports import profile_report, evidence_report
+from .doctor import diagnose, order_matrix_evidence
 
 JOB_TOOLS = {"locate_draws_at_pixel", "visualize_draw_contribution", "preview_resources", "trace_output_dependencies",
              "group_related_draws", "profile_events", "match_resources", "track_constant_changes",
-             "summarize_capture_changes", "export_analysis_bundle", "batch_query"}
+             "summarize_capture_changes", "export_analysis_bundle", "batch_query", "diff_shader_traces",
+             "debug_pixel_pair", "export_profile_report", "capture_doctor"}
 
 
 def file_artifact(directory, text, extension="json", role=None):
@@ -30,7 +34,7 @@ def file_artifact(directory, text, extension="json", role=None):
     data = text.encode("utf-8") if isinstance(text, str) else text
     path.write_bytes(data)
     return {"artifactId": path.stem, "path": str(path), "byteLength": len(data), "sha256": hashlib.sha256(data).hexdigest(),
-            "mimeType": {"json": "application/json", "md": "text/markdown", "csv": "text/csv", "zip": "application/zip"}.get(extension, "text/plain"), "role": role}
+            "mimeType": {"json": "application/json", "md": "text/markdown", "csv": "text/csv", "zip": "application/zip", "html": "text/html"}.get(extension, "text/plain"), "role": role}
 
 
 def flatten_constants(stages):
@@ -350,6 +354,107 @@ def project(value, fields):
 
 
 class AnalysisWorkflows:
+    def load_json_artifact(self, key, limit=268435456):
+        item = self.get(self.db["artifacts"], key, "artifact")
+        path = Path(item["path"])
+        if path.stat().st_size > limit:
+            raise ToolError("artifact_too_large", str(path))
+        raw = path.read_bytes()
+        if hashlib.sha256(raw).hexdigest().lower() != item["sha256"].lower():
+            raise ToolError("artifact_changed", key)
+        return json.loads(raw)
+
+    async def analysis_diff_shader_traces(self, args, info, stop):
+        def run():
+            left = self.load_json_artifact(args["leftArtifactId"])
+            right = self.load_json_artifact(args["rightArtifactId"])
+            result = compare_traces(left, right, args)
+            result.update(leftArtifactId=args["leftArtifactId"], rightArtifactId=args["rightArtifactId"])
+            result["fullResults"] = file_artifact(self.output / "trace-diffs", json.dumps(result, allow_nan=False), role="shader-trace-diff")
+            return result
+        return await asyncio.to_thread(run)
+
+    async def analysis_debug_pixel_pair(self, args, info, stop):
+        from contracts.catalog import validate
+        sides = [dict(args[k], stage="Pixel") for k in ("left", "right")]
+        for side in sides:
+            validate("debug_shader", side)
+            if "x" not in side or "y" not in side:
+                raise ToolError("invalid_arguments", "Each side needs sessionId, eventId, x and y")
+        results = []
+        for side in sides:
+            if stop.is_set():
+                return {"recordedTraces": results, "status": "cancelled"}
+            results.append(await self.query("debug_shader", side))
+            info["progress"] = len(results) / 3
+        comparison = await self.analysis_diff_shader_traces(dict(args, leftArtifactId=results[0]["trace"]["artifactId"],
+                                                               rightArtifactId=results[1]["trace"]["artifactId"]), info, stop)
+        comparison["recordedTraces"] = results
+        return comparison
+
+    async def analysis_export_profile_report(self, args, info, stop):
+        query = {k: v for k, v in args.items() if k != "title"}
+        result = await self.query("profile_events", query)
+        info["progress"] = .6
+        if stop.is_set():
+            return {"profile": result, "status": "cancelled"}
+        def render():
+            payload = self.load_json_artifact(result["fullResults"]["artifactId"])
+            payload["identity"] = {"captureId": result["captureId"], "sessionId": args["sessionId"], "measurement": "GPU replay"}
+            return file_artifact(self.output / "reports", profile_report(payload, args.get("title", "RenderDoc replay performance")), "html", "profile-report")
+        return {"profile": result, "report": await asyncio.to_thread(render)}
+
+    async def analysis_capture_doctor(self, args, info, stop):
+        if not any(args.get(k) for k in ("connectionId", "captureId", "sessionId", "orderMatrixPath")):
+            raise ToolError("invalid_arguments", "Select connectionId, captureId, sessionId or orderMatrixPath")
+        connection = capture = replay = health = None
+        errors = []
+        if args.get("connectionId"):
+            try:
+                connection = await self.connection_query("get_connection", {"connectionId": args["connectionId"]})
+            except ToolError as exc:
+                errors.append(dict(exc.payload(), scope="connection"))
+        capture_id = args.get("captureId")
+        session = args.get("sessionId")
+        if session:
+            session_capture = self.get(self.sessions, session, "session")["captureId"]
+            if capture_id and capture_id != session_capture:
+                raise ToolError("capture_session_mismatch", "sessionId does not belong to captureId")
+            capture_id = session_capture
+        owned = False
+        if capture_id:
+            capture = copy.deepcopy(self.get(self.db["captures"], capture_id, "capture"))
+            try:
+                from supervisor.service import sha256
+                if (await asyncio.to_thread(sha256, capture["path"])).lower() != capture["sha256"].lower():
+                    raise ToolError("capture_changed", "Collected capture bytes no longer match captureId")
+                if not session:
+                    session, owned = await self.session_for(capture_id)
+                replay = await self.query("get_capture_summary", {"sessionId": session})
+            except (ToolError, OSError) as exc:
+                error = exc.payload() if isinstance(exc, ToolError) else {"code": "capture_unavailable", "message": str(exc)}
+                errors.append(dict(error, scope="replay"))
+            finally:
+                if owned:
+                    await self.close_session(session)
+        if args.get("healthArtifactId"):
+            health = await asyncio.to_thread(self.load_json_artifact, args["healthArtifactId"], 8 * 1024 * 1024)
+        elif args.get("healthReportPath"):
+            path = Path(args["healthReportPath"])
+            if path.stat().st_size > 8 * 1024 * 1024:
+                raise ToolError("artifact_too_large", "Health report exceeds 8 MiB")
+            health = json.loads(await asyncio.to_thread(path.read_text, encoding="utf-8-sig"))
+        result = diagnose(connection, capture, replay, health, errors)
+        if args.get('orderMatrixPath'):
+            from supervisor.service import sha256
+            core_hash = await asyncio.to_thread(sha256, self.package_root / 'dgcore.dll')
+            try:
+                result['orderMatrixEvidence'] = await asyncio.to_thread(order_matrix_evidence, args['orderMatrixPath'], core_hash)
+            except (OSError, ValueError, KeyError, TypeError) as exc:
+                raise ToolError('invalid_order_matrix', str(exc))
+        result["fullResults"] = file_artifact(self.output / "doctor", json.dumps(result, allow_nan=False), role="capture-doctor")
+        return result
+
     def analysis_job(self, name, args):
         async def run(info, stop):
             result = await getattr(self, "analysis_" + name)(args, info, stop)
@@ -569,6 +674,17 @@ class AnalysisWorkflows:
 
 
 def export_bundle(payload, artifacts, args, directory):
+    artifacts = list(artifacts)
+    def collect(value):
+        if isinstance(value, dict):
+            if "artifactId" in value and "path" in value:
+                artifacts.append(value)
+            for child in value.values():
+                collect(child)
+        elif isinstance(value, list):
+            for child in value:
+                collect(child)
+    collect(payload)
     root = Path(directory) / ("bundle-" + uuid.uuid4().hex)
     root.mkdir(parents=True)
     copied, unique = {}, {a["artifactId"]: a for a in artifacts}
@@ -592,6 +708,20 @@ def export_bundle(payload, artifacts, args, directory):
         content["capture"]["path"] = None
         content["capture"]["rdcIncluded"] = False
     content["summary"].pop("path", None)
+    # Resource alpha has data meaning; browsers must not use it as opacity for
+    # a framebuffer RGB preview. Keep the original artifact bytes untouched.
+    for evidence in content.get("evidence", []):
+        for preview in evidence.get("previews", []):
+            original = preview["image"]
+            target = root / "display-previews" / (original["artifactId"] + ".png")
+            target.parent.mkdir(exist_ok=True)
+            with Image.open(root / original["path"]) as image:
+                image.convert("RGB").save(target)
+            preview["displayImage"] = {
+                "path": target.relative_to(root).as_posix(),
+                "sha256": hashlib.sha256(target.read_bytes()).hexdigest(),
+                "sourceArtifactId": original["artifactId"], "sourceSHA256": original["sha256"],
+                "transform": "Preserve preview RGB; discard stored alpha for opaque display. No extra color transfer."}
     (root / "analysis.json").write_text(json.dumps(content, ensure_ascii=False, indent=2), encoding="utf-8")
     summary = payload["summary"]
     lines = ["# " + args.get("title", "RenderDoc analysis evidence"), "", "Capture: `%s`" % payload["capture"]["sha256"],
@@ -603,12 +733,14 @@ def export_bundle(payload, artifacts, args, directory):
         action = evidence["action"]
         lines += ["### EID %s: %s" % (action["eventId"], action["name"]), "", "Indices: %s; flags: %s." % (action["numIndices"], action["flags"]), ""]
         for preview in evidence.get("previews", []):
-            lines += ["![%s](%s)" % (preview["resourceId"], preview["image"]["path"]), ""]
+            lines += ["![%s](%s)" % (preview["resourceId"], preview["displayImage"]["path"]), ""]
     lines += ["## Attached artifacts", ""]
     for key, path in copied.items():
         lines.append("- [%s](%s)" % (key, path))
     report = root / "REPORT.md"
     report.write_text("\n".join(lines), encoding="utf-8")
+    html_report = root / "REPORT.html"
+    html_report.write_text(evidence_report(content, copied, args.get("title", "RenderDoc analysis evidence")), encoding="utf-8")
     archive = root.with_suffix(".zip")
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as output:
         for path in root.rglob("*"):
@@ -617,5 +749,5 @@ def export_bundle(payload, artifacts, args, directory):
     def describe(path, mime):
         return {"artifactId": "artifact-" + uuid.uuid4().hex, "path": str(path), "byteLength": path.stat().st_size,
                 "sha256": hashlib.sha256(path.read_bytes()).hexdigest(), "mimeType": mime}
-    return {"directory": str(root), "report": describe(report, "text/markdown"), "index": describe(root / "analysis.json", "application/json"),
+    return {"directory": str(root), "report": describe(report, "text/markdown"), "htmlReport": describe(html_report, "text/html"), "index": describe(root / "analysis.json", "application/json"),
             "archive": describe(archive, "application/zip"), "artifactCount": len(copied), "rdcIncluded": args.get("includeRdc", False)}

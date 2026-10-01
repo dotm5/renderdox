@@ -138,6 +138,8 @@ jobs:
             printf '* `renderdox-%s-windows-x64-clangcl-release.zip` - ClangCL Release build.\n' "${short_sha}"
             printf '* `renderdox-%s-windows-x64-manifest.json` - Package manifest.\n' "${short_sha}"
             printf '* `SHA256SUMS.txt` - SHA-256 checksums for the published files.\n\n'
+            printf 'Both archives include the desktop runtime, four bootstrap DLLs, portable MCP with Chinese/English analysis skills, Proxy Builder with its generation templates, and Capture Doctor creation-order samples.\n\n'
+            printf 'Using the tools does not require a system Python. Compiling a generated proxy still requires Visual Studio C++/MASM; JVM host generation also requires a JDK.\n\n'
             printf '# Validation\n\n'
             printf '* [CMake](%s)\n' "${CMAKE_URL}"
             printf '* [MSBuild](%s)\n\n' "${MSBUILD_URL}"

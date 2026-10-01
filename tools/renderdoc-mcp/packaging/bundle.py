@@ -39,7 +39,7 @@ def build(build_root):
     return build_root / "dist" / "renderdoc-mcp"
 
 
-def bundle(package, frozen, build_root):
+def bundle(package, frozen, build_root, developer_tools=None):
     manifest_path = package / "manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
     abi = str(manifest["python_major_minor"])
@@ -52,6 +52,10 @@ def bundle(package, frozen, build_root):
     if digest(archive) != expected:
         raise RuntimeError("Worker Python archive digest mismatch")
     shutil.copytree(frozen, package, dirs_exist_ok=True)
+    if developer_tools is not None:
+        shutil.copytree(developer_tools, package / 'developer-tools')
+        manifest['developerTools'] = json.loads(
+            (developer_tools / 'component-manifest.json').read_text(encoding='utf-8'))
     runtime = package / "mcp" / "worker-runtime"
     runtime.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(archive) as z:
@@ -62,7 +66,7 @@ def bundle(package, frozen, build_root):
         shutil.copy2(package / name, runtime / name)
     (runtime / ("python" + abi + "._pth")).write_text("python" + abi + ".zip\n.\n", encoding="utf-8")
     source = package / "mcp" / "source"
-    for folder in ("contracts", "adapters", "worker", "gui_bridge"):
+    for folder in ("contracts", "adapters", "worker", "gui_bridge", "skills"):
         shutil.copytree(ROOT / folder, source / folder, dirs_exist_ok=True, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     shutil.copy2(ROOT / "README.md", package / "MCP-README.md")
     licenses = package / "mcp" / "licenses"
@@ -99,11 +103,16 @@ def main():
     parser.add_argument("--package-root", action="append", required=True)
     parser.add_argument("--build-root", required=True)
     parser.add_argument("--matrix-manifest")
+    parser.add_argument("--native-acceptance", help="Both-toolchain fixture results; include Builder and Capture Doctor")
     args = parser.parse_args()
     build_root = Path(args.build_root).resolve()
     build_root.mkdir(parents=True, exist_ok=True)
     frozen = build(build_root)
-    manifests = [bundle(Path(root).resolve(), frozen, build_root) for root in args.package_root]
+    developer_tools = None
+    if args.native_acceptance:
+        from developer_tools import prepare
+        developer_tools = prepare(build_root, args.native_acceptance)
+    manifests = [bundle(Path(root).resolve(), frozen, build_root, developer_tools) for root in args.package_root]
     if args.matrix_manifest:
         path = Path(args.matrix_manifest)
         matrix = json.loads(path.read_text(encoding="utf-8-sig"))

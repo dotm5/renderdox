@@ -44,6 +44,8 @@ Capture workflows
 
 RenderDox supports two distinct Windows activation routes. Use one route per run so that loading and hook timing remain easy to diagnose.
 
+Capture integration choices are maintained independently in this fork, including custom hooks and adapters for managed hosts. An upstream decision to decline an integration does not define this branch's development scope.
+
 ### 1. Import proxy bootstrap
 
 This route is useful when an owned application follows the normal Windows DLL search path and must load the capture runtime before its first DXGI/D3D call. The bootstrap DLLs are optional, are not part of the default solution graph, and remain plain System32 forwarders unless explicitly enabled.
@@ -147,9 +149,9 @@ Each native package contains the GUI, command-line tools, capture runtime, injec
 
 For a single toolchain, use `util/buildscripts/build_windows_release.ps1`. The scripts validate product identity, exports, embedded DXIL, static-runtime requirements for injected components, Vulkan descriptor identity, required runtime files, and optional bootstrap exports before declaring success.
 
-Code pushes to `dgcore-main` are released automatically after both the CMake and MSBuild workflows validate the same commit. The [continuous pre-release](https://github.com/dotm5/renderdox/releases) contains matching x64 MSVC and ClangCL archives, a complete manifest, SHA-256 checksums, and GitHub build-provenance attestations. Changes confined to Markdown files and `docs/` do not trigger builds. Pull requests and manually dispatched builds remain validation-only and never publish a release.
+Code pushes to `dgcore-main` are released automatically after both the CMake and MSBuild workflows validate the same commit. The [continuous pre-release](https://github.com/dotm5/renderdox/releases) contains matching x64 MSVC and ClangCL archives, a complete manifest, SHA-256 checksums, and GitHub build-provenance attestations. Changes confined to root Markdown, named README/license/notice/changelog files, `docs/`, README images or issue templates do not trigger builds. Built-in analysis skills and their references are packaged runtime content, so changes to them trigger both workflows. Source, scripts, dependency lists, build configuration and workflow changes still trigger builds. A mixed documentation-and-code change also builds normally. Pull requests and manually dispatched builds remain validation-only and never publish a release.
 
-See [Compiling.md](docs/CONTRIBUTING/Compiling.md) for upstream prerequisites and platform notes.
+See the [build guide](docs/CONTRIBUTING/Compiling.md) for the current project build entry points.
 
 API support
 -----------
@@ -203,4 +205,4 @@ Downstream changes should remain reviewable as focused commits on top of the ups
 - [Aftermath deployment](bootstrap/aftermath_proxy/README.md): renamed original and activation marker.
 - [Portable MCP reference](tools/renderdoc-mcp/README.md): capture jobs, analysis tools, Diff, alignment and GUI bridge.
 - [Windows release scripts](util/buildscripts/README.md): build and packaging commands.
-- [Upstream compilation notes](docs/CONTRIBUTING/Compiling.md): prerequisites and platform notes.
+- [Build guide](docs/CONTRIBUTING/Compiling.md): project toolchains and packaging entry points.

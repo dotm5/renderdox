@@ -47,3 +47,6 @@ renderdoc/data/resource.h binary
 
 # Preserve the vendored OpenXR bytes and their upstream whitespace/hashes.
 tools/proxy-builder/vendor/openxr/** text eol=lf whitespace=-blank-at-eol
+
+# Runtime skill text is hashed and exposed verbatim through MCP on every host.
+tools/renderdoc-mcp/skills/** text eol=lf

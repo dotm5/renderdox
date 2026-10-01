@@ -4,12 +4,48 @@ on:
   push:
     branches: [dgcore-main, 'feat/**']
     paths-ignore:
-      - '**/*.md'
+      # Built-in skill Markdown is executable analysis content and must build.
+      - '*.md'
+      - '**/README.md'
+      - '**/ReadMe.md'
+      - '**/readme.md'
+      - '**/LICENSE.md'
+      - '**/README.txt'
+      - '**/ReadMe.txt'
+      - '**/readme.txt'
+      - '**/LICENSE.txt'
+      - '**/License.txt'
+      - '**/NOTICE.txt'
+      - '**/NOTICES.txt'
+      - '**/CHANGELOG.txt'
+      - '**/AUTHORS.txt'
+      - '**/CONTRIBUTORS.txt'
+      - 'assets/readme/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/pull.yml'
       - 'docs/**'
   pull_request:
     branches: [dgcore-main]
     paths-ignore:
-      - '**/*.md'
+      # Built-in skill Markdown is executable analysis content and must build.
+      - '*.md'
+      - '**/README.md'
+      - '**/ReadMe.md'
+      - '**/readme.md'
+      - '**/LICENSE.md'
+      - '**/README.txt'
+      - '**/ReadMe.txt'
+      - '**/readme.txt'
+      - '**/LICENSE.txt'
+      - '**/License.txt'
+      - '**/NOTICE.txt'
+      - '**/NOTICES.txt'
+      - '**/CHANGELOG.txt'
+      - '**/AUTHORS.txt'
+      - '**/CONTRIBUTORS.txt'
+      - 'assets/readme/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/pull.yml'
       - 'docs/**'
   workflow_dispatch:
 
@@ -56,7 +92,7 @@ jobs:
     name: MSVC and ClangCL x64 Release
     needs: contracts
     runs-on: windows-2025
-    timeout-minutes: 150
+    timeout-minutes: 180
     permissions:
       contents: read
       id-token: write
@@ -104,6 +140,12 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Set up JDK for the owned JVM host fixture
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
       - name: Bundle portable MCP service and compatible worker
         shell: pwsh
         run: |
@@ -114,11 +156,25 @@ jobs:
           $python = Join-Path $venv 'Scripts/python.exe'
           & $python -m pip install --disable-pip-version-check -r tools/renderdoc-mcp/packaging/requirements.txt
           if($LASTEXITCODE -ne 0) { throw 'MCP packaging dependencies failed' }
+          & $python -m unittest discover -s tools/renderdoc-mcp/tests -p 'test_*.py'
+          if($LASTEXITCODE -ne 0) { throw 'MCP source tests failed' }
+          & $python -m unittest discover -s tools/proxy-builder/tests -p 'test_*.py'
+          if($LASTEXITCODE -ne 0) { throw 'Proxy Builder source tests failed' }
+          $native = Join-Path $env:RUNNER_TEMP 'developer-native-acceptance'
+          ./tools/proxy-builder/tests/run_static_acceptance.ps1 `
+            -Python $python -OutputDirectory $native -Toolchain Both
+          $routes = Join-Path $env:RUNNER_TEMP 'developer-route-acceptance'
+          & $python tools/proxy-builder/tests/run_route_acceptance.py --output $routes --toolchain Both
+          if($LASTEXITCODE -ne 0) { throw 'Proxy route acceptance failed' }
+          & $python tools/proxy-builder/tests/run_mixed_acceptance.py `
+            --fixtures $routes --output (Join-Path $env:RUNNER_TEMP 'developer-mixed-acceptance')
+          if($LASTEXITCODE -ne 0) { throw 'Mixed route acceptance failed' }
           & $python tools/renderdoc-mcp/packaging/bundle.py `
             --package-root (Join-Path $output 'msvc-release') `
             --package-root (Join-Path $output 'clangcl-release') `
             --build-root (Join-Path $env:RUNNER_TEMP 'mcp-freeze') `
-            --matrix-manifest (Join-Path $output 'manifest.json')
+            --matrix-manifest (Join-Path $output 'manifest.json') `
+            --native-acceptance $native
           if($LASTEXITCODE -ne 0) { throw 'Portable MCP packaging failed' }
 
       - name: Verify packaged Python and Qt bindings
@@ -155,7 +211,18 @@ jobs:
                 'bootstrap\aftermath_proxy\GFSDK_Aftermath_Lib.x64.dll',
                 'renderdoc-mcp.exe', 'mcp\component-manifest.json',
                 'mcp\worker-runtime\python.exe', 'mcp\source\worker\entry.py',
-                'mcp-runtime\python312.dll'))
+                'mcp-runtime\python312.dll',
+                'mcp\source\skills\game-rendering-analysis\SKILL.md',
+                'mcp\source\skills\game-rendering-analysis-en\SKILL.md',
+                'developer-tools\component-manifest.json',
+                'developer-tools\proxy-builder\proxy-builder.exe',
+                'developer-tools\proxy-builder\builder-runtime\python312.dll',
+                'developer-tools\proxy-builder\runtime-templates\bootstrap\aftermath_proxy\aftermath_forward.asm',
+                'developer-tools\proxy-builder\route-templates\templates\route_runtime.cpp',
+                'developer-tools\proxy-builder\route-templates\vendor\openxr\LICENSE-MIT',
+                'developer-tools\capture-doctor\include\api\app\renderdoc_app.h',
+                'developer-tools\capture-doctor\bin\MSVC\d3d12-order.exe',
+                'developer-tools\capture-doctor\bin\ClangCL\d3d12-order.exe'))
             {
               if(-not (Test-Path -LiteralPath (Join-Path $root $relative) -PathType Leaf))
               {
@@ -178,6 +245,9 @@ jobs:
             if($LASTEXITCODE -ne 0) { throw "$package command line smoke test failed" }
 
             $testLog = Join-Path $env:RUNNER_TEMP "$package-unit-tests.log"
+            # Release can compile out ENABLE_UNIT_TESTS. This checks the entry
+            # point's exit status, not native unit-test coverage. Tool source
+            # tests and owned fixture assertions above provide counted checks.
             & $executable test unit -o $testLog
             if($LASTEXITCODE -ne 0) { throw "$package core unit tests failed; inspect $testLog" }
           }
@@ -235,6 +305,14 @@ jobs:
             }
             python util/buildscripts/check_windows_runtime_closure.py $unpacked --quiet
             if($LASTEXITCODE -ne 0) { throw "$package archive has missing DLL dependencies" }
+            $python = Join-Path $env:RUNNER_TEMP 'mcp-build-venv/Scripts/python.exe'
+            & $python tools/renderdoc-mcp/tests/skill_acceptance.py `
+              --package $unpacked --output (Join-Path $env:RUNNER_TEMP "skill-acceptance-$package")
+            if($LASTEXITCODE -ne 0) { throw "$package archived MCP skill acceptance failed" }
+            & $python tools/proxy-builder/tests/frozen_acceptance.py `
+              --package $unpacked --fixtures (Join-Path $env:RUNNER_TEMP 'developer-native-acceptance') `
+              --output (Join-Path $env:RUNNER_TEMP "builder-acceptance-$package")
+            if($LASTEXITCODE -ne 0) { throw "$package archived Builder acceptance failed" }
             Write-Host "$package archive verified: $($manifest.files.Count) files"
           }
 

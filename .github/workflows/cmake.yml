@@ -4,12 +4,48 @@ on:
   push:
     branches: [dgcore-main, 'feat/**']
     paths-ignore:
-      - '**/*.md'
+      # Built-in skill Markdown is executable analysis content and must build.
+      - '*.md'
+      - '**/README.md'
+      - '**/ReadMe.md'
+      - '**/readme.md'
+      - '**/LICENSE.md'
+      - '**/README.txt'
+      - '**/ReadMe.txt'
+      - '**/readme.txt'
+      - '**/LICENSE.txt'
+      - '**/License.txt'
+      - '**/NOTICE.txt'
+      - '**/NOTICES.txt'
+      - '**/CHANGELOG.txt'
+      - '**/AUTHORS.txt'
+      - '**/CONTRIBUTORS.txt'
+      - 'assets/readme/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/pull.yml'
       - 'docs/**'
   pull_request:
     branches: [dgcore-main]
     paths-ignore:
-      - '**/*.md'
+      # Built-in skill Markdown is executable analysis content and must build.
+      - '*.md'
+      - '**/README.md'
+      - '**/ReadMe.md'
+      - '**/readme.md'
+      - '**/LICENSE.md'
+      - '**/README.txt'
+      - '**/ReadMe.txt'
+      - '**/readme.txt'
+      - '**/LICENSE.txt'
+      - '**/License.txt'
+      - '**/NOTICE.txt'
+      - '**/NOTICES.txt'
+      - '**/CHANGELOG.txt'
+      - '**/AUTHORS.txt'
+      - '**/CONTRIBUTORS.txt'
+      - 'assets/readme/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/pull.yml'
       - 'docs/**'
   workflow_dispatch:
 
