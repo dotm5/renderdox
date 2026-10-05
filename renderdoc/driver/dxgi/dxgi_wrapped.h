@@ -43,6 +43,7 @@ MIDL_INTERFACE("9B7E4E00-342C-4106-A19F-4F2704F689F0") ID3D11Multithread;
 class RefCountDXGIObject : public IDXGIObject
 {
   IDXGIObject *m_pReal;
+protected:
   unsigned int m_iRefcount;
 
 public:
@@ -135,6 +136,9 @@ public:
   {                                                                                        \
     return RefCountDXGIObject::Release();                                                  \
   }                                                                                        \
+  IMPLEMENT_IDXGIOBJECT_WITH_REFCOUNTDXGIOBJECT_METHODS
+
+#define IMPLEMENT_IDXGIOBJECT_WITH_REFCOUNTDXGIOBJECT_METHODS                              \
   HRESULT STDMETHODCALLTYPE SetPrivateData(REFIID Name, UINT DataSize, const void *pData)  \
   {                                                                                        \
     return RefCountDXGIObject::SetPrivateData(Name, DataSize, pData);                      \
@@ -1466,11 +1470,16 @@ class WrappedIDXGIFactory : public IDXGIFactory7, public RefCountDXGIObject
   IDXGIFactory6 *m_pReal6;
   IDXGIFactory7 *m_pReal7;
 
-public:
+  IUnknown *m_Canonical = NULL; // weak; m_pReal owns its lifetime
   WrappedIDXGIFactory(IDXGIFactory *real);
-  virtual ~WrappedIDXGIFactory();
 
-  IMPLEMENT_IDXGIOBJECT_WITH_REFCOUNTDXGIOBJECT_CUSTOMQUERY;
+public:
+  // Consumes the incoming real reference, including when an existing wrapper is reused.
+  static WrappedIDXGIFactory *Wrap(IDXGIFactory *real);
+  virtual ~WrappedIDXGIFactory();
+  ULONG STDMETHODCALLTYPE AddRef() { return RefCountDXGIObject::AddRef(); }
+  ULONG STDMETHODCALLTYPE Release();
+  IMPLEMENT_IDXGIOBJECT_WITH_REFCOUNTDXGIOBJECT_METHODS;
   HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void **ppvObject);
 
   //////////////////////////////

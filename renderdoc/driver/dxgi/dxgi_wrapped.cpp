@@ -27,6 +27,7 @@
 #include "core/core.h"
 #include "serialise/serialiser.h"
 #include "dxgi_common.h"
+#include <map>
 
 ID3D11Resource *UnwrapDXResource(void *dxObject);
 IDXGIResource *UnwrapDXGIResource(void *dxgiObject);
@@ -54,6 +55,23 @@ bool RefCountDXGIObject::HandleWrap(const char *ifaceName, REFIID riid, void **p
   {
     RDCWARN("HandleWrap called with NULL ppvObject querying %s", ifaceName);
     return false;
+  }
+
+  // GetParent may request the parent's base interface directly. If it is a
+  // factory, route that identity through the same cache as typed factory returns.
+  // Other object families retain their existing handling below.
+  if(riid == __uuidof(IUnknown) || riid == __uuidof(IDXGIObject))
+  {
+    IDXGIFactory *factory = NULL;
+    IUnknown *incoming = (IUnknown *)*ppvObject;
+    if(SUCCEEDED(incoming->QueryInterface(__uuidof(IDXGIFactory), (void **)&factory)))
+    {
+      WrappedIDXGIFactory *wrapper = WrappedIDXGIFactory::Wrap(factory);
+      HRESULT hr = wrapper->QueryInterface(riid, ppvObject);
+      wrapper->Release();
+      incoming->Release();
+      return SUCCEEDED(hr);
+    }
   }
 
   // unknown GUID that we only want to print once to avoid log spam
@@ -110,7 +128,7 @@ bool RefCountDXGIObject::HandleWrap(const char *ifaceName, REFIID riid, void **p
     // IDXGIFactory1 like a IDXGIFactory should all just work by definition, but there's no way to
     // know now if someone trying to create a IDXGIFactory really means it or not.
     IDXGIFactory *real = (IDXGIFactory *)(*ppvObject);
-    *ppvObject = (IDXGIFactory *)(new WrappedIDXGIFactory(real));
+    *ppvObject = (IDXGIFactory *)WrappedIDXGIFactory::Wrap(real);
     return true;
   }
 
@@ -123,43 +141,43 @@ bool RefCountDXGIObject::HandleWrap(const char *ifaceName, REFIID riid, void **p
   else if(riid == __uuidof(IDXGIFactory1))
   {
     IDXGIFactory1 *real = (IDXGIFactory1 *)(*ppvObject);
-    *ppvObject = (IDXGIFactory1 *)(new WrappedIDXGIFactory(real));
+    *ppvObject = (IDXGIFactory1 *)WrappedIDXGIFactory::Wrap(real);
     return true;
   }
   else if(riid == __uuidof(IDXGIFactory2))
   {
     IDXGIFactory2 *real = (IDXGIFactory2 *)(*ppvObject);
-    *ppvObject = (IDXGIFactory2 *)(new WrappedIDXGIFactory(real));
+    *ppvObject = (IDXGIFactory2 *)WrappedIDXGIFactory::Wrap(real);
     return true;
   }
   else if(riid == __uuidof(IDXGIFactory3))
   {
     IDXGIFactory3 *real = (IDXGIFactory3 *)(*ppvObject);
-    *ppvObject = (IDXGIFactory3 *)(new WrappedIDXGIFactory(real));
+    *ppvObject = (IDXGIFactory3 *)WrappedIDXGIFactory::Wrap(real);
     return true;
   }
   else if(riid == __uuidof(IDXGIFactory4))
   {
     IDXGIFactory4 *real = (IDXGIFactory4 *)(*ppvObject);
-    *ppvObject = (IDXGIFactory4 *)(new WrappedIDXGIFactory(real));
+    *ppvObject = (IDXGIFactory4 *)WrappedIDXGIFactory::Wrap(real);
     return true;
   }
   else if(riid == __uuidof(IDXGIFactory5))
   {
     IDXGIFactory5 *real = (IDXGIFactory5 *)(*ppvObject);
-    *ppvObject = (IDXGIFactory5 *)(new WrappedIDXGIFactory(real));
+    *ppvObject = (IDXGIFactory5 *)WrappedIDXGIFactory::Wrap(real);
     return true;
   }
   else if(riid == __uuidof(IDXGIFactory6))
   {
     IDXGIFactory6 *real = (IDXGIFactory6 *)(*ppvObject);
-    *ppvObject = (IDXGIFactory6 *)(new WrappedIDXGIFactory(real));
+    *ppvObject = (IDXGIFactory6 *)WrappedIDXGIFactory::Wrap(real);
     return true;
   }
   else if(riid == __uuidof(IDXGIFactory7))
   {
     IDXGIFactory7 *real = (IDXGIFactory7 *)(*ppvObject);
-    *ppvObject = (IDXGIFactory7 *)(new WrappedIDXGIFactory(real));
+    *ppvObject = (IDXGIFactory7 *)WrappedIDXGIFactory::Wrap(real);
     return true;
   }
   else if(riid == ID3D10Texture2D_uuid)
@@ -1074,6 +1092,71 @@ HRESULT STDMETHODCALLTYPE WrappedIDXGIDevice4::ReclaimResources1(UINT NumResourc
 {
   rdcarray<IDXGIResource *> resources = UnwrapResourceSet(NumResources, ppResources);
   return m_pReal4->ReclaimResources1(NumResources, resources.data(), pResults);
+}
+
+// Factory-only weak cache. Acquisition and the last Release share the lock so
+// GetParent cannot resurrect a wrapper whose reference count reached zero.
+// No cache-owned COM references and no changes to the D3D resource registry.
+struct FactoryWrappers
+{
+  Threading::CriticalSection lock;
+  std::map<IUnknown *, WrappedIDXGIFactory *> objects;
+};
+
+static FactoryWrappers &GetFactoryWrappers()
+{
+  static FactoryWrappers *cache = new FactoryWrappers;
+  return *cache;
+}
+
+WrappedIDXGIFactory *WrappedIDXGIFactory::Wrap(IDXGIFactory *real)
+{
+  IUnknown *canonical = NULL;
+  real->QueryInterface(__uuidof(IUnknown), (void **)&canonical);
+  FactoryWrappers &cache = GetFactoryWrappers();
+  WrappedIDXGIFactory *wrapper = NULL;
+  bool reused = false;
+  {
+    SCOPED_LOCK(cache.lock);
+    auto it = cache.objects.find(canonical);
+    if(canonical && it != cache.objects.end())
+    {
+      wrapper = it->second;
+      wrapper->AddRef();
+      reused = true;
+    }
+    else
+    {
+      wrapper = new WrappedIDXGIFactory(real);
+      wrapper->m_Canonical = canonical;
+      if(canonical)
+        cache.objects[canonical] = wrapper;
+    }
+  }
+  if(reused)
+  {
+    real->Release();
+  }
+  SAFE_RELEASE(canonical);
+  return wrapper;
+}
+
+ULONG STDMETHODCALLTYPE WrappedIDXGIFactory::Release()
+{
+  FactoryWrappers &cache = GetFactoryWrappers();
+  unsigned int ret;
+  {
+    SCOPED_LOCK(cache.lock);
+    ret = InterlockedDecrement(&m_iRefcount);
+    if(ret == 0)
+    {
+      if(m_Canonical)
+        cache.objects.erase(m_Canonical);
+    }
+  }
+  if(ret == 0)
+    delete this;
+  return ret;
 }
 
 WrappedIDXGIFactory::WrappedIDXGIFactory(IDXGIFactory *real)
