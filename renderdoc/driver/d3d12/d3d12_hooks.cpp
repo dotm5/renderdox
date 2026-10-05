@@ -653,6 +653,17 @@ public:
           (ID3D12DeviceRemovedExtendedData2 *)(new WrappedID3D12DeviceRemovedExtendedData());
       return S_OK;
     }
+    else if(riid == __uuidof(ID3D12DeviceFactory))
+    {
+      ID3D12DeviceFactory *real = (ID3D12DeviceFactory *)realUnk;
+      if(real)
+      {
+        // The caller releases realUnk after this helper returns.
+        real->AddRef();
+        *ppvInterface = (ID3D12DeviceFactory *)(new WrappedID3D12DeviceFactory(real));
+        return S_OK;
+      }
+    }
     else if(riid == __uuidof(ID3D12SDKConfiguration))
     {
       ID3D12SDKConfiguration *real = (ID3D12SDKConfiguration *)realUnk;
