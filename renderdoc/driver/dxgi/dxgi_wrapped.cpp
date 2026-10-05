@@ -532,31 +532,67 @@ HRESULT WrappedIDXGISwapChain4::GetDevice(
 {
   HRESULT ret = m_pReal->GetDevice(riid, ppDevice);
 
-  if(SUCCEEDED(ret))
+  if(SUCCEEDED(ret) && ppDevice && *ppDevice)
   {
-    // try one of the trivial wraps, we don't mind making a new one of those
-    if(m_pDevice->IsDeviceUUID(riid))
+    IUnknown *native = (IUnknown *)*ppDevice;
+    ID3DDevice *identityOwner = NULL;
+    if(riid == __uuidof(IUnknown))
     {
-      // probably they're asking for the device device.
-      *ppDevice = m_pDevice->GetDeviceInterface(riid);
-      m_pDevice->AddRef();
+      // DX12 swapchains are created with a queue, but GetDevice returns the
+      // device's identity. Match the real identity before choosing its wrapper.
+      IUnknown *canonical = NULL;
+      native->QueryInterface(__uuidof(IUnknown), (void **)&canonical);
+      ID3DDevice *owners[2] = {m_pDevice, NULL};
+      if(m_pDevice->IsDeviceUUID(__uuidof(ID3D12Device)))
+        owners[1] = GetD3DDevice(m_pDevice->GetDeviceInterface(__uuidof(ID3D12Device)));
+      for(ID3DDevice *owner : owners)
+      {
+        if(!owner || !canonical)
+          continue;
+        IUnknown *candidate = NULL;
+        owner->GetRealIUnknown()->QueryInterface(__uuidof(IUnknown), (void **)&candidate);
+        bool match = candidate == canonical;
+        SAFE_RELEASE(candidate);
+        if(match)
+        {
+          identityOwner = owner;
+          break;
+        }
+      }
+      SAFE_RELEASE(canonical);
+    }
+
+    if(identityOwner)
+    {
+      *ppDevice = NULL;
+      ret = identityOwner->QueryInterface(riid, ppDevice);
+      native->Release();
+    }
+    else if(m_pDevice->IsDeviceUUID(riid))
+    {
+      IUnknown *wrapped = m_pDevice->GetDeviceInterface(riid);
+      // AddRef the returned interface, which may be the device rather than the
+      // queue stored in m_pDevice. Consume the reference returned by DXGI.
+      wrapped->AddRef();
+      *ppDevice = wrapped;
+      native->Release();
     }
     else if(riid == __uuidof(IDXGISwapChain))
     {
-      // don't think anyone would try this, but what the hell.
       *ppDevice = this;
       AddRef();
+      native->Release();
     }
     else if(riid == __uuidof(IDXGIDevice) || riid == __uuidof(IDXGIDevice1) ||
             riid == __uuidof(IDXGIDevice2) || riid == __uuidof(IDXGIDevice3) ||
             riid == __uuidof(IDXGIDevice4))
     {
-      return m_pDevice->QueryInterface(riid, ppDevice);
+      *ppDevice = NULL;
+      ret = m_pDevice->QueryInterface(riid, ppDevice);
+      native->Release();
     }
     else if(!HandleWrap("GetDevice", riid, ppDevice))
     {
-      // can probably get away with returning the real result here,
-      // but it worries me a bit.
       RDCUNIMPLEMENTED("Not returning trivial type");
     }
   }
