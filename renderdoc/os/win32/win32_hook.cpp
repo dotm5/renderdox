@@ -1536,6 +1536,17 @@ static HMODULE FindTopmostProvider(const char *function, HMODULE fallback)
     if(GetModuleFileNameW(modules[i], path, MAX_PATH) == 0)
       continue;
 
+    // D3D12Core exports a runtime-private D3D12GetInterface contract. Matching
+    // the export name does not make it a provider of d3d12.dll's public API.
+    // In particular, moving the public hook here intercepts the loader's own
+    // runtime requests and redirects the public original to the wrong ABI.
+    const wchar_t *basename = wcsrchr(path, L'\\');
+    basename = basename ? basename + 1 : path;
+    if(!strcmp(function, "D3D12GetInterface") && !_wcsicmp(basename, L"D3D12Core.dll"))
+    {
+      continue;
+    }
+
     // System32 ships the real implementation; anything installed alongside it
     // is the thing the application actually reaches.
     if(_wcsnicmp(path, systemDir, wcslen(systemDir)) == 0)
