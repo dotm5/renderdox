@@ -791,7 +791,12 @@ void WrappedID3D12CommandQueue::ExecuteCommandListsInternal(UINT NumCommandLists
 {
   ID3D12CommandList **unwrapped = m_pDevice->GetTempArray<ID3D12CommandList *>(NumCommandLists);
   for(UINT i = 0; i < NumCommandLists; i++)
+  {
+    if(DxClosureEnabled() && ppCommandLists[i] &&
+       !WrappedID3D12GraphicsCommandList::IsAlloc(ppCommandLists[i]))
+      DxClosureEvent("unwrapped_object", "ExecuteCommandLists", ppCommandLists[i], this);
     unwrapped[i] = Unwrap(ppCommandLists[i]);
+  }
 
   if(!m_MarkedActive)
   {

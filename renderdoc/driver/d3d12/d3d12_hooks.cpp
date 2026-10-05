@@ -347,9 +347,12 @@ class WrappedID3D12DeviceFactory : public RefCounter12<ID3D12DeviceFactory>, pub
 {
   WrappedID3D12DeviceConfiguration config;
 public:
-  WrappedID3D12DeviceFactory(ID3D12DeviceFactory *real) : RefCounter12(real), config(real, this) {}
+  WrappedID3D12DeviceFactory(ID3D12DeviceFactory *real) : RefCounter12(real), config(real, this)
+  {
+    DxClosureRegister(real, (ID3D12DeviceFactory *)this, "D3D12DeviceFactory");
+  }
 
-  virtual ~WrappedID3D12DeviceFactory() {}
+  virtual ~WrappedID3D12DeviceFactory() { DxClosureUnregister((ID3D12DeviceFactory *)this); }
   //////////////////////////////
   // Implement IUnknown
   ULONG STDMETHODCALLTYPE AddRef() { return RefCounter12::AddRef(); }
@@ -381,6 +384,8 @@ public:
       return S_OK;
     }
 
+    if(DxClosureEnabled())
+      DxClosureEvent("qi_unsupported", ToStr(riid).c_str(), this);
     return E_NOINTERFACE;
   }
 
@@ -442,6 +447,7 @@ public:
                                                  D3D_FEATURE_LEVEL FeatureLevel, REFIID riid,
                                                  _COM_Outptr_opt_ void **ppvDevice)
   {
+    DxClosureEvent("root_path", "DeviceFactory.CreateDevice", this);
     if(RenderDoc::Inst().GetCaptureOptions().apiValidation)
     {
       D3D12DevConfiguration tmpConfig = {};
@@ -465,6 +471,8 @@ public:
         },
         &devConfig, adapter, FeatureLevel, riid, ppvDevice);
 
+    if(SUCCEEDED(ret) && ppvDevice && DxClosureEnabled())
+      DxClosureReturned("DeviceFactory.CreateDevice", ToStr(riid).c_str(), *ppvDevice);
     return ret;
   }
 };
@@ -480,9 +488,11 @@ public:
     if(!real1)
       real->QueryInterface(__uuidof(ID3D12SDKConfiguration1), (void **)&real1);
     m_pReal1 = real1;
+    DxClosureRegister(real, (ID3D12SDKConfiguration *)this, "D3D12SDKConfiguration");
   }
   virtual ~WrappedID3D12SDKConfiguration()
   {
+    DxClosureUnregister((ID3D12SDKConfiguration *)this);
     SAFE_RELEASE(m_pReal);
     SAFE_RELEASE(m_pReal1);
   }
@@ -511,6 +521,8 @@ public:
       return S_OK;
     }
 
+    if(DxClosureEnabled())
+      DxClosureEvent("qi_unsupported", ToStr(riid).c_str(), this);
     return E_NOINTERFACE;
   }
 
@@ -526,6 +538,11 @@ public:
   virtual HRESULT STDMETHODCALLTYPE CreateDeviceFactory(UINT SDKVersion, _In_ LPCSTR SDKPath,
                                                         REFIID riid, _COM_Outptr_ void **ppvFactory)
   {
+    DxClosureEvent("root_path", "SDKConfiguration.CreateDeviceFactory", this);
+    if(DxClosureEnabled())
+      DxClosureEvent("sdk_selection",
+                     StringFormat::Fmt("%u:%s", SDKVersion, SDKPath ? SDKPath : "NULL").c_str(),
+                     this);
     if(riid != __uuidof(ID3D12DeviceFactory))
     {
       RDCERR("Unexpected uuid to CreateDeviceFactory: %s", ToStr(riid).c_str());
@@ -538,6 +555,8 @@ public:
     {
       RDCASSERT(realFactory);
       *ppvFactory = (ID3D12DeviceFactory *)(new WrappedID3D12DeviceFactory(realFactory));
+      if(DxClosureEnabled())
+        DxClosureReturned("SDKConfiguration.CreateDeviceFactory", ToStr(riid).c_str(), *ppvFactory);
       return hr;
     }
     SAFE_RELEASE(realFactory);
@@ -724,6 +743,7 @@ private:
                           IUnknown *pAdapter, D3D_FEATURE_LEVEL MinimumFeatureLevel, REFIID riid,
                           void **ppDevice)
   {
+    DxClosureEvent("root_path", devConfig ? "ConfiguredCreateDevice" : "D3D12CreateDevice");
     // if we're already inside a wrapped create i.e. this function, then DON'T do anything
     // special. Just grab the trampolined function and call it.
     if(CheckRecurse())
@@ -989,6 +1009,8 @@ private:
 
   static HRESULT WINAPI D3D12GetInterface_hook(REFCLSID rclsid, REFIID riid, void **ppvDebug)
   {
+    if(DxClosureEnabled())
+      DxClosureEvent("root_path", ToStr(riid).c_str());
     if(riid == CLSID_D3D12StateObjectFactory)
     {
       RDCLOG("Deliberately reporting no support for state object factories");
@@ -998,7 +1020,22 @@ private:
     IUnknown *realUnk = NULL;
     HRESULT real = d3d12hooks.GetInterface()(rclsid, riid, (void **)&realUnk);
 
+    if(DxClosureEnabled() && FAILED(real))
+      DxClosureEvent("root_native_rejected", ToStr(rclsid).c_str());
+
     HRESULT hr = GetWrappedInterface(realUnk, riid, ppvDebug);
+    if(DxClosureEnabled())
+    {
+      rdcstr result = StringFormat::Fmt("clsid=%s;iid=%s;native=%08x;wrapped=%08x",
+                                        ToStr(rclsid).c_str(), ToStr(riid).c_str(), real, hr);
+      DxClosureEvent("root_interface_result", result.c_str(), realUnk);
+      if(SUCCEEDED(real) && FAILED(hr))
+        DxClosureEvent("root_wrapper_rejected", ToStr(riid).c_str(), realUnk);
+      if(SUCCEEDED(hr) && ppvDebug &&
+         (riid == __uuidof(ID3D12DeviceFactory) || riid == __uuidof(ID3D12SDKConfiguration) ||
+          riid == __uuidof(ID3D12SDKConfiguration1)))
+        DxClosureReturned("D3D12GetInterface", ToStr(riid).c_str(), *ppvDebug);
+    }
 
     if(realUnk)
       realUnk->Release();

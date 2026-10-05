@@ -363,7 +363,10 @@ public:
 
   virtual HRESULT STDMETHODCALLTYPE GetDevice(REFIID riid, _COM_Outptr_opt_ void **ppvDevice)
   {
-    return m_pDevice->GetDevice(riid, ppvDevice);
+    HRESULT hr = m_pDevice->GetDevice(riid, ppvDevice);
+    if(SUCCEEDED(hr) && ppvDevice && DxClosureEnabled())
+      DxClosureReturned("CommandQueue.GetDevice", ToStr(riid).c_str(), *ppvDevice);
+    return hr;
   }
 
   //////////////////////////////

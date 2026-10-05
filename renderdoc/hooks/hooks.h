@@ -29,6 +29,14 @@
 
 typedef std::function<void(void *, const char *)> FunctionLoadCallback;
 
+// Opt-in, observational DX closure diagnostics. No wrapping or interception policy changes.
+bool DxClosureEnabled();
+void DxClosureEvent(const char *kind, const char *site, const void *object = NULL,
+                    const void *related = NULL);
+void DxClosureRegister(void *real, void *wrapper, const char *type);
+void DxClosureUnregister(void *wrapper);
+void DxClosureReturned(const char *site, const char *iid, void *object);
+
 struct FunctionHook
 {
   FunctionHook() : orig(NULL), hook(NULL) {}

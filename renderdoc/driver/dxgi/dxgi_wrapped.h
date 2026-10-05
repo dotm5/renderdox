@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include "hooks/hooks.h"
+
 #include "api/replay/stringise.h"
 #include "common/common.h"
 #include "common/wrapped_pool.h"
@@ -47,8 +49,11 @@ protected:
   unsigned int m_iRefcount;
 
 public:
-  RefCountDXGIObject(IDXGIObject *real) : m_pReal(real), m_iRefcount(1) {}
-  virtual ~RefCountDXGIObject() {}
+  RefCountDXGIObject(IDXGIObject *real) : m_pReal(real), m_iRefcount(1)
+  {
+    DxClosureRegister(real, this, "DXGIObject");
+  }
+  virtual ~RefCountDXGIObject() { DxClosureUnregister(this); }
   static bool HandleWrap(const char *ifaceName, REFIID riid, void **ppvObject);
   static HRESULT WrapQueryInterface(IUnknown *real, const char *ifaceName, REFIID riid,
                                     void **ppvObject);

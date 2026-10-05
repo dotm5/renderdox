@@ -28,6 +28,99 @@
 #include "serialise/serialiser.h"
 #include "dxgi_common.h"
 #include <map>
+#include <set>
+
+// Weak diagnostic index: never retains COM objects or changes the runtime's registry.
+// The object being registered owns a real reference. Temporary QI references are balanced.
+struct DxClosureIndex
+{
+  Threading::CriticalSection lock;
+  std::map<void *, void *> wrappers;
+  std::map<void *, std::set<void *>> identities;
+};
+
+static DxClosureIndex &ClosureIndex()
+{
+  // Process lifetime, including shutdown of global wrappers.
+  static DxClosureIndex *index = new DxClosureIndex;
+  return *index;
+}
+
+void DxClosureRegister(void *real, void *wrapper, const char *type)
+{
+  if(!DxClosureEnabled() || !real)
+    return;
+  IUnknown *canonical = NULL, *check = NULL;
+  HRESULT hr = ((IUnknown *)real)->QueryInterface(__uuidof(IUnknown), (void **)&canonical);
+  if(FAILED(hr) || !canonical)
+  {
+    DxClosureEvent("identity_failure", type, real, wrapper);
+    return;
+  }
+  hr = canonical->QueryInterface(__uuidof(IUnknown), (void **)&check);
+  if(FAILED(hr) || check != canonical)
+    DxClosureEvent("canonical_anomaly", type, real, canonical);
+  SAFE_RELEASE(check);
+
+  DxClosureIndex &index = ClosureIndex();
+  {
+    SCOPED_LOCK(index.lock);
+    auto &aliases = index.identities[canonical];
+    if(!aliases.empty() && aliases.find(wrapper) == aliases.end())
+      DxClosureEvent("duplicate_candidate", type, wrapper, canonical);
+    aliases.insert(wrapper);
+    index.wrappers[wrapper] = canonical;
+    DxClosureEvent("object_register", type, wrapper, canonical);
+  }
+  SAFE_RELEASE(canonical);
+}
+
+void DxClosureUnregister(void *wrapper)
+{
+  if(!DxClosureEnabled())
+    return;
+  DxClosureIndex &index = ClosureIndex();
+  SCOPED_LOCK(index.lock);
+  auto it = index.wrappers.find(wrapper);
+  if(it == index.wrappers.end())
+    return;
+  auto identity = index.identities.find(it->second);
+  if(identity != index.identities.end())
+  {
+    identity->second.erase(wrapper);
+    if(identity->second.empty())
+      index.identities.erase(identity);
+  }
+  DxClosureEvent("object_unregister", "lifetime", wrapper, it->second);
+  index.wrappers.erase(it);
+}
+
+// Call only after a successful return, while the caller owns the returned reference.
+void DxClosureReturned(const char *site, const char *iid, void *object)
+{
+  if(!DxClosureEnabled() || !object)
+    return;
+  rdcstr route = StringFormat::Fmt("%s:%s", site, iid);
+  IUnknown *canonical = NULL, *check = NULL;
+  HRESULT hr = ((IUnknown *)object)->QueryInterface(__uuidof(IUnknown), (void **)&canonical);
+  if(FAILED(hr) || !canonical)
+  {
+    DxClosureEvent("identity_failure", route.c_str(), object);
+    return;
+  }
+  hr = canonical->QueryInterface(__uuidof(IUnknown), (void **)&check);
+  if(FAILED(hr) || check != canonical)
+    DxClosureEvent("identity_mismatch", route.c_str(), object, canonical);
+  bool known = false;
+  {
+    DxClosureIndex &index = ClosureIndex();
+    SCOPED_LOCK(index.lock);
+    known = index.wrappers.find(canonical) != index.wrappers.end();
+  }
+  DxClosureEvent(known ? "returned_wrapped" : "returned_untracked", route.c_str(), object, canonical);
+  SAFE_RELEASE(check);
+  SAFE_RELEASE(canonical);
+}
 
 ID3D11Resource *UnwrapDXResource(void *dxObject);
 IDXGIResource *UnwrapDXGIResource(void *dxgiObject);
@@ -204,6 +297,9 @@ bool RefCountDXGIObject::HandleWrap(const char *ifaceName, REFIID riid, void **p
     WarnUnknownGUID(ifaceName, riid);
   }
 
+  if(DxClosureEnabled())
+    DxClosureEvent("unrecognised_interface", ToStr(riid).c_str(), *ppvObject);
+
   return false;
 }
 
@@ -213,8 +309,21 @@ HRESULT STDMETHODCALLTYPE RefCountDXGIObject::GetParent(
 {
   HRESULT ret = m_pReal->GetParent(riid, ppParent);
 
-  if(SUCCEEDED(ret))
-    HandleWrap("GetParent", riid, ppParent);
+  if(SUCCEEDED(ret) && ppParent && *ppParent)
+  {
+    // Preserve the native identity evidence separately from the returned wrapper.
+    if(DxClosureEnabled())
+    {
+      IUnknown *native = NULL;
+      ((IUnknown *)*ppParent)->QueryInterface(__uuidof(IUnknown), (void **)&native);
+      DxClosureEvent("returned_native", "GetParent", *ppParent, native);
+      SAFE_RELEASE(native);
+    }
+    if(!HandleWrap("GetParent", riid, ppParent))
+      DxClosureEvent("return_passthrough", "GetParent", *ppParent);
+    if(DxClosureEnabled())
+      DxClosureReturned("GetParent", ToStr(riid).c_str(), *ppParent);
+  }
 
   return ret;
 }
@@ -222,10 +331,22 @@ HRESULT STDMETHODCALLTYPE RefCountDXGIObject::GetParent(
 HRESULT RefCountDXGIObject::WrapQueryInterface(IUnknown *real, const char *ifaceName, REFIID riid,
                                                void **ppvObject)
 {
+  if(DxClosureEnabled())
+    DxClosureEvent("qi_fallback_attempt", ToStr(riid).c_str(), real);
   HRESULT ret = real->QueryInterface(riid, ppvObject);
+  if(DxClosureEnabled() && FAILED(ret))
+    DxClosureEvent("qi_native_rejected",
+                   StringFormat::Fmt("%s:%s;hr=%08x", ifaceName, ToStr(riid).c_str(), ret).c_str(),
+                   real);
 
   if(SUCCEEDED(ret))
-    HandleWrap(ifaceName, riid, ppvObject);
+  {
+    if(!HandleWrap(ifaceName, riid, ppvObject))
+    {
+      if(DxClosureEnabled())
+        DxClosureEvent("qi_passthrough", ToStr(riid).c_str(), real, *ppvObject);
+    }
+  }
 
   return ret;
 }
@@ -520,6 +641,9 @@ HRESULT WrappedIDXGISwapChain4::GetBuffer(
     return ret;
   }
 
+  if(DxClosureEnabled())
+    DxClosureReturned("GetBuffer", ToStr(riid).c_str(), *ppSurface);
+
   // now the reference is in ppSurface
   SAFE_RELEASE(wrappedBackbuffer);
 
@@ -593,9 +717,13 @@ HRESULT WrappedIDXGISwapChain4::GetDevice(
     }
     else if(!HandleWrap("GetDevice", riid, ppDevice))
     {
+      DxClosureEvent("return_passthrough", "SwapChain.GetDevice", *ppDevice);
       RDCUNIMPLEMENTED("Not returning trivial type");
     }
   }
+
+  if(SUCCEEDED(ret) && ppDevice && DxClosureEnabled())
+    DxClosureReturned("SwapChain.GetDevice", ToStr(riid).c_str(), *ppDevice);
 
   return ret;
 }
@@ -1171,6 +1299,7 @@ WrappedIDXGIFactory *WrappedIDXGIFactory::Wrap(IDXGIFactory *real)
   }
   if(reused)
   {
+    DxClosureEvent("wrapper_reused", "IDXGIFactory", wrapper, canonical);
     real->Release();
   }
   SAFE_RELEASE(canonical);
@@ -1188,6 +1317,8 @@ ULONG STDMETHODCALLTYPE WrappedIDXGIFactory::Release()
     {
       if(m_Canonical)
         cache.objects.erase(m_Canonical);
+      // Retire diagnostics before another wrapper can be published for this real object.
+      DxClosureUnregister((RefCountDXGIObject *)this);
     }
   }
   if(ret == 0)
@@ -1379,6 +1510,7 @@ HRESULT WrappedIDXGIFactory::CreateSwapChain(IUnknown *pDevice, DXGI_SWAP_CHAIN_
     return ret;
   }
 
+  DxClosureEvent("unwrapped_root", "CreateSwapChain", pDevice);
   RDCERR("Creating swap chain with non-hooked device!");
 
   return m_pReal->CreateSwapChain(pDevice, pDesc, ppSwapChain);
@@ -1424,6 +1556,7 @@ HRESULT WrappedIDXGIFactory::CreateSwapChainForHwnd(
   }
   else
   {
+    DxClosureEvent("unwrapped_root", "CreateSwapChain", pDevice);
     RDCERR("Creating swap chain with non-hooked device!");
   }
 
@@ -1475,6 +1608,7 @@ HRESULT WrappedIDXGIFactory::CreateSwapChainForCoreWindow(IUnknown *pDevice, IUn
   }
   else
   {
+    DxClosureEvent("unwrapped_root", "CreateSwapChain", pDevice);
     RDCERR("Creating swap chain with non-hooked device!");
   }
 
@@ -1526,6 +1660,7 @@ HRESULT WrappedIDXGIFactory::CreateSwapChainForComposition(IUnknown *pDevice,
   }
   else
   {
+    DxClosureEvent("unwrapped_root", "CreateSwapChain", pDevice);
     RDCERR("Creating swap chain with non-hooked device!");
   }
 

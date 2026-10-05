@@ -88,6 +88,7 @@ protected:
       : RefCounter12(real), TrackedResource12(id), m_pDevice(device)
   {
     m_pDevice->SoftRef();
+    DxClosureRegister(real, (NestedType *)this, "D3D12DeviceChild");
 
     if(real)
     {
@@ -101,6 +102,7 @@ protected:
 
   void Shutdown()
   {
+    DxClosureUnregister((NestedType *)this);
     if(m_pReal)
       m_pDevice->GetResourceManager()->RemoveWrapper(this, m_pReal);
 
@@ -340,7 +342,10 @@ public:
 
   virtual HRESULT STDMETHODCALLTYPE GetDevice(REFIID riid, _COM_Outptr_opt_ void **ppvDevice)
   {
-    return m_pDevice->GetDevice(riid, ppvDevice);
+    HRESULT hr = m_pDevice->GetDevice(riid, ppvDevice);
+    if(SUCCEEDED(hr) && ppvDevice && DxClosureEnabled())
+      DxClosureReturned("DeviceChild.GetDevice", ToStr(riid).c_str(), *ppvDevice);
+    return hr;
   }
 };
 
@@ -2029,6 +2034,9 @@ typename UnwrapHelper<iface>::Outer *GetWrapped(iface *obj)
     return NULL;
 
   typename UnwrapHelper<iface>::Outer *wrapped = UnwrapHelper<iface>::FromHandle(obj);
+
+  if(DxClosureEnabled() && !wrapped->IsAlloc(wrapped))
+    DxClosureEvent("unwrapped_object", "GetWrapped", obj);
 
 #if WRAPPING_DEBUG
   if(obj != NULL && !wrapped->IsAlloc(wrapped))

@@ -25,7 +25,50 @@
 
 #include "hooks.h"
 #include "common/common.h"
+#include "common/threading.h"
+#include "common/formatting.h"
 #include "os/os_specific.h"
+#if defined(_WIN32)
+#include <windows.h>
+#endif
+
+bool DxClosureEnabled()
+{
+  static const bool enabled = Process::GetEnvVariable("DCOMP_DX_CLOSURE") == "1";
+  return enabled;
+}
+
+void DxClosureEvent(const char *kind, const char *site, const void *object, const void *related)
+{
+  if(!DxClosureEnabled())
+    return;
+#if defined(_WIN32)
+  const DWORD savedError = GetLastError();
+#endif
+  RDCLOG("[dx-closure] kind=%s site=%s object=%p related=%p", kind, site, object, related);
+  // Core's normal debug log is deleted at clean shutdown. Keep an optional independent
+  // per-process artifact; no COM references are held by the diagnostic sink.
+  static Threading::CriticalSection lock;
+  {
+    SCOPED_LOCK(lock);
+    static FILE *sink = []() -> FILE * {
+      rdcstr base = Process::GetEnvVariable("DCOMP_DX_CLOSURE_LOG");
+      if(base.empty()) return NULL;
+      return FileIO::fopen(StringFormat::Fmt("%s.%u.log", base.c_str(), Process::GetCurrentPID()),
+                           FileIO::WriteBinary);
+    }();
+    if(sink)
+    {
+      const rdcstr line = StringFormat::Fmt("[dx-closure] kind=%s site=%s object=%p related=%p\n",
+                                            kind, site, object, related);
+      FileIO::fwrite(line.c_str(), 1, line.size(), sink);
+      fflush(sink);
+    }
+  }
+#if defined(_WIN32)
+  SetLastError(savedError);
+#endif
+}
 
 static rdcarray<LibraryHook *> &LibList()
 {

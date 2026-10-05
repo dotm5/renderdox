@@ -503,6 +503,7 @@ WrappedID3D12CommandQueue::WrappedID3D12CommandQueue(ResourceId id, ID3D12Comman
       m_SharingContract(*m_pDevice)
 {
   RenderDoc::Inst().RegisterMemoryRegion(this, sizeof(WrappedID3D12CommandQueue));
+  DxClosureRegister(real, (ID3D12CommandQueue *)this, "D3D12CommandQueue");
 
   m_WrappedDebug.m_pQueue = this;
   m_pDownlevel = NULL;
@@ -558,6 +559,7 @@ WrappedID3D12CommandQueue::WrappedID3D12CommandQueue(ResourceId id, ID3D12Comman
 
 WrappedID3D12CommandQueue::~WrappedID3D12CommandQueue()
 {
+  DxClosureUnregister((ID3D12CommandQueue *)this);
   SAFE_DELETE(m_FrameReader);
 
   SAFE_RELEASE(m_CallbackFence);
@@ -1374,6 +1376,7 @@ WrappedID3D12GraphicsCommandList::WrappedID3D12GraphicsCommandList(ResourceId id
     : m_RefCounter(real, false), m_pList(real), m_pDevice(device), m_State(state)
 {
   RenderDoc::Inst().RegisterMemoryRegion(this, sizeof(WrappedID3D12GraphicsCommandList));
+  DxClosureRegister(real, (ID3D12GraphicsCommandList *)this, "D3D12GraphicsCommandList");
 
   m_pList1 = NULL;
   m_pList2 = NULL;
@@ -1457,6 +1460,7 @@ WrappedID3D12GraphicsCommandList::WrappedID3D12GraphicsCommandList(ResourceId id
 
 WrappedID3D12GraphicsCommandList::~WrappedID3D12GraphicsCommandList()
 {
+  DxClosureUnregister((ID3D12GraphicsCommandList *)this);
   SAFE_RELEASE(m_AMDMarkers);
 
   for(std::function<void()> &func : m_UnusedCleanupCallbacks)

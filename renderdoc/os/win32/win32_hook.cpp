@@ -35,6 +35,7 @@
 #include <map>
 #include <set>
 #include "common/common.h"
+#include "common/formatting.h"
 #include "common/threading.h"
 #include "generated/product_identity.h"
 #include "hooks/hooks.h"
@@ -259,10 +260,29 @@ static BOOL ProtectPage(void *addr, SIZE_T size, DWORD newProtect, DWORD &oldPro
 std::map<void **, void *> s_InstalledHooks;
 Threading::CriticalSection installedLock;
 
+// Explicit per-process experiments only. Empty by default; no production
+// interception is removed based on sample or UE-only coverage evidence.
+static const rdcstr &ClosureABMode()
+{
+  static const rdcstr mode = Process::GetEnvVariable("DCOMP_DX_CLOSURE_AB");
+  return mode;
+}
+
 bool ApplyHook(FunctionHook &hook, void **IATentry, bool &already)
 {
   if(IsProxyOnly())
     return true;  // skip all IAT patches in ProxyOnly mode
+
+#if defined(DCOMP_INLINE_GRAPHICS_HOOKS) && DCOMP_INLINE_GRAPHICS_HOOKS
+  if(ClosureABMode() == "loader-iat" &&
+     (hook.function == "GetProcAddress" || hook.function == "LoadLibraryA" ||
+      hook.function == "LoadLibraryW" || hook.function == "LoadLibraryExA" ||
+      hook.function == "LoadLibraryExW"))
+  {
+    DxClosureEvent("ab_iat_skip", hook.function.c_str(), IATentry);
+    return true;
+  }
+#endif
 
   DWORD oldProtection = PAGE_EXECUTE;
 
@@ -289,6 +309,15 @@ bool ApplyHook(FunctionHook &hook, void **IATentry, bool &already)
   }
 
   *IATentry = hook.hook;
+  if(DxClosureEnabled())
+  {
+    // Logged after the actual write, even if restoring protection subsequently fails.
+    HMODULE owner = NULL;
+    GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                          GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                      (LPCSTR)IATentry, &owner);
+    DxClosureEvent("iat_write", hook.function.c_str(), IATentry, owner);
+  }
 
   if(!ProtectPage(IATentry, sizeof(void *), oldProtection, oldProtection))
   {
@@ -1466,6 +1495,7 @@ static void InstallInProcessDumpBlock()
     }
 
     s_InlineGraphicsHooks[target] = installed;
+    DxClosureEvent("inline_install", "dbghelp.dll!MiniDumpWriteDump", target);
     patched++;
 
     RDCWARN("Blocked in-process dumps by detouring MiniDumpWriteDump at %p in %ls", target, path);
@@ -1544,6 +1574,8 @@ static HMODULE FindTopmostProvider(const char *function, HMODULE fallback)
     basename = basename ? basename + 1 : path;
     if(!strcmp(function, "D3D12GetInterface") && !_wcsicmp(basename, L"D3D12Core.dll"))
     {
+      if(DxClosureEnabled())
+        DxClosureEvent("provider_excluded", "D3D12Core.runtime_private", modules[i], address);
       continue;
     }
 
@@ -1646,6 +1678,13 @@ static void MoveInlineGraphicsHooksToTopmostProviders()
     if(IsInApplicationDirectory(provider))
       continue;
 
+    if(DxClosureEnabled())
+    {
+      wchar_t providerPath[MAX_PATH] = {};
+      GetModuleFileNameW(provider, providerPath, MAX_PATH);
+      DxClosureEvent("provider_selected", StringFormat::Wide2UTF8(providerPath).c_str(), provider);
+    }
+
     void *newTarget = (void *)GetProcAddress(provider, installed.function.c_str());
     if(newTarget == NULL || newTarget == installed.target)
       continue;
@@ -1689,6 +1728,8 @@ static void MoveInlineGraphicsHooksToTopmostProviders()
     else
       Win32DestroyInlineHook(installed.hook);
 
+    DxClosureEvent("inline_remove", moved.function.c_str(), installed.target);
+    DxClosureEvent("inline_install", moved.function.c_str(), newTarget);
     s_InlineGraphicsHooks.erase(hookIt);
     s_InlineGraphicsHooks[newTarget] = moved;
 
@@ -1736,6 +1777,23 @@ static void InstallInlineGraphicsHooks()
       void *target = (void *)GetProcAddress(module, hook.function.c_str());
       if(target == NULL || target == hook.hook)
         continue;
+
+      if(ClosureABMode() == "system-dxgi" && libraryIt->first == "dxgi.dll" &&
+         TargetIsInSystemDirectory(target) &&
+         s_InlineGraphicsHooks.find(target) == s_InlineGraphicsHooks.end())
+      {
+        bool localEntry = false;
+        for(const auto &entry : s_InlineGraphicsHooks)
+          if(entry.second.library == "dxgi.dll" && entry.second.function == hook.function &&
+             entry.second.detour == hook.hook && IsInApplicationDirectory(entry.second.ownerModule))
+            localEntry = true;
+        if(localEntry)
+        {
+          *hook.orig = target;
+          DxClosureEvent("ab_inline_skip", hook.function.c_str(), target, module);
+          continue;
+        }
+      }
 
       auto installedIt = s_InlineGraphicsHooks.find(target);
       if(installedIt != s_InlineGraphicsHooks.end())
@@ -1792,6 +1850,8 @@ static void InstallInlineGraphicsHooks()
 
         s_InlineGraphicsHooks[target] = installed;
 
+        DxClosureEvent("inline_chain", hook.function.c_str(), target, foreign.detour);
+
         RDCLOG("Chained graphics entry hook for %s!%s at %p: existing %s detour into %s+0x%llx",
                libraryIt->first.c_str(), hook.function.c_str(), target,
                foreign.shape ? foreign.shape : "unknown", foreign.module,
@@ -1825,6 +1885,7 @@ static void InstallInlineGraphicsHooks()
       }
 
       s_InlineGraphicsHooks[target] = installed;
+      DxClosureEvent("inline_install", hook.function.c_str(), target, module);
       wchar_t hookedModulePath[MAX_PATH] = {};
       GetModuleFileNameW(module, hookedModulePath, MAX_PATH);
 
@@ -1850,6 +1911,7 @@ static void RemoveInlineGraphicsHooks()
     for(auto &hookIt : s_InlineGraphicsHooks)
     {
       InlineGraphicsHook &installed = hookIt.second;
+      DxClosureEvent("inline_remove", installed.function.c_str(), installed.target);
 
       if(installed.chained)
       {
@@ -2271,6 +2333,8 @@ FARPROC WINAPI Hooked_GetProcAddress(HMODULE mod, const LPCSTR func)
           if(realfunc == NULL)
             return NULL;
 
+          DxClosureEvent("dynamic_redirect", searchFunc, mod, found->hook);
+
           return (FARPROC)found->hook;
         }
       }
@@ -2283,7 +2347,25 @@ FARPROC WINAPI Hooked_GetProcAddress(HMODULE mod, const LPCSTR func)
 
   SetLastError(S_OK);
 
-  return GetProcAddress(mod, func);
+  FARPROC result = GetProcAddress(mod, func);
+  if(DxClosureEnabled())
+  {
+    DWORD error = GetLastError();
+    wchar_t path[MAX_PATH] = {};
+    GetModuleFileNameW(mod, path, MAX_PATH);
+    const wchar_t *name = wcsrchr(path, L'\\');
+    name = name ? name + 1 : path;
+    if(!_wcsicmp(name, L"d3d12.dll") || !_wcsicmp(name, L"D3D12Core.dll") ||
+       !_wcsicmp(name, L"dxgi.dll") || !_wcsicmp(name, L"d3d11.dll"))
+    {
+      rdcstr entry = OrdinalAsString((void *)func) ?
+          StringFormat::Fmt("ordinal_%u", (uint32_t)(uintptr_t)func) : rdcstr(func);
+      rdcstr route = StringFormat::Wide2UTF8(path) + "!" + entry;
+      DxClosureEvent(result ? "dynamic_native" : "dynamic_missing", route.c_str(), mod, (void *)result);
+    }
+    SetLastError(error);
+  }
+  return result;
 }
 static void InitHookData()
 {
@@ -2339,6 +2421,8 @@ void LibraryHooks::RegisterFunctionHook(const char *libraryName, const FunctionH
     }
   }
   s_HookData->DllHooks[strlower(rdcstr(libraryName))].FunctionHooks.push_back(hook);
+  if(DxClosureEnabled())
+    DxClosureEvent("export_registered", (rdcstr(libraryName) + "!" + hook.function).c_str());
 }
 
 void LibraryHooks::RegisterLibraryHook(const char *libraryName, FunctionLoadCallback loadedCallback)

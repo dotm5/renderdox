@@ -593,6 +593,7 @@ WrappedID3D12Device::WrappedID3D12Device(ID3D12Device *realDevice, D3D12InitPara
       m_WrappedAGS(*this)
 {
   RenderDoc::Inst().RegisterMemoryRegion(this, sizeof(WrappedID3D12Device));
+  DxClosureRegister(realDevice, (ID3D12Device *)this, "D3D12Device");
 
   m_SectionVersion = D3D12InitParams::CurrentVersion;
 
@@ -945,6 +946,7 @@ WrappedID3D12Device::WrappedID3D12Device(ID3D12Device *realDevice, D3D12InitPara
 
 WrappedID3D12Device::~WrappedID3D12Device()
 {
+  DxClosureUnregister((ID3D12Device *)this);
   if(!m_Replay->IsRemoteProxy())
   {
     Threading::JobSystem::SyncAllJobs();
