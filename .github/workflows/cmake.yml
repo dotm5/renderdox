@@ -72,7 +72,8 @@ jobs:
             cxx: g++
             metal: 'OFF'
           - name: macOS AppleClang Release
-            os: macos-14
+            # macos-14 is being retired and has scheduled runner brownouts.
+            os: macos-15
             cc: clang
             cxx: clang++
             metal: 'ON'

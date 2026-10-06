@@ -2,12 +2,12 @@ name: Automatic Windows release
 
 on:
   workflow_run:
-    workflows: [MSBuild]
+    workflows: [MSBuild, CMake]
     types: [completed]
 
 # This privileged workflow never checks out or executes triggering content. It
 # only accepts artifacts from a successful push run in this repository's
-# default branch, waits for the matching CMake run, then publishes the exact
+# default branch, requires both matching builds, then publishes the exact
 # archives already attested by MSBuild.
 permissions:
   actions: read
@@ -29,58 +29,68 @@ jobs:
     timeout-minutes: 45
 
     steps:
-      - name: Wait for the matching CMake run
-        id: cmake
+      - name: Check both builds for this commit
+        id: builds
         uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const sha = context.payload.workflow_run.head_sha;
-            const delay = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
+            const repository = `${context.repo.owner}/${context.repo.repo}`;
+            const builds = {};
 
-            for (let attempt = 1; attempt <= 60; attempt++) {
+            for (const workflow of ['msbuild', 'cmake']) {
               const response = await github.rest.actions.listWorkflowRuns({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                workflow_id: 'cmake.yml',
+                workflow_id: `${workflow}.yml`,
                 head_sha: sha,
                 event: 'push',
                 per_page: 20,
               });
 
               const runs = response.data.workflow_runs.filter(run =>
-                run.head_sha === sha && run.event === 'push');
+                run.head_sha === sha && run.event === 'push' &&
+                run.head_branch === 'dgcore-main' &&
+                run.head_repository?.full_name === repository);
               const successful = runs.find(run =>
                 run.status === 'completed' && run.conclusion === 'success');
 
               if (successful) {
-                core.setOutput('run-id', successful.id.toString());
-                core.setOutput('run-url', successful.html_url);
-                return;
+                builds[workflow] = successful;
+                continue;
               }
 
               const active = runs.some(run => run.status !== 'completed');
               if (runs.length > 0 && !active) {
                 const results = runs.map(run => `${run.id}:${run.conclusion}`).join(', ');
-                core.setFailed(`CMake did not succeed for ${sha}: ${results}`);
+                core.setFailed(`${workflow} did not succeed for ${sha}: ${results}`);
                 return;
               }
 
-              core.info(`CMake result for ${sha} is not ready (attempt ${attempt}/60)`);
-              await delay(30000);
+              // The other workflow's completion (including a successful rerun)
+              // will evaluate the same SHA again, without occupying a runner.
+              core.setOutput('ready', 'false');
+              core.info(`${workflow} is not ready for ${sha}; waiting for its completion event`);
+              return;
             }
 
-            core.setFailed(`Timed out waiting for CMake to validate ${sha}`);
+            core.setOutput('msbuild-run-id', builds.msbuild.id.toString());
+            core.setOutput('msbuild-run-url', builds.msbuild.html_url);
+            core.setOutput('cmake-run-url', builds.cmake.html_url);
+            core.setOutput('ready', 'true');
 
       - name: Download the attested MSBuild artifacts
+        if: steps.builds.outputs.ready == 'true'
         uses: actions/download-artifact@v8
         with:
           name: renderdox-windows-release
           path: ${{ runner.temp }}/release-assets
-          run-id: ${{ github.event.workflow_run.id }}
+          run-id: ${{ steps.builds.outputs.msbuild-run-id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Validate release assets
+        if: steps.builds.outputs.ready == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -98,13 +108,14 @@ jobs:
           (cd "${asset_root}" && sha256sum --check SHA256SUMS.txt)
 
       - name: Publish the latest continuous release
+        if: steps.builds.outputs.ready == 'true'
         id: release
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
-          MSBUILD_URL: ${{ github.event.workflow_run.html_url }}
-          CMAKE_URL: ${{ steps.cmake.outputs.run-url }}
+          MSBUILD_URL: ${{ steps.builds.outputs.msbuild-run-url }}
+          CMAKE_URL: ${{ steps.builds.outputs.cmake-run-url }}
         run: |
           set -euo pipefail
           short_sha="${HEAD_SHA:0:12}"
