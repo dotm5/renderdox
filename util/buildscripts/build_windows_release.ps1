@@ -15,7 +15,10 @@ param(
   [ValidateRange(1, 64)]
   [int]$MaxCpuCount = 8,
 
-  [string]$WindowsSDKVersion = '10.0.26100.0',
+  [string]$WindowsSDKVersion,
+
+  [ValidatePattern('^(Auto|v[0-9]+)$')]
+  [string]$MSVCPlatformToolset = 'Auto',
 
   [switch]$EnableLTCG,
 
@@ -30,9 +33,12 @@ $solutionPath = Join-Path $repositoryRoot 'renderdoc.sln'
 $contractCheck = Join-Path $PSScriptRoot 'check_windows_build_contracts.ps1'
 $embeddedDxilCheck = Join-Path $PSScriptRoot 'check_windows_embedded_dxil.ps1'
 $bootstrapExportCheck = Join-Path $PSScriptRoot 'check_windows_bootstrap_exports.ps1'
-$vswherePath = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
 $solutionPlatform = if($Platform -eq 'Win32') { 'x86' } else { $Platform }
-$platformToolset = if($Toolchain -eq 'ClangCL') { 'ClangCL' } else { 'v143' }
+. (Join-Path $PSScriptRoot 'windows_toolchain.ps1')
+$selectedToolchain = Get-DCompWindowsToolchain -PlatformToolset $MSVCPlatformToolset `
+  -WindowsSDKVersion $WindowsSDKVersion
+$WindowsSDKVersion = $selectedToolchain.WindowsSDKVersion
+$platformToolset = if($Toolchain -eq 'ClangCL') { 'ClangCL' } else { $selectedToolchain.PlatformToolset }
 $configurationDirectory = if($Toolchain -eq 'ClangCL') { 'ClangRelease' } else { 'Release' }
 $singleGeneration = if($ChildPropagation -eq 'OneGeneration') { '1' } else { '0' }
 $toolchainTag = $Toolchain.ToLowerInvariant()
@@ -111,22 +117,7 @@ try
     throw 'Pre-build contract validation failed'
   }
 
-  if(-not (Test-Path -LiteralPath $vswherePath -PathType Leaf))
-  {
-    throw "vswhere.exe was not found: $vswherePath"
-  }
-  $visualStudioPath = & $vswherePath -latest -products * -requires Microsoft.Component.MSBuild `
-    -property installationPath
-  $msbuildPath = Join-Path $visualStudioPath 'MSBuild\Current\Bin\amd64\MSBuild.exe'
-  if(-not (Test-Path -LiteralPath $msbuildPath -PathType Leaf))
-  {
-    $msbuildPath = & $vswherePath -latest -products * -requires Microsoft.Component.MSBuild `
-      -find 'MSBuild\**\Bin\MSBuild.exe' | Select-Object -First 1
-  }
-  if(-not $msbuildPath)
-  {
-    throw 'MSBuild.exe was not found in an installed Visual Studio instance'
-  }
+  $msbuildPath = $selectedToolchain.MSBuildPath
 
   $logDirectory = Join-Path $repositoryRoot 'build\logs'
   New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null
@@ -145,6 +136,7 @@ try
     '-p:Configuration=Release'
     "-p:Platform=$solutionPlatform"
     "-p:PlatformToolset=$platformToolset"
+    "-p:VCToolsVersion=$($selectedToolchain.VCToolsVersion)"
     "-p:WindowsTargetPlatformVersion=$WindowsSDKVersion"
     "-p:SolutionDir=$repositoryRoot\"
     '-p:BuildInParallel=true'
@@ -168,6 +160,7 @@ try
   )
 
   Write-Host "Building full Release|$solutionPlatform with $Toolchain, target=$Target"
+  Write-Host "C++ tools: $($selectedToolchain.PlatformToolset) $($selectedToolchain.VCToolsVersion); SDK: $WindowsSDKVersion"
   Write-Host "Output: $Platform\$configurationDirectory"
   Write-Host "Log: $logBase.log"
   Write-Host "Binlog: $logBase.binlog"
@@ -214,6 +207,7 @@ try
         '-p:Configuration=Release'
         "-p:Platform=$Platform"
         "-p:PlatformToolset=$platformToolset"
+        "-p:VCToolsVersion=$($selectedToolchain.VCToolsVersion)"
         "-p:WindowsTargetPlatformVersion=$WindowsSDKVersion"
         "-p:SolutionDir=$repositoryRoot\"
         "-p:RDocEnableLTCG=$ltcgValue"

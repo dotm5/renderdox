@@ -9,7 +9,10 @@ param(
   [ValidateRange(1, 64)]
   [int]$MaxCpuCount = 8,
 
-  [string]$WindowsSDKVersion = '10.0.26100.0',
+  [string]$WindowsSDKVersion,
+
+  [ValidatePattern('^(Auto|v[0-9]+)$')]
+  [string]$MSVCPlatformToolset = 'Auto',
 
   [string]$OutputDirectory,
 
@@ -29,40 +32,27 @@ $commandFilename = "$($identity.commandBaseName).exe"
 $uiStubFilename = "$($identity.uiStubBaseName).exe"
 $shim64Filename = "$($identity.shimBaseName)64.dll"
 $vulkanJsonFilename = "$($identity.coreBaseName).json"
-$vswherePath = Join-Path ${env:ProgramFiles(x86)} `
-  'Microsoft Visual Studio\Installer\vswhere.exe'
-if(-not (Test-Path -LiteralPath $vswherePath -PathType Leaf))
-{
-  throw "vswhere.exe was not found: $vswherePath"
-}
-$visualStudioPath = & $vswherePath -latest -products * -requires Microsoft.Component.MSBuild `
-  -property installationPath
-if(-not $visualStudioPath)
-{
-  throw 'An MSBuild-capable Visual Studio installation was not found'
-}
-$v143VersionFile = Join-Path $visualStudioPath `
-  'VC\Auxiliary\Build\Microsoft.VCToolsVersion.v143.default.txt'
-if(-not (Test-Path -LiteralPath $v143VersionFile -PathType Leaf))
-{
-  throw "The v143 toolset version file was not found: $v143VersionFile"
-}
-$v143Version = (Get-Content -LiteralPath $v143VersionFile -Raw).Trim()
-$v143VersionPrefix = ([version]$v143Version).ToString(2)
+. (Join-Path $PSScriptRoot 'windows_toolchain.ps1')
+$selectedToolchain = Get-DCompWindowsToolchain -PlatformToolset $MSVCPlatformToolset `
+  -WindowsSDKVersion $WindowsSDKVersion
+$MSVCPlatformToolset = $selectedToolchain.PlatformToolset
+$WindowsSDKVersion = $selectedToolchain.WindowsSDKVersion
+$visualStudioPath = $selectedToolchain.VisualStudioPath
+$toolsVersionPrefix = ([version]$selectedToolchain.VCToolsVersion).ToString(2)
 $redistRoot = Join-Path $visualStudioPath 'VC\Redist\MSVC'
 $redistVersionDirectory = Get-ChildItem -LiteralPath $redistRoot -Directory |
-  Where-Object { $_.Name -match '^\d+\.\d+\.\d+$' -and $_.Name.StartsWith("$v143VersionPrefix.") } |
+  Where-Object { $_.Name -match '^\d+\.\d+\.\d+$' -and $_.Name.StartsWith("$toolsVersionPrefix.") } |
   Sort-Object { [version]$_.Name } -Descending |
   Select-Object -First 1
 if(-not $redistVersionDirectory)
 {
-  throw "A matching v143 redistributable directory was not found below $redistRoot"
+  throw "A matching $MSVCPlatformToolset redistributable directory was not found below $redistRoot"
 }
 $crtDirectory = Get-ChildItem -LiteralPath (Join-Path $redistVersionDirectory.FullName 'x64') `
   -Directory -Filter 'Microsoft.VC*.CRT' | Select-Object -First 1
 if(-not $crtDirectory)
 {
-  throw "The x64 v143 CRT directory was not found below $($redistVersionDirectory.FullName)"
+  throw "The x64 $MSVCPlatformToolset CRT directory was not found below $($redistVersionDirectory.FullName)"
 }
 $crtFileNames = @('msvcp140.dll', 'msvcp140_1.dll', 'vcruntime140.dll', 'vcruntime140_1.dll')
 foreach($crtFileName in $crtFileNames)
@@ -70,7 +60,7 @@ foreach($crtFileName in $crtFileNames)
   $crtFile = Join-Path $crtDirectory.FullName $crtFileName
   if(-not (Test-Path -LiteralPath $crtFile -PathType Leaf))
   {
-    throw "The required v143 CRT file is missing: $crtFile"
+    throw "The required $MSVCPlatformToolset CRT file is missing: $crtFile"
   }
 }
 $commit = (& git -C $repositoryRoot rev-parse HEAD).Trim()
@@ -174,7 +164,7 @@ foreach($toolchain in @('MSVC', 'ClangCL'))
 {
   & $singleBuild -Target $Target -Toolchain $toolchain -Platform x64 `
     -ChildPropagation $ChildPropagation -MaxCpuCount $MaxCpuCount `
-    -WindowsSDKVersion $WindowsSDKVersion `
+    -WindowsSDKVersion $WindowsSDKVersion -MSVCPlatformToolset $MSVCPlatformToolset `
     -IncludeBootstrap:$IncludeBootstrap.IsPresent
   if($LASTEXITCODE -ne 0)
   {
@@ -319,7 +309,8 @@ foreach($toolchain in @('MSVC', 'ClangCL'))
     })
   $toolchainManifest = [ordered]@{
     toolchain = $toolchain
-    platform_toolset = if($toolchain -eq 'ClangCL') { 'ClangCL' } else { 'v143' }
+    platform_toolset = if($toolchain -eq 'ClangCL') { 'ClangCL' } else { $MSVCPlatformToolset }
+    vc_tools_version = $selectedToolchain.VCToolsVersion
     vc_runtime = $crtDirectory.FullName
     source_output = $sourceRoot
     package = $packageName
@@ -341,6 +332,8 @@ $manifest = [ordered]@{
   configuration = 'Release'
   platform = 'x64'
   child_propagation = $ChildPropagation
+  visual_studio = $visualStudioPath
+  vc_tools_version = $selectedToolchain.VCToolsVersion
   windows_sdk = $WindowsSDKVersion
   bootstrap = $IncludeBootstrap.IsPresent
   toolchains = $matrix
@@ -354,7 +347,7 @@ $readme = @'
 This directory contains two complete, runnable x64 Release packages built from
 the same source commit:
 
-- `msvc-release`: Visual C++ v143 build.
+- `msvc-release`: Visual C++ {MSVC_TOOLSET} build.
 - `clangcl-release`: ClangCL build with isolated output and targeted MSVC
   frontend fallback only for source files that require MSVC-compatible parsing.
 
@@ -371,7 +364,7 @@ to it, so a dependency update to another Python does not silently drop runtime
 files. Each package is then verified for a complete DLL import closure before it
 is published, and `manifest.json` records the interpreter and binding state.
 '@
-$readme = $readme.Replace('{PRODUCT_NAME}', $identity.productDisplayName)
+$readme = $readme.Replace('{PRODUCT_NAME}', $identity.productDisplayName).Replace('{MSVC_TOOLSET}', $MSVCPlatformToolset)
 $readme | Set-Content -LiteralPath (Join-Path $OutputDirectory 'README.md') -Encoding utf8
 if($IncludeBootstrap)
 {

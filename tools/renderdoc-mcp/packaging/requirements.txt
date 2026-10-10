@@ -1,4 +1,5 @@
-numpy==2.2.6
-Pillow==11.3.0
-PyInstaller==6.16.0
+# Stable packaging dependencies; the embedded replay worker retains its native ABI.
+numpy==2.5.3
+Pillow==12.3.0
+PyInstaller==6.22.3
 pyinstaller-hooks-contrib==2026.8

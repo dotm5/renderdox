@@ -67,20 +67,20 @@ jobs:
       matrix:
         include:
           - name: Ubuntu GCC Release
-            os: ubuntu-24.04
+            os: ubuntu-latest
             cc: gcc
             cxx: g++
             metal: 'OFF'
           - name: macOS AppleClang Release
-            # macos-14 is being retired and has scheduled runner brownouts.
-            os: macos-15
+            # GitHub moves this alias only to generally available images.
+            os: macos-latest
             cc: clang
             cxx: clang++
             metal: 'ON'
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 5
           submodules: recursive

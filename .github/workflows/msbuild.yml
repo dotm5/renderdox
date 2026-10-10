@@ -63,18 +63,24 @@ env:
 jobs:
   contracts:
     name: Windows build contracts
-    runs-on: windows-2025
+    runs-on: windows-latest
     timeout-minutes: 20
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 5
           submodules: recursive
 
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@v3
+
+      - name: Resolve the stable Windows build environment
+        shell: pwsh
+        run: |
+          . ./util/buildscripts/windows_toolchain.ps1
+          Get-DCompWindowsToolchain | Format-List
 
       - name: Validate generated product identity
         shell: pwsh
@@ -91,7 +97,7 @@ jobs:
   build:
     name: MSVC and ClangCL x64 Release
     needs: contracts
-    runs-on: windows-2025
+    runs-on: windows-latest
     timeout-minutes: 180
     permissions:
       contents: read
@@ -100,7 +106,7 @@ jobs:
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 5
           submodules: recursive
@@ -136,15 +142,17 @@ jobs:
             -IncludeBootstrap
 
       - name: Set up portable MCP packaging Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
-          python-version: '3.12'
+          python-version: '3.15'
+          check-latest: true
 
       - name: Set up JDK for the owned JVM host fixture
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: '25'
+          check-latest: true
 
       - name: Bundle portable MCP service and compatible worker
         shell: pwsh
@@ -181,6 +189,8 @@ jobs:
         shell: pwsh
         run: |
           $output = Join-Path $env:RUNNER_TEMP 'dcomp-release'
+          $packagingPythonDll = python -c "import sys; print('python%d%d.dll' % sys.version_info[:2])"
+          if($LASTEXITCODE -ne 0) { throw 'Unable to resolve the packaging Python ABI' }
           foreach($package in @('msvc-release', 'clangcl-release'))
           {
             $root = Join-Path $output $package
@@ -211,12 +221,12 @@ jobs:
                 'bootstrap\aftermath_proxy\GFSDK_Aftermath_Lib.x64.dll',
                 'renderdoc-mcp.exe', 'mcp\component-manifest.json',
                 'mcp\worker-runtime\python.exe', 'mcp\source\worker\entry.py',
-                'mcp-runtime\python312.dll',
+                "mcp-runtime\$packagingPythonDll",
                 'mcp\source\skills\game-rendering-analysis\SKILL.md',
                 'mcp\source\skills\game-rendering-analysis-en\SKILL.md',
                 'developer-tools\component-manifest.json',
                 'developer-tools\proxy-builder\proxy-builder.exe',
-                'developer-tools\proxy-builder\builder-runtime\python312.dll',
+                "developer-tools\proxy-builder\builder-runtime\$packagingPythonDll",
                 'developer-tools\proxy-builder\runtime-templates\bootstrap\aftermath_proxy\aftermath_forward.asm',
                 'developer-tools\proxy-builder\route-templates\templates\route_runtime.cpp',
                 'developer-tools\proxy-builder\route-templates\vendor\openxr\LICENSE-MIT',

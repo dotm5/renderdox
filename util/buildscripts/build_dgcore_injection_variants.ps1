@@ -9,7 +9,10 @@ param(
   [ValidateRange(1, 64)]
   [int]$MaxCpuCount = 8,
 
-  [string]$WindowsSDKVersion = '10.0.26100.0'
+  [string]$WindowsSDKVersion,
+
+  [ValidatePattern('^(Auto|v[0-9]+)$')]
+  [string]$MSVCPlatformToolset = 'Auto'
 )
 
 Set-StrictMode -Version Latest
@@ -23,28 +26,14 @@ $coreFilename = "$($identity.coreBaseName).dll"
 $sourceDll = Join-Path $repositoryRoot "x64\Release\$coreFilename"
 $contractCheck = Join-Path $PSScriptRoot 'check_windows_build_contracts.ps1'
 $embeddedDxilCheck = Join-Path $PSScriptRoot 'check_windows_embedded_dxil.ps1'
-$vswherePath = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
-
-if(-not (Test-Path -LiteralPath $vswherePath -PathType Leaf))
-{
-  throw "vswhere.exe was not found: $vswherePath"
-}
-
-if(-not $MSBuildPath)
-{
-  $MSBuildPath = & $vswherePath -latest -products * -requires Microsoft.Component.MSBuild `
-    -find 'MSBuild\**\Bin\amd64\MSBuild.exe' | Select-Object -First 1
-  if(-not $MSBuildPath)
-  {
-    $MSBuildPath = & $vswherePath -latest -products * -requires Microsoft.Component.MSBuild `
-      -find 'MSBuild\**\Bin\MSBuild.exe' | Select-Object -First 1
-  }
-}
-
+. (Join-Path $PSScriptRoot 'windows_toolchain.ps1')
+$selectedToolchain = Get-DCompWindowsToolchain -PlatformToolset $MSVCPlatformToolset `
+  -WindowsSDKVersion $WindowsSDKVersion
+$WindowsSDKVersion = $selectedToolchain.WindowsSDKVersion
+if(-not $MSBuildPath) { $MSBuildPath = $selectedToolchain.MSBuildPath }
 if(-not $DumpbinPath)
 {
-  $DumpbinPath = & $vswherePath -latest -products * `
-    -find 'VC\Tools\MSVC\**\bin\Hostx64\x64\dumpbin.exe' | Select-Object -First 1
+  $DumpbinPath = Join-Path $selectedToolchain.ToolsRoot 'bin\Hostx64\x64\dumpbin.exe'
 }
 
 foreach($requiredTool in @($MSBuildPath, $DumpbinPath))
@@ -86,7 +75,8 @@ if($LASTEXITCODE -ne 0)
 $commonProperties = [ordered]@{
   Configuration = 'Release'
   Platform = 'x64'
-  PlatformToolset = 'v143'
+  PlatformToolset = $selectedToolchain.PlatformToolset
+  VCToolsVersion = $selectedToolchain.VCToolsVersion
   WindowsTargetPlatformVersion = $WindowsSDKVersion
   SolutionDir = "$repositoryRoot\"
   BuildInParallel = 'true'
