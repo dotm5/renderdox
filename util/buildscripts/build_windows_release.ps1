@@ -38,6 +38,11 @@ $solutionPlatform = if($Platform -eq 'Win32') { 'x86' } else { $Platform }
 $selectedToolchain = Get-DCompWindowsToolchain -PlatformToolset $MSVCPlatformToolset `
   -WindowsSDKVersion $WindowsSDKVersion
 $WindowsSDKVersion = $selectedToolchain.WindowsSDKVersion
+$dumpbinPath = Join-Path $selectedToolchain.ToolsRoot 'bin\Hostx64\x64\dumpbin.exe'
+if(-not (Test-Path -LiteralPath $dumpbinPath -PathType Leaf))
+{
+  throw "dumpbin.exe was not found in the selected toolchain: $dumpbinPath"
+}
 $platformToolset = if($Toolchain -eq 'ClangCL') { 'ClangCL' } else { $selectedToolchain.PlatformToolset }
 $configurationDirectory = if($Toolchain -eq 'ClangCL') { 'ClangRelease' } else { 'Release' }
 $singleGeneration = if($ChildPropagation -eq 'OneGeneration') { '1' } else { '0' }
@@ -400,12 +405,6 @@ try
   }
   Write-Host "Vulkan descriptor contract passed: $vulkanLayerName, $expectedDisableVar"
 
-  $dumpbinPath = & $vswherePath -latest -products * `
-    -find 'VC\Tools\MSVC\**\bin\Hostx64\x64\dumpbin.exe' | Select-Object -First 1
-  if(-not $dumpbinPath)
-  {
-    throw 'dumpbin.exe was not found'
-  }
   $coreDll = Join-Path $outputRoot "$coreBaseName.dll"
   & $embeddedDxilCheck -DllPath $coreDll
 
