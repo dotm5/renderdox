@@ -15,7 +15,8 @@ The desktop build uses the bundled Qt, Python and PySide2/Shiboken2 dependency s
 `qrenderdoc/3rdparty`. MSBuild CI downloads the pinned dependency archive before building.
 SafetyHook and Zydis sources are part of the checkout.
 
-MCP packaging uses Python 3.15 and the dependencies in
+MCP packaging uses the latest stable Python available in the Actions manifest
+within the supported range `>=3.12 <3.16`, and the dependencies in
 [packaging/requirements.txt](../../tools/renderdoc-mcp/packaging/requirements.txt).
 It bundles a separate worker interpreter matching the native Python bindings.
 End users of a complete portable package do not need a system Python installation.
@@ -37,8 +38,11 @@ The maintained workflows use GitHub's `ubuntu-latest`, `macos-latest` and
 `windows-latest` aliases, which follow generally available runner images. The
 workflow logs identify the actual image and tool versions used by each build.
 Actions follow their current stable major tags to receive compatible patch
-updates; MCP packaging follows Python 3.15 patch releases and JVM fixtures use
-Temurin 25 LTS. Packaging dependencies are pinned in the requirements file.
+updates; MCP packaging selects the newest supported stable Python from the
+Actions manifest, excluding prereleases. The upper bound follows PyInstaller
+support. Python and JDK setup run before native compilation so unavailable
+environments fail early. JVM fixtures use Temurin 25 LTS. Packaging dependencies
+are pinned in the requirements file.
 
 The bundled Qt/Python/PySide2 archive is a separate native ABI contract, verified
 by SHA-256. Changing the CI packaging interpreter does not replace that archive

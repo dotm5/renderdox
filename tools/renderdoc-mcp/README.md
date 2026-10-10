@@ -215,7 +215,7 @@ GPU 计数器来自回放采样，不能作为游戏实时 FPS 或端到端捕�
 证据包中的 HTML/Markdown 预览按不透明 RGB 显示；资源 Alpha 仍保留在原始 PNG 中。
 `analysis.json` 的 `displayImage` 记录显示副本、原件 SHA256 和处理方法，原始采样及纹理数值不受影响。
 
-服务源码位于 `tools/renderdoc-mcp`。现代服务源码支持 Python 3.12+；CI 打包使用 Python 3.15 和 packaging/requirements.txt；
+服务源码位于 `tools/renderdoc-mcp`。现代服务源码支持 Python 3.12+；CI 从 Actions 清单选择 `>=3.12 <3.16` 范围内最新稳定 Python，并使用 packaging/requirements.txt；
 Worker 源码保持 Python 3.6 语法，ABI 当前为 python36.dll。
 更换上游 Python ABI 时，在 packaging/bundle.py 添加经确认的 embedded runtime 版本/哈希；
 API 差异集中在 adapters/renderdoc，MCP/Workflow 不引用 SWIG 对象。

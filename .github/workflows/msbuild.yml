@@ -114,6 +114,21 @@ jobs:
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@v3
 
+      - name: Set up portable MCP packaging Python
+        uses: actions/setup-python@v7
+        with:
+          # Match the supported packaging range against the Actions manifest.
+          python-version: '>=3.12 <3.16'
+          check-latest: true
+          allow-prereleases: false
+
+      - name: Set up JDK for the owned JVM host fixture
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '25'
+          check-latest: true
+
       - name: Download pinned QRenderDoc dependencies
         shell: pwsh
         run: |
@@ -140,19 +155,6 @@ jobs:
             -MaxCpuCount 4 `
             -OutputDirectory $output `
             -IncludeBootstrap
-
-      - name: Set up portable MCP packaging Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: '3.15'
-          check-latest: true
-
-      - name: Set up JDK for the owned JVM host fixture
-        uses: actions/setup-java@v6
-        with:
-          distribution: temurin
-          java-version: '25'
-          check-latest: true
 
       - name: Bundle portable MCP service and compatible worker
         shell: pwsh

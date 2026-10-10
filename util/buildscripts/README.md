@@ -24,8 +24,10 @@ Qt plugins, Python and PySide2/Shiboken2. `-IncludeBootstrap` adds the DXGI,
 D3D11, D3D12 and x64 Aftermath proxies.
 
 The MSBuild workflow adds the portable MCP service to both packages using
-`tools/renderdoc-mcp/packaging/bundle.py`. This step freezes the Python 3.15
-service and adds an embedded worker interpreter matching `renderdoc.pyd`;
+`tools/renderdoc-mcp/packaging/bundle.py`. This step freezes the service with
+the latest stable packaging Python supported by its dependencies and available
+in the Actions manifest (`>=3.12 <3.16`), then adds an embedded worker interpreter
+matching `renderdoc.pyd`;
 it packages existing native outputs without rebuilding RenderDoc. See the
 [MCP packaging guide](../../tools/renderdoc-mcp/README.md#开发和云端打包) for local use.
 
