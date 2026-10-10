@@ -175,7 +175,7 @@ else()
         # using an URL to a zip directly so we don't clone the history etc
         URL ${RENDERDOC_PCRE_PACKAGE}
         BUILD_IN_SOURCE 1
-        CONFIGURE_COMMAND autoreconf -f -v > /dev/null 2>&1
+        CONFIGURE_COMMAND ${SET_SYSTEM_PATH_COMMAND} autoreconf -f -v > /dev/null 2>&1
         COMMAND CC=${SWIG_CONFIGURE_CC} CXX=${SWIG_CONFIGURE_CXX} CFLAGS=-fPIC CXXFLAGS=-fPIC ${SET_SYSTEM_PATH_COMMAND} ./configure --prefix=${CMAKE_BINARY_DIR} --disable-shared > /dev/null
         BUILD_COMMAND ${GENERATOR_MAKE} ${GENERATOR_MAKE_PARAMS} > /dev/null 2>&1
         INSTALL_COMMAND ${GENERATOR_MAKE} install > /dev/null 2>&1)
@@ -394,13 +394,13 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL "Xcode")
     list(APPEND QRD_XCODE_SOURCES ${WINDOWS_FILES})
 
     file(GLOB_RECURSE THIRDPARTY_FILES 
-        3rdParty/toolwindowmanager/*.h
-        3rdParty/toolwindowmanager/*.cpp
-        3rdParty/flowlayout/*.h
-        3rdParty/flowlayout/*.cpp
-        3rdParty/scintilla/*.h
-        3rdParty/scintilla/*.cxx
-        3rdParty/scintilla/*.cpp)
+        3rdparty/toolwindowmanager/*.h
+        3rdparty/toolwindowmanager/*.cpp
+        3rdparty/flowlayout/*.h
+        3rdparty/flowlayout/*.cpp
+        3rdparty/scintilla/*.h
+        3rdparty/scintilla/*.cxx
+        3rdparty/scintilla/*.cpp)
     list(SORT THIRDPARTY_FILES COMPARE FILE_BASENAME)
     list(APPEND QRD_XCODE_SOURCES ${THIRDPARTY_FILES})
 

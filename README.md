@@ -14,7 +14,7 @@
 
 RenderDox is a Windows-focused fork of [RenderDoc](https://github.com/baldurk/renderdoc) for graphics capture and replay, with an enhanced desktop interface, early capture options, and LLM-driven analysis. Its isolated runtime and desktop application are branded **DComp** and **DCompUI**.
 
-The current baseline is **RenderDoc v1.46**, with upstream maintenance integrated through `2e32b910d`. RenderDox is independently maintained and keeps the upstream `.rdc` capture workflow.
+The current baseline is **RenderDoc v1.46**, with upstream maintenance integrated through [`36b1c78ec`](https://github.com/baldurk/renderdoc/commit/36b1c78ec7df44b2945c3c360ba8f4cc445eb060). RenderDox is independently maintained and keeps the upstream `.rdc` capture workflow.
 
 <p align="center">
   <a href="https://github.com/dotm5/renderdox/releases">Download portable releases</a> ·
