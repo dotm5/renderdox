@@ -61,6 +61,12 @@ Windows and Linux runners; macOS has a different allocation, so the workflow
 reads its available CPU count. See the
 [GitHub-hosted runner specifications](https://docs.github.com/en/actions/reference/runners/github-hosted-runners#standard-github-hosted-runners-for-public-repositories).
 
+Routine macOS validation uses the free `macos-15-intel` x64 runner (4 CPUs,
+14 GB RAM). The first cache validation encountered two ARM64 capacity timeouts
+before GitHub assigned any runner. **Actions > Run workflow > macos_arch** can
+select `arm64` to validate on `macos-latest` (3 CPUs, 7 GB RAM); an x64 run
+provides x64 coverage. Cache keys include the actual runner architecture.
+
 The caches serve different parts of the build:
 
 | Cache | Reused results | Identity and invalidation | Work on a hit |
@@ -107,6 +113,16 @@ and other machine-specific inputs are recorded separately by
 the runner image and native link tools for L1; its `compiler-key` lets L2 retain
 compiler entries across image updates for sccache to check individually.
 
+The Windows workflow also caches the compiler fingerprint calculation itself.
+The small memo is bound to the exact GitHub-hosted image, selected toolchain,
+expected compiler paths, workspace, pinned dependency digest and both toolchain
+scripts. Restoring it avoids hashing the same large compiler files in every
+job. The initializer validates the memo and reconstructs the original identity
+JSON exactly, so `compiler-key` and `toolchain-key` retain their existing values.
+A missing, invalid or differently keyed memo falls back to binary hashing;
+local and self-hosted builds always hash the binaries. The memo changes only
+fingerprint preparation, and does not change the sccache compilation checks.
+
 L1 and fixture restore prefixes contain their complete input identity. Only the
 `run_id` and `run_attempt` suffix is omitted when restoring the latest matching
 snapshot. Compiler archives also have unique run suffixes, with the source SHA
@@ -136,6 +152,8 @@ from sccache, so generated files and link steps follow the normal build rules.
 invalidation, compiler routing and failure propagation before an MSVC build that misses L1. Cold compilation
 with this profile can take longer because it does not use PCH files; judge the
 tradeoff from the recorded cold and warm runs.
+Native jobs upload compiler logs and binlogs after a build, including successful
+builds, with three-day retention so a non-cacheable invocation can be inspected.
 
 ### Native provenance and current package validation
 
@@ -167,6 +185,7 @@ Both workflows expose the boolean `cold_build` input in **Actions > Run
 workflow**. Set it to `true` to skip restoring build results. Windows rebuilds
 L1/L2/fixture results and POSIX starts with an empty compiler cache; completed
 results are saved under the new run's key to seed a subsequent warm run.
+Windows also recalculates its compiler fingerprint memo in this mode.
 Dependency archives and pip downloads may still be restored. The default
 `false` enables normal cache reuse.
 

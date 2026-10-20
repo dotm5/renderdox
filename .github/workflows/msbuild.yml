@@ -132,12 +132,41 @@ jobs:
           version: 'v0.18.0'
           disable_annotations: 'true'
 
+      # Memoize the large binary hashes within this exact hosted runner image.
+      - name: Resolve compiler fingerprint cache key
+        id: fingerprint-key
+        shell: pwsh
+        run: |
+          ./util/buildscripts/initialize_windows_compiler_cache.ps1 `
+            -OutputDirectory (Join-Path $env:RUNNER_TEMP 'sccache-compilers') `
+            -CacheKeyOnly
+
+      - name: Restore compiler fingerprint
+        id: fingerprint-cache
+        if: ${{ !inputs.cold_build && steps.fingerprint-key.outputs.fingerprint-cache-key != '' }}
+        continue-on-error: true
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ runner.temp }}/compiler-identity-cache.json
+          key: ${{ steps.fingerprint-key.outputs.fingerprint-cache-key }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ${{ steps.fingerprint-key.outputs.fingerprint-cache-key }}-
+
       - name: Initialize compiler cache and available CPU parallelism
         id: compiler-env
         shell: pwsh
         run: |
           ./util/buildscripts/initialize_windows_compiler_cache.ps1 `
-            -OutputDirectory (Join-Path $env:RUNNER_TEMP 'sccache-compilers')
+            -OutputDirectory (Join-Path $env:RUNNER_TEMP 'sccache-compilers') `
+            -FingerprintCachePath (Join-Path $env:RUNNER_TEMP 'compiler-identity-cache.json')
+
+      - name: Save compiler fingerprint
+        if: steps.fingerprint-key.outputs.fingerprint-cache-key != '' && steps.compiler-env.outputs.fingerprint-cache-hit == 'false'
+        continue-on-error: true
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ runner.temp }}/compiler-identity-cache.json
+          key: ${{ steps.fingerprint-key.outputs.fingerprint-cache-key }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Fingerprint native build inputs
         id: native-inputs
@@ -282,8 +311,8 @@ jobs:
           compression-level: 1
           overwrite: true
 
-      - name: Upload compiler diagnostics on failure
-        if: failure()
+      - name: Upload compiler diagnostics
+        if: ${{ always() && (steps.native-build.outcome == 'success' || failure()) }}
         uses: actions/upload-artifact@v7
         with:
           name: compiler-diagnostics-${{ matrix.toolchain }}
@@ -370,13 +399,42 @@ jobs:
           & $python -m unittest discover -s tools/proxy-builder/tests -p 'test_*.py'
           if($LASTEXITCODE -ne 0) { throw 'Proxy Builder source tests failed' }
 
+      # Memoize the large binary hashes within this exact hosted runner image.
+      - name: Resolve compiler fingerprint cache key
+        id: fingerprint-key
+        shell: pwsh
+        run: |
+          ./util/buildscripts/initialize_windows_compiler_cache.ps1 `
+            -OutputDirectory (Join-Path $env:RUNNER_TEMP 'fixture-toolchain') `
+            -CacheKeyOnly
+
+      - name: Restore compiler fingerprint
+        id: fingerprint-cache
+        if: ${{ !inputs.cold_build && steps.fingerprint-key.outputs.fingerprint-cache-key != '' }}
+        continue-on-error: true
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ runner.temp }}/compiler-identity-cache.json
+          key: ${{ steps.fingerprint-key.outputs.fingerprint-cache-key }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ${{ steps.fingerprint-key.outputs.fingerprint-cache-key }}-
+
       - name: Fingerprint the fixture toolchain
         id: fixture-env
         shell: pwsh
         run: |
           ./util/buildscripts/initialize_windows_compiler_cache.ps1 `
             -OutputDirectory (Join-Path $env:RUNNER_TEMP 'fixture-toolchain') `
+            -FingerprintCachePath (Join-Path $env:RUNNER_TEMP 'compiler-identity-cache.json') `
             -FingerprintOnly
+
+      - name: Save compiler fingerprint
+        if: steps.fingerprint-key.outputs.fingerprint-cache-key != '' && steps.fixture-env.outputs.fingerprint-cache-hit == 'false'
+        continue-on-error: true
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ runner.temp }}/compiler-identity-cache.json
+          key: ${{ steps.fingerprint-key.outputs.fingerprint-cache-key }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Fingerprint native fixture inputs
         id: fixture-inputs

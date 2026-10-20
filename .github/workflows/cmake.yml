@@ -53,6 +53,11 @@ on:
         description: 'Skip restoring compiler results and populate a fresh cache'
         type: boolean
         default: false
+      macos_arch:
+        description: 'macOS validation architecture'
+        type: choice
+        options: [x64, arm64]
+        default: x64
 
 permissions:
   contents: read
@@ -81,9 +86,10 @@ jobs:
             cc: gcc
             cxx: g++
             metal: 'OFF'
-          - name: macOS AppleClang Release
-            # GitHub moves this alias only to generally available images.
-            os: macos-latest
+          - name: macOS AppleClang Release (${{ inputs.macos_arch == 'arm64' && 'ARM64' || 'x64' }})
+            # Use the free Intel pool for routine checks. ARM64 remains available
+            # on dispatch; its hosted pool has encountered long capacity queues.
+            os: ${{ inputs.macos_arch == 'arm64' && 'macos-latest' || 'macos-15-intel' }}
             cc: clang
             cxx: clang++
             metal: 'ON'
