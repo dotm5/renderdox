@@ -5,6 +5,13 @@
     <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
 
+  <!-- Configure task selection before the C++ toolset imports its defaults. -->
+  <PropertyGroup Condition="'$(RDocUseCompilerCache)'=='true'">
+    <UseMultiToolTask>true</UseMultiToolTask>
+    <EnforceProcessCountAcrossBuilds>true</EnforceProcessCountAcrossBuilds>
+    <TrackFileAccess>false</TrackFileAccess>
+  </PropertyGroup>
+
   <!-- ClangCL 产物隔离到独立目录，避免覆盖 MSVC 构建 -->
   <PropertyGroup>
     <RepoRoot Condition="'$(RepoRoot)'==''">$(MSBuildThisFileDirectory)</RepoRoot>
@@ -38,3 +45,4 @@
     </Link>
   </ItemDefinitionGroup>
 </Project>
+

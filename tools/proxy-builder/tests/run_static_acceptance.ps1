@@ -2,13 +2,21 @@
 param(
   [Parameter(Mandatory)][string]$Python,
   [Parameter(Mandatory)][string]$OutputDirectory,
-  [ValidateSet('MSVC','ClangCL','Both')][string]$Toolchain = 'Both'
+  [ValidateSet('MSVC','ClangCL','Both')][string]$Toolchain = 'Both',
+  [switch]$ReuseBuilds
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..\..')).Path
 $artifactRoot = [IO.Path]::GetFullPath($OutputDirectory)
 New-Item -ItemType Directory -Path $artifactRoot -Force | Out-Null
+$cacheHelper = Join-Path $PSScriptRoot 'fixture_build_cache.py'
+if($ReuseBuilds)
+{
+  & $Python $cacheHelper verify --root $artifactRoot --kind static --toolchain $Toolchain
+  if($LASTEXITCODE -ne 0) { throw 'Static fixture build cache validation failed' }
+  Remove-Item -LiteralPath (Join-Path $artifactRoot 'results.json')
+}
 $vswhere = 'C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe'
 $vsPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath | Select-Object -First 1
 if(-not $vsPath) { throw 'MSBuild missing' }
@@ -20,6 +28,15 @@ function BuildFixture([string]$Project, [string]$Root, [string]$Name, [string]$C
   $buildInt = Join-Path $Root 'obj'
   $log = Join-Path $Root 'build.log'
   New-Item -ItemType Directory -Path $Root -Force | Out-Null
+  if($ReuseBuilds)
+  {
+    $extension = if($Name -in @('proxy-smoke','d3d12-order')) { '.exe' } else { '.dll' }
+    if(-not (Test-Path -LiteralPath (Join-Path $buildOut ($Name + $extension)) -PathType Leaf))
+    {
+      throw "Cached native fixture is missing: $Name"
+    }
+    return $buildOut
+  }
   $buildArgs = @($Project, '/t:Build', '/m:4', '/v:minimal', '/nologo', "/p:Configuration=$Configuration", '/p:Platform=x64', '/p:ImportDirectoryBuildProps=false', '/p:ImportDirectoryBuildTargets=false', "/p:OutDir=$buildOut\", "/p:IntDir=$buildInt\", "/p:TargetName=$Name") + $Extra
   & $msbuild @buildArgs *> $log
   if($LASTEXITCODE -ne 0) { Get-Content -LiteralPath $log -Tail 35; throw "Native build failed: $Project" }
@@ -39,11 +56,22 @@ foreach($compiler in $toolchains) {
     $sourceDll = if($slot -eq 'fixture') { Join-Path $fixtureBin 'fixture.dll' } else { Join-Path $env:SystemRoot "System32\$slot.dll" }
     $template = if($slot -eq 'fixture') { 'app-local' } else { 'system' }
     $generated = Join-Path $root "generated-$slot"
-    if(Test-Path -LiteralPath $generated) { throw 'Choose a fresh output directory' }
+    if(-not $ReuseBuilds -and (Test-Path -LiteralPath $generated)) { throw 'Choose a fresh output directory' }
       $extraBuild = if($slot -eq 'fixture') { @('--copy-original','--route','streamline-bootstrap') } else { @() }
-      & $Python $generator build $sourceDll --template $template --output $generated --toolchain $compiler --msbuild $msbuild @extraBuild *> (Join-Path $root "generate-$slot.log")
-      if($LASTEXITCODE -ne 0) {
-        if($slot -eq 'd3d12' -and $LASTEXITCODE -eq 2 -and (Get-Content (Join-Path $root "generate-$slot.log") -Raw).Contains('Data/unknown export')) {
+      $buildExit = 0
+      if(-not $ReuseBuilds -or -not (Test-Path -LiteralPath (Join-Path $generated 'build-result.json') -PathType Leaf))
+      {
+        # A DATA-export rejection has no compiled product to reuse. Exercise
+        # the current generator again, including its expected rejection.
+        if($ReuseBuilds -and (Test-Path -LiteralPath $generated))
+        {
+          Remove-Item -LiteralPath $generated -Recurse -Force
+        }
+        & $Python $generator build $sourceDll --template $template --output $generated --toolchain $compiler --msbuild $msbuild @extraBuild *> (Join-Path $root "generate-$slot.log")
+        $buildExit = $LASTEXITCODE
+      }
+      if($buildExit -ne 0) {
+        if($slot -eq 'd3d12' -and $buildExit -eq 2 -and (Get-Content (Join-Path $root "generate-$slot.log") -Raw).Contains('Data/unknown export')) {
           $results += [pscustomobject]@{toolchain=$compiler; slot=$slot; contractVerified=$false; safelyRejected=$true; reason='Data/unknown export requires an explicit data-forwarding design'; sourceSHA256=(Get-FileHash -LiteralPath $sourceDll).Hash}
           continue
         }
@@ -51,6 +79,12 @@ foreach($compiler in $toolchains) {
       }
     $receipt = Get-Content -LiteralPath (Join-Path $generated 'build-result.json') -Raw | ConvertFrom-Json
     if($receipt.status -ne 'verified') { throw 'One-command build was not verified' }
+    if($receipt.toolchain -ne $compiler -or
+       $receipt.sourceSHA256 -ne (Get-FileHash -LiteralPath $sourceDll -Algorithm SHA256).Hash -or
+       $receipt.dllSHA256 -ne (Get-FileHash -LiteralPath $receipt.dll -Algorithm SHA256).Hash)
+    {
+      throw "Cached compiled fixture inputs or binary differ: $slot"
+    }
     $proxyBin = Split-Path -Parent $receipt.dll
     & $Python $generator verify $sourceDll (Join-Path $proxyBin "$slot.dll") *> (Join-Path $root "verify-$slot.json")
     if($LASTEXITCODE -ne 0) { throw "Export verification failed: $slot" }
@@ -71,6 +105,9 @@ foreach($compiler in $toolchains) {
   Write-Output "${compiler}: generated proxy contracts, ABI smoke and D3D12 fixture build passed"
 }
 $results | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $artifactRoot 'results.json') -Encoding utf8
+& $Python $cacheHelper seal --root $artifactRoot --kind static --toolchain $Toolchain
+if($LASTEXITCODE -ne 0) { throw 'Could not seal static fixture build products' }
 # A safely rejected DATA export can leave the last native exit code at 2.
 # Expected negative cases above are assertions, not a failed acceptance run.
 exit 0
+

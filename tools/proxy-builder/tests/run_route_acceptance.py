@@ -9,26 +9,39 @@ from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 import proxy_builder as builder
 import hosts
+import fixture_build_cache as build_cache
 
 TESTS=Path(__file__).resolve().parent
 
 
-def run(root, toolchains):
+def run(root, toolchains, reuse_builds=False):
     root=Path(root).resolve()
-    if root.exists(): raise ValueError('Choose a fresh route acceptance directory')
-    root.mkdir(parents=True)
+    selection='Both' if set(toolchains)=={'MSVC','ClangCL'} else toolchains[0]
+    if reuse_builds:
+        build_cache.verify(root,'routes',selection)
+        (root/'results.json').unlink()
+    elif root.exists(): raise ValueError('Choose a fresh route acceptance directory')
+    root.mkdir(parents=True,exist_ok=reuse_builds)
     compiler=builder.find_msbuild()
     results=[]
+    def build_dll(source,output,**options):
+        if reuse_builds:
+            return build_cache.cached_receipt(output,builder,source,options['toolchain'],core=options.get('core'))
+        return builder.build_dll(source,output,**options)
     def execute(command,log,cwd=None):
         with Path(log).open('wb') as stream:
             result=subprocess.run([str(s) for s in command],cwd=cwd,stdout=stream,stderr=subprocess.STDOUT,timeout=180)
         if result.returncode:
             raise ValueError('Command failed (%s): %s\n%s'%(result.returncode,command,Path(log).read_text(encoding='utf-8',errors='replace')[-7000:]))
     for toolchain in toolchains:
-        base=root/toolchain; base.mkdir()
+        base=root/toolchain; base.mkdir(exist_ok=reuse_builds)
         config='ClangRelease' if toolchain=='ClangCL' else 'Release'
         def native(name,source,kind='DynamicLibrary',definition=None,library=None,include=None,target=None):
-            folder=base/name; folder.mkdir()
+            folder=base/name; folder.mkdir(exist_ok=reuse_builds)
+            binary=folder/((target or name)+('.exe' if kind=='Application' else '.dll'))
+            if reuse_builds:
+                if not binary.is_file(): raise ValueError('Cached native fixture is missing: '+str(binary))
+                return binary
             command=[compiler,TESTS/'native_route.vcxproj','/t:Build','/nologo','/v:minimal',
                 '/p:Configuration='+config,'/p:Platform=x64','/p:ImportDirectoryBuildProps=false','/p:ImportDirectoryBuildTargets=false',
                 '/p:FixtureType='+kind,'/p:FixtureSource='+str(source),'/p:OutDir='+str(folder)+'\\',
@@ -37,7 +50,7 @@ def run(root, toolchains):
             if definition: command.append('/p:FixtureDef='+str(definition))
             if library: command.append('/p:FixtureLib='+str(library))
             execute(command,folder/'build.log')
-            return folder/((target or name)+('.exe' if kind=='Application' else '.dll'))
+            return binary
         full=native('original-data',TESTS/'route_fixture.cpp',definition=TESTS/'route_fixture.def',target='fixture')
         no_data=base/'code.def'; no_data.write_text('\n'.join(line for line in (TESTS/'route_fixture.def').read_text().splitlines() if ' DATA' not in line)+'\n')
         source=native('original-code',TESTS/'route_fixture.cpp',definition=no_data,target='fixture')
@@ -49,7 +62,7 @@ def run(root, toolchains):
             options=dict(options or {})
             options.setdefault('enableDefault',True)
             if not default_activation: options.setdefault('activation','first-call')
-            receipt=builder.build_dll(input_dll or source,folder,template='app-local',toolchain=toolchain,
+            receipt=build_dll(input_dll or source,folder,template='app-local',toolchain=toolchain,
                 copy_original=copy,core=core,profile=profile,config=options)
             binary=Path(receipt['dll'])
             argv=[smoke,mode or name,binary]
@@ -76,7 +89,7 @@ def run(root, toolchains):
         for failure_case, options in (
                 ('reentrant-core-fail',{'activation':'first-call'}),
                 ('required-worker-plugin-fail',{'activation':'worker','plugins':[{'path':'missing_owned_plugin.dll'}]})):
-            required_failure=builder.build_dll(source,base/failure_case,template='app-local',toolchain=toolchain,
+            required_failure=build_dll(source,base/failure_case,template='app-local',toolchain=toolchain,
                 copy_original=True,core=core,profile='generic',config=dict(options,enableDefault=True,requireCore=True))
             with (base/failure_case/'smoke.log').open('wb') as log:
                 failed=subprocess.run([str(smoke),failure_case,required_failure['dll']],stdout=log,stderr=subprocess.STDOUT,timeout=30)
@@ -90,7 +103,7 @@ def run(root, toolchains):
         sdk_source=native('sdk-original',TESTS/'route_fixture.cpp',definition=sdk_def,target='GFSDK_Aftermath_Lib.x64')
         for index,rename in enumerate(builder.routes.AFTERMATH_ORIGINAL_NAMES):
             case='aftermath-rename-'+str(index+1)
-            receipt=builder.build_dll(sdk_source,base/case,template='app-local',toolchain=toolchain,
+            receipt=build_dll(sdk_source,base/case,template='app-local',toolchain=toolchain,
                 core=core,profile='auto',config={'enableDefault':True})
             if receipt['route']['profile']!='aftermath' or receipt['route']['activation']!='worker':
                 raise ValueError('Aftermath auto policy was not applied')
@@ -99,7 +112,7 @@ def run(root, toolchains):
             results.append({'toolchain':toolchain,'case':case,'compiled':True,'ownedProcessPassed':True,'activation':'worker'})
             print(toolchain+': '+case+' passed without an SDK activation call',flush=True)
         proxy_case('aftermath-first-call','auto',{'activation':'first-call'},mode='aftermath-first-call',input_dll=sdk_source)
-        rejected=builder.build_dll(sdk_source,base/'aftermath-bad-primary',template='app-local',toolchain=toolchain,
+        rejected=build_dll(sdk_source,base/'aftermath-bad-primary',template='app-local',toolchain=toolchain,
             core=core,profile='auto',config={'enableDefault':True})
         binary=Path(rejected['dll']); shutil.copy2(source,binary.parent/builder.routes.AFTERMATH_ORIGINAL_NAMES[0])
         shutil.copy2(sdk_source,binary.parent/builder.routes.AFTERMATH_ORIGINAL_NAMES[1])
@@ -117,7 +130,7 @@ def run(root, toolchains):
         bad=proxy_case('bad-provider',options={'activation':'manual','provider':{'kind':'sibling','path':'fixture_orig.dll','sha256':'0'*64}})
         proxy_case('missing-core',options={'activation':'manual','core':{'path':'not-present.dll','sha256':''}})
         proxy_case('linker',options={'forwarding':'linker','activation':'manual'},mode='host')
-        entry=builder.build_dll(source,base/'entry-point',template='app-local',toolchain=toolchain,copy_original=True,
+        entry=build_dll(source,base/'entry-point',template='app-local',toolchain=toolchain,copy_original=True,
             core=core,profile='generic',config={'activation':'entry-point','enableDefault':True})
         binary=Path(entry['dll'])
         entry_exe=native('entry-client',TESTS/'entry_smoke.cpp','Application',library=binary.with_suffix('.lib'),target='entry-smoke')
@@ -131,9 +144,9 @@ def run(root, toolchains):
         middle_source=native('middle-original',TESTS/'route_fixture.cpp',definition=middle_def,target='middle')
         for cycle in (False,True):
             name='cycle' if cycle else 'chain'
-            middle=builder.build_dll(middle_source,base/(name+'-middle'),template='app-local',toolchain=toolchain,
+            middle=build_dll(middle_source,base/(name+'-middle'),template='app-local',toolchain=toolchain,
                 core=core,profile='generic',config={'activation':'manual','provider':{'kind':'sibling','path':'fixture.dll' if cycle else 'leaf.dll','sha256':''}})
-            upper=builder.build_dll(source,base/name,template='app-local',toolchain=toolchain,core=core,profile='generic',
+            upper=build_dll(source,base/name,template='app-local',toolchain=toolchain,core=core,profile='generic',
                 config={'activation':'first-call','enableDefault':True,'provider':{'kind':'sibling','path':'middle.dll','sha256':''}})
             binary=Path(upper['dll']); shutil.copy2(middle['dll'],binary.parent/'middle.dll')
             if not cycle: shutil.copy2(source,binary.parent/'leaf.dll')
@@ -141,22 +154,29 @@ def run(root, toolchains):
             results.append({'toolchain':toolchain,'case':name,'compiled':True,'ownedProcessPassed':True})
             print(toolchain+': '+name+' passed',flush=True)
         for kind in hosts.KINDS:
-            receipt=hosts.build(builder,kind,base/('host-'+kind),core,toolchain)
+            receipt=(build_cache.cached_receipt(base/('host-'+kind),builder,core,toolchain,host=kind)
+                if reuse_builds else hosts.build(builder,kind,base/('host-'+kind),core,toolchain))
             binary=Path(receipt.get('asi',receipt['dll']))
             execute([smoke,kind if kind in ('openxr','vulkan-layer') else 'host',binary],base/('host-'+kind)/'smoke.json')
             if kind=='jvm':
                 test=base/'OwnedJavaMain.java'; test.write_text('public final class OwnedJavaMain { public static void main(String[] args) { System.out.println("premainPassed=true"); } }')
                 java_home=Path(receipt['jdk'])
-                execute([java_home/'bin/javac.exe','--release','17',test],base/'java-compile.log')
+                if not reuse_builds:
+                    execute([java_home/'bin/javac.exe','--release','17',test],base/'java-compile.log')
+                elif not (base/'OwnedJavaMain.class').is_file():
+                    raise ValueError('Cached owned Java host class is missing')
                 execute([java_home/'bin/java.exe','--enable-native-access=ALL-UNNAMED',receipt['jvmArgument'],'-cp',base,'OwnedJavaMain'],base/'jvm-premain.log')
             results.append({'toolchain':toolchain,'case':'host-'+kind,'compiled':True,'ownedProcessPassed':True,'dllSHA256':receipt['dllSHA256']})
             print(toolchain+': host-'+kind+' passed',flush=True)
     (root/'results.json').write_text(json.dumps(results,indent=2),encoding='utf-8')
+    build_cache.seal(root,'routes',selection)
     return results
 
 
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__); p.add_argument('--output',required=True)
     p.add_argument('--toolchain',choices=['MSVC','ClangCL','Both'],default='Both')
+    p.add_argument('--reuse-builds',action='store_true',help='Validate cached build products, then rerun every owned-process check')
     args=p.parse_args()
-    run(args.output,['MSVC','ClangCL'] if args.toolchain=='Both' else [args.toolchain])
+    run(args.output,['MSVC','ClangCL'] if args.toolchain=='Both' else [args.toolchain],args.reuse_builds)
+

@@ -239,4 +239,6 @@
       <LinkTimeCodeGeneration>false</LinkTimeCodeGeneration>
     </Lib>
   </ItemDefinitionGroup>
+  <Import Project="$(MSBuildThisFileDirectory)util\buildscripts\sccache.targets" />
 </Project>
+

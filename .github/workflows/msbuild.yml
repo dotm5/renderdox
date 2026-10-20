@@ -48,6 +48,11 @@ on:
       - '.github/pull.yml'
       - 'docs/**'
   workflow_dispatch:
+    inputs:
+      cold_build:
+        description: 'Skip restoring build results and populate fresh caches'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -59,6 +64,8 @@ concurrency:
 env:
   QRENDERDOC_THIRDPARTY_URL: https://renderdoc.org/qrenderdoc_3rdparty.zip
   QRENDERDOC_THIRDPARTY_SHA256: 9FDF4B298DF843571120FF139B745B4183D9C332B157F1982F4242C96E038F1C
+  # This shared policy is part of the exact native-package cache identity.
+  NATIVE_BUILD_PROFILE: '{"configuration":"Release","platform":"x64","child_propagation":"AllGenerations","include_bootstrap":true,"ltcg":false,"compiler_cache":"sccache-v0.18.0-no-pch-z7-v1"}'
 
 jobs:
   contracts:
@@ -94,11 +101,204 @@ jobs:
         shell: pwsh
         run: ./util/buildscripts/check_windows_build_contracts.ps1 -Configuration Release -Platform x64
 
-  build:
-    name: MSVC and ClangCL x64 Release
+  native:
+    name: ${{ matrix.toolchain }} x64 Release
     needs: contracts
     runs-on: windows-latest
     timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain: [MSVC, ClangCL]
+    env:
+      SCCACHE_DIR: ${{ github.workspace }}/.sccache
+      SCCACHE_CACHE_SIZE: '2G'
+      SCCACHE_IGNORE_SERVER_IO_ERROR: '1'
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 5
+          submodules: recursive
+
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@v3
+
+      - name: Set up sccache
+        id: sccache
+        uses: Mozilla-Actions/sccache-action@v0.0.11
+        with:
+          version: 'v0.18.0'
+          disable_annotations: 'true'
+
+      - name: Initialize compiler cache and available CPU parallelism
+        id: compiler-env
+        shell: pwsh
+        run: |
+          ./util/buildscripts/initialize_windows_compiler_cache.ps1 `
+            -OutputDirectory (Join-Path $env:RUNNER_TEMP 'sccache-compilers')
+
+      - name: Fingerprint native build inputs
+        id: native-inputs
+        shell: pwsh
+        run: |
+          python util/buildscripts/native_build_inputs.py `
+            --profile-json $env:NATIVE_BUILD_PROFILE `
+            --output (Join-Path $env:RUNNER_TEMP 'native-inputs.json')
+          if($LASTEXITCODE -ne 0) { throw 'Native input fingerprint failed' }
+
+      # Exact input identity can reuse the complete native stage across MCP-only
+      # changes. Its original producer commit is retained in the final manifest.
+      - name: Restore complete native package
+        id: native-package
+        if: ${{ !inputs.cold_build }}
+        continue-on-error: true
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ runner.temp }}/dcomp-native
+          key: native-package-v1-${{ runner.os }}-${{ runner.arch }}-${{ matrix.toolchain }}-${{ steps.compiler-env.outputs.toolchain-key }}-${{ steps.native-inputs.outputs.native-inputs-digest }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            native-package-v1-${{ runner.os }}-${{ runner.arch }}-${{ matrix.toolchain }}-${{ steps.compiler-env.outputs.toolchain-key }}-${{ steps.native-inputs.outputs.native-inputs-digest }}-
+
+      - name: Restore compiler results for changed native inputs
+        if: ${{ !inputs.cold_build && steps.native-package.outputs.cache-matched-key == '' }}
+        continue-on-error: true
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ env.SCCACHE_DIR }}
+          key: windows-sccache-v1-${{ matrix.toolchain }}-${{ steps.compiler-env.outputs.compiler-key }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            windows-sccache-v1-${{ matrix.toolchain }}-${{ steps.compiler-env.outputs.compiler-key }}-
+
+      - name: Cache pinned QRenderDoc dependency archive
+        if: steps.native-package.outputs.cache-matched-key == ''
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/qrenderdoc_3rdparty.zip
+          key: qrenderdoc-dependencies-v1-${{ env.QRENDERDOC_THIRDPARTY_SHA256 }}
+
+      - name: Prepare pinned QRenderDoc dependencies
+        if: steps.native-package.outputs.cache-matched-key == ''
+        shell: pwsh
+        run: |
+          $archive = Join-Path $env:RUNNER_TEMP 'qrenderdoc_3rdparty.zip'
+          if(-not (Test-Path -LiteralPath $archive -PathType Leaf))
+          {
+            & curl.exe --fail --location --retry 3 --output $archive $env:QRENDERDOC_THIRDPARTY_URL
+            if($LASTEXITCODE -ne 0) { throw "Dependency download failed with exit code $LASTEXITCODE" }
+          }
+          $actual = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash
+          if($actual -ne $env:QRENDERDOC_THIRDPARTY_SHA256)
+          {
+            throw "QRenderDoc dependency hash mismatch: $actual"
+          }
+          & 7z x $archive -y
+          if($LASTEXITCODE -ne 0) { throw "Dependency extraction failed with exit code $LASTEXITCODE" }
+
+      - name: Verify real compiler cache hits and invalidation
+        if: matrix.toolchain == 'MSVC' && steps.native-package.outputs.cache-matched-key == ''
+        shell: pwsh
+        run: |
+          ./util/buildscripts/check_windows_compiler_cache.ps1 `
+            -CacheToolDirectory $env:RDocSccacheCompilerDir `
+            -OutputDirectory (Join-Path $env:RUNNER_TEMP 'sccache-smoke') `
+            -MaxCpuCount ([Environment]::ProcessorCount)
+
+      - name: Build and validate the native package
+        id: native-build
+        if: steps.native-package.outputs.cache-matched-key == ''
+        shell: pwsh
+        env:
+          BUILD_TOOLCHAIN: ${{ matrix.toolchain }}
+        run: |
+          $output = Join-Path $env:RUNNER_TEMP 'dcomp-native'
+          # A partial cache download must not leave an apparent package behind.
+          if(Test-Path -LiteralPath $output) { Remove-Item -LiteralPath $output -Recurse -Force }
+          $profile = $env:NATIVE_BUILD_PROFILE | ConvertFrom-Json
+          if($profile.configuration -ne 'Release' -or $profile.platform -ne 'x64' -or $profile.ltcg)
+          {
+            throw 'The release matrix currently supports the x64 fast Release profile'
+          }
+          ./util/buildscripts/build_windows_release_matrix.ps1 `
+            -Target Rebuild `
+            -Toolchains $env:BUILD_TOOLCHAIN `
+            -ChildPropagation $profile.child_propagation `
+            -MaxCpuCount ([Environment]::ProcessorCount) `
+            -OutputDirectory $output `
+            -NativeInputsManifest (Join-Path $env:RUNNER_TEMP 'native-inputs.json') `
+            -IncludeBootstrap:([bool]$profile.include_bootstrap)
+
+      # Persist native work before MCP packaging/test steps on another runner.
+      - name: Flush compiler cache writes
+        if: ${{ always() && (steps.native-build.outcome == 'success' || steps.native-build.outcome == 'failure') }}
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $stats = & sccache --stop-server 2>&1
+          $stats | ForEach-Object { Write-Host $_ }
+          @('### Compiler cache statistics', '', '```text') + @($stats) + @('```') |
+            Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
+
+      - name: Save compiler results
+        if: ${{ always() && (steps.native-build.outcome == 'success' || steps.native-build.outcome == 'failure') }}
+        continue-on-error: true
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ env.SCCACHE_DIR }}
+          key: windows-sccache-v1-${{ matrix.toolchain }}-${{ steps.compiler-env.outputs.compiler-key }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Save complete native package
+        if: steps.native-build.outcome == 'success'
+        continue-on-error: true
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ runner.temp }}/dcomp-native
+          key: native-package-v1-${{ runner.os }}-${{ runner.arch }}-${{ matrix.toolchain }}-${{ steps.compiler-env.outputs.toolchain-key }}-${{ steps.native-inputs.outputs.native-inputs-digest }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Report native cache result
+        if: ${{ always() }}
+        shell: pwsh
+        env:
+          CACHE_TOOLCHAIN: ${{ matrix.toolchain }}
+          NATIVE_CACHE_HIT: ${{ steps.native-package.outputs.cache-matched-key != '' }}
+          NATIVE_INPUTS_DIGEST: ${{ steps.native-inputs.outputs.native-inputs-digest }}
+        run: |
+          @(
+            "### $env:CACHE_TOOLCHAIN native cache",
+            '',
+            "Complete native package reused: $env:NATIVE_CACHE_HIT",
+            "Native inputs: $env:NATIVE_INPUTS_DIGEST",
+            "Parallel compiler tasks: $([Environment]::ProcessorCount)"
+          ) | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
+
+      - name: Upload native package for assembly
+        uses: actions/upload-artifact@v7
+        with:
+          name: renderdox-native-${{ matrix.toolchain }}
+          path: ${{ runner.temp }}/dcomp-native/
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 1
+          overwrite: true
+
+      - name: Upload compiler diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: compiler-diagnostics-${{ matrix.toolchain }}
+          path: |
+            build/logs/
+            ${{ runner.temp }}/sccache-smoke/
+          if-no-files-found: ignore
+          retention-days: 3
+          overwrite: true
+
+  build:
+    name: Assemble and validate portable releases
+    needs: native
+    runs-on: windows-latest
+    timeout-minutes: 90
     permissions:
       contents: read
       id-token: write
@@ -121,6 +321,8 @@ jobs:
           python-version: '>=3.12 <3.16'
           check-latest: true
           allow-prereleases: false
+          cache: pip
+          cache-dependency-path: tools/renderdoc-mcp/packaging/requirements.txt
 
       - name: Set up JDK for the owned JVM host fixture
         uses: actions/setup-java@v6
@@ -129,34 +331,31 @@ jobs:
           java-version: '25'
           check-latest: true
 
-      - name: Download pinned QRenderDoc dependencies
+      - name: Download MSVC native package
+        uses: actions/download-artifact@v8
+        with:
+          name: renderdox-native-MSVC
+          path: ${{ runner.temp }}/dcomp-native/MSVC
+
+      - name: Download ClangCL native package
+        uses: actions/download-artifact@v8
+        with:
+          name: renderdox-native-ClangCL
+          path: ${{ runner.temp }}/dcomp-native/ClangCL
+
+      - name: Merge native packages with their producer identities
         shell: pwsh
+        env:
+          ASSEMBLY_COMMIT: ${{ github.sha }}
         run: |
-          $archive = Join-Path $env:RUNNER_TEMP 'qrenderdoc_3rdparty.zip'
-          & curl.exe --fail --location --retry 3 --output $archive $env:QRENDERDOC_THIRDPARTY_URL
-          if($LASTEXITCODE -ne 0) { throw "Dependency download failed with exit code $LASTEXITCODE" }
+          python util/buildscripts/merge_windows_release_matrix.py `
+            --input-root (Join-Path $env:RUNNER_TEMP 'dcomp-native/MSVC') `
+            --input-root (Join-Path $env:RUNNER_TEMP 'dcomp-native/ClangCL') `
+            --output-directory (Join-Path $env:RUNNER_TEMP 'dcomp-release') `
+            --source-commit $env:ASSEMBLY_COMMIT
+          if($LASTEXITCODE -ne 0) { throw 'Native release assembly failed' }
 
-          $actual = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash
-          if($actual -ne $env:QRENDERDOC_THIRDPARTY_SHA256)
-          {
-            throw "QRenderDoc dependency hash mismatch: $actual"
-          }
-
-          & 7z x $archive -y
-          if($LASTEXITCODE -ne 0) { throw "Dependency extraction failed with exit code $LASTEXITCODE" }
-
-      - name: Build and validate the Windows release matrix
-        shell: pwsh
-        run: |
-          $output = Join-Path $env:RUNNER_TEMP 'dcomp-release'
-          ./util/buildscripts/build_windows_release_matrix.ps1 `
-            -Target Rebuild `
-            -ChildPropagation AllGenerations `
-            -MaxCpuCount 4 `
-            -OutputDirectory $output `
-            -IncludeBootstrap
-
-      - name: Bundle portable MCP service and compatible worker
+      - name: Prepare packaging environment and run source tests
         shell: pwsh
         run: |
           $output = Join-Path $env:RUNNER_TEMP 'dcomp-release'
@@ -170,15 +369,136 @@ jobs:
           if($LASTEXITCODE -ne 0) { throw 'MCP source tests failed' }
           & $python -m unittest discover -s tools/proxy-builder/tests -p 'test_*.py'
           if($LASTEXITCODE -ne 0) { throw 'Proxy Builder source tests failed' }
+
+      - name: Fingerprint the fixture toolchain
+        id: fixture-env
+        shell: pwsh
+        run: |
+          ./util/buildscripts/initialize_windows_compiler_cache.ps1 `
+            -OutputDirectory (Join-Path $env:RUNNER_TEMP 'fixture-toolchain') `
+            -FingerprintOnly
+
+      - name: Fingerprint native fixture inputs
+        id: fixture-inputs
+        shell: pwsh
+        env:
+          FIXTURE_TOOLCHAIN_KEY: ${{ steps.fixture-env.outputs.toolchain-key }}
+        run: |
+          $python = Join-Path $env:RUNNER_TEMP 'mcp-build-venv/Scripts/python.exe'
+          # The shared helper excludes Python bytecode created by source tests.
+          # Checkout timestamps in .pyc files would otherwise defeat every hit.
+          $sourceDigest = & $python -c "import sys; sys.path.insert(0, 'tools/proxy-builder/tests'); from fixture_build_cache import source_fingerprint; print(source_fingerprint())"
+          if($LASTEXITCODE -ne 0) { throw 'Unable to fingerprint fixture sources' }
+          $pythonVersion = & $python -c 'import sys; print(sys.version)'
+          if($LASTEXITCODE -ne 0) { throw 'Unable to fingerprint fixture Python' }
+          $dependencies = & $python -m pip freeze --all --disable-pip-version-check
+          if($LASTEXITCODE -ne 0) { throw 'Unable to fingerprint fixture dependencies' }
+          $identity = [ordered]@{
+            policy = 'static-routes-mixed-both-v1'
+            toolchain = $env:FIXTURE_TOOLCHAIN_KEY
+            sources = $sourceDigest
+            python = $python
+            python_version = $pythonVersion
+            dependencies = @($dependencies | Sort-Object)
+            java_home = $env:JAVA_HOME
+            java_release = Get-Content -LiteralPath (Join-Path $env:JAVA_HOME 'release') -Raw
+          } | ConvertTo-Json -Depth 4 -Compress
+          $digest = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
+            [Text.Encoding]::UTF8.GetBytes($identity))).ToLowerInvariant()
+          $key = "fixture-builds-v1-$digest"
+          "cache-prefix=$key" | Add-Content -LiteralPath $env:GITHUB_OUTPUT
+          "RENDERDOX_FIXTURE_CACHE_KEY=$key" | Add-Content -LiteralPath $env:GITHUB_ENV
+
+      - name: Restore compiled native test fixtures
+        id: fixture-cache
+        if: ${{ !inputs.cold_build }}
+        continue-on-error: true
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            ${{ runner.temp }}/developer-native-acceptance
+            ${{ runner.temp }}/developer-route-acceptance
+            ${{ runner.temp }}/developer-mixed-acceptance
+          key: ${{ steps.fixture-inputs.outputs.cache-prefix }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ${{ steps.fixture-inputs.outputs.cache-prefix }}-
+
+      - name: Verify restored fixture compilation outputs
+        id: fixture-cache-check
+        shell: pwsh
+        env:
+          FIXTURE_CACHE_MATCH: ${{ steps.fixture-cache.outputs.cache-matched-key }}
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $false
+          $python = Join-Path $env:RUNNER_TEMP 'mcp-build-venv/Scripts/python.exe'
+          $roots = [ordered]@{
+            static = (Join-Path $env:RUNNER_TEMP 'developer-native-acceptance')
+            routes = (Join-Path $env:RUNNER_TEMP 'developer-route-acceptance')
+            mixed = (Join-Path $env:RUNNER_TEMP 'developer-mixed-acceptance')
+          }
+          $valid = -not [string]::IsNullOrEmpty($env:FIXTURE_CACHE_MATCH)
+          foreach($entry in $roots.GetEnumerator())
+          {
+            if($valid)
+            {
+              & $python tools/proxy-builder/tests/fixture_build_cache.py verify `
+                --root $entry.Value --kind $entry.Key
+              if($LASTEXITCODE -ne 0) { $valid = $false }
+            }
+          }
+          if(-not $valid)
+          {
+            foreach($path in $roots.Values)
+            {
+              if(Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Recurse -Force }
+            }
+          }
+          "reuse=$($valid.ToString().ToLowerInvariant())" | Add-Content -LiteralPath $env:GITHUB_OUTPUT
+          Write-Host "Native fixture compilation reused: $valid"
+          "Native fixture compilation reused: $valid; tests execute in this run." |
+            Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
+          # A rejected cache is a cold build, not a failed test.
+          exit 0
+
+      - name: Run native fixture acceptance
+        id: fixture-tests
+        shell: pwsh
+        env:
+          REUSE_FIXTURE_BUILDS: ${{ steps.fixture-cache-check.outputs.reuse }}
+        run: |
+          $python = Join-Path $env:RUNNER_TEMP 'mcp-build-venv/Scripts/python.exe'
           $native = Join-Path $env:RUNNER_TEMP 'developer-native-acceptance'
-          ./tools/proxy-builder/tests/run_static_acceptance.ps1 `
-            -Python $python -OutputDirectory $native -Toolchain Both
           $routes = Join-Path $env:RUNNER_TEMP 'developer-route-acceptance'
-          & $python tools/proxy-builder/tests/run_route_acceptance.py --output $routes --toolchain Both
+          $reuse = $env:REUSE_FIXTURE_BUILDS -eq 'true'
+          $reuseArguments = @()
+          if($reuse) { $reuseArguments = @('--reuse-builds') }
+          ./tools/proxy-builder/tests/run_static_acceptance.ps1 `
+            -Python $python -OutputDirectory $native -Toolchain Both -ReuseBuilds:$reuse
+          & $python tools/proxy-builder/tests/run_route_acceptance.py `
+            --output $routes --toolchain Both @reuseArguments
           if($LASTEXITCODE -ne 0) { throw 'Proxy route acceptance failed' }
           & $python tools/proxy-builder/tests/run_mixed_acceptance.py `
-            --fixtures $routes --output (Join-Path $env:RUNNER_TEMP 'developer-mixed-acceptance')
+            --fixtures $routes --output (Join-Path $env:RUNNER_TEMP 'developer-mixed-acceptance') `
+            @reuseArguments
           if($LASTEXITCODE -ne 0) { throw 'Mixed route acceptance failed' }
+
+      - name: Save compiled native test fixtures
+        if: steps.fixture-tests.outcome == 'success' && steps.fixture-cache-check.outputs.reuse != 'true'
+        continue-on-error: true
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            ${{ runner.temp }}/developer-native-acceptance
+            ${{ runner.temp }}/developer-route-acceptance
+            ${{ runner.temp }}/developer-mixed-acceptance
+          key: ${{ steps.fixture-inputs.outputs.cache-prefix }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Bundle portable MCP service and compatible worker
+        shell: pwsh
+        run: |
+          $python = Join-Path $env:RUNNER_TEMP 'mcp-build-venv/Scripts/python.exe'
+          $output = Join-Path $env:RUNNER_TEMP 'dcomp-release'
+          $native = Join-Path $env:RUNNER_TEMP 'developer-native-acceptance'
           & $python tools/renderdoc-mcp/packaging/bundle.py `
             --package-root (Join-Path $output 'msvc-release') `
             --package-root (Join-Path $output 'clangcl-release') `
@@ -277,7 +597,7 @@ jobs:
             $source = Join-Path $matrixRoot $package
             $archive = Join-Path $assetRoot "renderdox-$label-windows-x64-$package.zip"
             Compress-Archive -Path (Join-Path $source '*') `
-              -DestinationPath $archive -CompressionLevel Optimal
+              -DestinationPath $archive -CompressionLevel Fastest
           }
 
           Copy-Item -LiteralPath (Join-Path $matrixRoot 'manifest.json') `
@@ -341,3 +661,7 @@ jobs:
           path: '${{ runner.temp }}/release-assets/*'
           if-no-files-found: error
           retention-days: 30
+          overwrite: true
+          # Release ZIPs are already compressed; avoid recompressing them.
+          compression-level: 0
+

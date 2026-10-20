@@ -3,6 +3,10 @@ param(
   [ValidateSet('Build', 'Rebuild')]
   [string]$Target = 'Rebuild',
 
+  [ValidateCount(1, 2)]
+  [ValidateSet('MSVC', 'ClangCL')]
+  [string[]]$Toolchains = @('MSVC', 'ClangCL'),
+
   [ValidateSet('OneGeneration', 'AllGenerations')]
   [string]$ChildPropagation = 'AllGenerations',
 
@@ -16,11 +20,21 @@ param(
 
   [string]$OutputDirectory,
 
+  [string]$NativeInputsManifest,
+
   [switch]$IncludeBootstrap
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+$Toolchains = @($Toolchains | ForEach-Object {
+  if($_ -eq 'MSVC') { 'MSVC' } else { 'ClangCL' }
+})
+if(@($Toolchains | Select-Object -Unique).Count -ne $Toolchains.Count)
+{
+  throw 'Each toolchain may only be requested once'
+}
 
 $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
 $singleBuild = Join-Path $PSScriptRoot 'build_windows_release.ps1'
@@ -69,6 +83,17 @@ if($LASTEXITCODE -ne 0 -or -not $commit)
   throw 'Unable to resolve the source Git commit'
 }
 $shortCommit = $commit.Substring(0, 10)
+$nativeInputs = $null
+if($NativeInputsManifest)
+{
+  $nativeInputs = Get-Content -LiteralPath $NativeInputsManifest -Raw | ConvertFrom-Json
+  if($nativeInputs.source_commit -ne $commit -or
+     $nativeInputs.native_inputs_digest -notmatch '^[0-9a-f]{64}$' -or
+     $nativeInputs.native_build_profile -isnot [pscustomobject])
+  {
+    throw 'Native input metadata must describe this source commit and a valid build profile'
+  }
+}
 
 if(-not $OutputDirectory)
 {
@@ -160,7 +185,7 @@ if($IncludeBootstrap)
 }
 $matrix = @()
 
-foreach($toolchain in @('MSVC', 'ClangCL'))
+foreach($toolchain in $Toolchains)
 {
   & $singleBuild -Target $Target -Toolchain $toolchain -Platform x64 `
     -ChildPropagation $ChildPropagation -MaxCpuCount $MaxCpuCount `
@@ -309,6 +334,7 @@ foreach($toolchain in @('MSVC', 'ClangCL'))
     })
   $toolchainManifest = [ordered]@{
     toolchain = $toolchain
+    native_source_commit = $commit
     platform_toolset = if($toolchain -eq 'ClangCL') { 'ClangCL' } else { $MSVCPlatformToolset }
     vc_tools_version = $selectedToolchain.VCToolsVersion
     vc_runtime = $crtDirectory.FullName
@@ -338,20 +364,23 @@ $manifest = [ordered]@{
   bootstrap = $IncludeBootstrap.IsPresent
   toolchains = $matrix
 }
+if($nativeInputs)
+{
+  $manifest.native_inputs_digest = $nativeInputs.native_inputs_digest
+  $manifest.native_build_profile = $nativeInputs.native_build_profile
+}
 $manifest | ConvertTo-Json -Depth 8 | Set-Content `
   -LiteralPath (Join-Path $OutputDirectory 'manifest.json') -Encoding utf8
 
 $readme = @'
 # {PRODUCT_NAME} full Windows Release matrix
 
-This directory contains two complete, runnable x64 Release packages built from
-the same source commit:
+This directory contains the selected complete, runnable x64 Release packages
+built from the same source commit:
 
-- `msvc-release`: Visual C++ {MSVC_TOOLSET} build.
-- `clangcl-release`: ClangCL build with isolated output and targeted MSVC
-  frontend fallback only for source files that require MSVC-compatible parsing.
+{PACKAGE_LIST}
 
-Both packages contain the GUI, CLI, capture DLL, shim, UI stub, embedded Python
+Each package contains the GUI, CLI, capture DLL, shim, UI stub, embedded Python
 modules, the versioned CPython runtime (interpreter DLL, stdlib archive and the
 extension modules built beside it), the PySide2/Shiboken2 Qt bindings, the Qt
 runtime with its TLS libraries and plugins, and the symbol helper runtime files.
@@ -365,6 +394,12 @@ files. Each package is then verified for a complete DLL import closure before it
 is published, and `manifest.json` records the interpreter and binding state.
 '@
 $readme = $readme.Replace('{PRODUCT_NAME}', $identity.productDisplayName).Replace('{MSVC_TOOLSET}', $MSVCPlatformToolset)
+$packageDescriptions = @{
+  MSVC = "- ``msvc-release``: Visual C++ $MSVCPlatformToolset build."
+  ClangCL = '- `clangcl-release`: ClangCL build with isolated output and targeted MSVC frontend fallback.'
+}
+$packageList = ($Toolchains | ForEach-Object { $packageDescriptions[$_] }) -join "`n"
+$readme = $readme.Replace('{PACKAGE_LIST}', $packageList)
 $readme | Set-Content -LiteralPath (Join-Path $OutputDirectory 'README.md') -Encoding utf8
 if($IncludeBootstrap)
 {
@@ -377,3 +412,4 @@ automatically; see the included `bootstrap\README.md`.
 }
 
 Write-Host "Full Release matrix complete: $OutputDirectory"
+
