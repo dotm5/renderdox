@@ -346,9 +346,10 @@ jobs:
       - name: Set up portable MCP packaging Python
         uses: actions/setup-python@v7
         with:
-          # Match the supported packaging range against the Actions manifest.
+          # Use the newest preinstalled stable Python within the supported
+          # packaging range; download only when the runner has no match.
           python-version: '>=3.12 <3.16'
-          check-latest: true
+          check-latest: false
           allow-prereleases: false
           cache: pip
           cache-dependency-path: tools/renderdoc-mcp/packaging/requirements.txt
@@ -358,7 +359,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '25'
-          check-latest: true
+          check-latest: false
 
       - name: Download MSVC native package
         uses: actions/download-artifact@v8
