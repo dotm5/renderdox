@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <!--
+    Opt-in CI profile. Import this file at the end of Directory.Build.targets,
+    after the ClangCL projects that select the MSVC frontend have been resolved.
+
+    RDocSccacheCompilerDir contains copies of the real sccache executable named
+    cl.exe and clang-cl.exe. The selected real compiler directories must be on
+    PATH; sccache resolves its compiler from its own executable name. The
+    normal MSBuild compiler environment (INCLUDE, LIB, and PATH) is preserved.
+  -->
+  <PropertyGroup Condition="'$(RDocUseCompilerCache)'=='true'">
+    <!-- sccache caches one translation unit per compiler invocation. -->
+    <UseMultiToolTask>true</UseMultiToolTask>
+    <EnforceProcessCountAcrossBuilds>true</EnforceProcessCountAcrossBuilds>
+    <!-- Compilation happens in the sccache server, outside MSBuild's tracker. -->
+    <TrackFileAccess>false</TrackFileAccess>
+  </PropertyGroup>
+
+  <!--
+    Apply metadata at execution time so that project-local overrides and source
+    items added after Microsoft.Cpp.targets (including version.cpp) are covered.
+    Full builds configure before computing compiler inputs; direct compile
+    requests are covered by SelectClCompile and ClCompile as well.
+    The ordinary local and release profiles are unchanged when the switch is off.
+  -->
+  <Target Name="RDocConfigureCompilerCache"
+          BeforeTargets="PrepareForBuild;SelectClCompile;ClCompile"
+          Condition="'$(RDocUseCompilerCache)'=='true'">
+    <Error Condition="'$(RDocSccacheCompilerDir)'==''"
+           Text="RDocUseCompilerCache=true requires RDocSccacheCompilerDir containing the sccache compiler proxies." />
+
+    <PropertyGroup>
+      <RDocCompilerCacheToolExe>cl.exe</RDocCompilerCacheToolExe>
+      <RDocCompilerCacheToolExe
+          Condition="'$(PlatformToolset)'=='ClangCL' And '$(RDocUseMsvcFrontend)'!='true'">clang-cl.exe</RDocCompilerCacheToolExe>
+      <CLToolExe>$(RDocCompilerCacheToolExe)</CLToolExe>
+      <CLToolPath>$(RDocSccacheCompilerDir)</CLToolPath>
+    </PropertyGroup>
+
+    <Error Condition="!Exists('$(CLToolPath)\$(CLToolExe)')"
+           Text="The selected sccache compiler proxy is missing: $(CLToolPath)\$(CLToolExe)." />
+
+    <ItemGroup>
+      <_RDocCompilerCachePchCreator Include="@(ClCompile)"
+          Condition="'%(ClCompile.PrecompiledHeader)'=='Create' And '%(ClCompile.ExcludedFromBuild)'!='true'" />
+    </ItemGroup>
+
+    <PropertyGroup>
+      <RDocCompilerCachePchIncludeDirectories>@(_RDocCompilerCachePchCreator->'%(RootDir)%(Directory)', ';')</RDocCompilerCachePchIncludeDirectories>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <!--
+        /Yu can hide a missing header search directory. Without a PCH, /FI
+        must find the original header. In this tree each PCH creator lives
+        beside its header; keep this directory available to its former users.
+        Source-specific NotUsing items retain their original include paths.
+      -->
+      <ClCompile Condition="'$(RDocCompilerCachePchIncludeDirectories)'!='' And ('%(ClCompile.PrecompiledHeader)'=='Use' Or '%(ClCompile.PrecompiledHeader)'=='Create')">
+        <AdditionalIncludeDirectories>%(ClCompile.AdditionalIncludeDirectories);$(RDocCompilerCachePchIncludeDirectories)</AdditionalIncludeDirectories>
+      </ClCompile>
+      <!-- Inside a Target, omitting Include/Update modifies existing items. -->
+      <ClCompile>
+        <!-- /Yc and /Fp bypass caching in the MSVC/clang-cl sccache parser. -->
+        <PrecompiledHeader>NotUsing</PrecompiledHeader>
+        <PrecompiledHeaderFile />
+        <PrecompiledHeaderOutputFile />
+        <MultiProcessorCompilation>false</MultiProcessorCompilation>
+        <!-- Keep explicit None metadata, including the large SWIG sources. -->
+        <DebugInformationFormat
+            Condition="'%(ClCompile.DebugInformationFormat)'=='ProgramDatabase' Or '%(ClCompile.DebugInformationFormat)'=='EditAndContinue'">OldStyle</DebugInformationFormat>
+        <!-- ForcedIncludeFiles is deliberately preserved for each source. -->
+      </ClCompile>
+    </ItemGroup>
+  </Target>
+</Project>

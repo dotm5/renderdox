@@ -48,6 +48,16 @@ on:
       - '.github/pull.yml'
       - 'docs/**'
   workflow_dispatch:
+    inputs:
+      cold_build:
+        description: 'Skip restoring compiler results and populate a fresh cache'
+        type: boolean
+        default: false
+      macos_arch:
+        description: 'macOS validation architecture'
+        type: choice
+        options: [x64, arm64]
+        default: x64
 
 permissions:
   contents: read
@@ -62,6 +72,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
 
+    env:
+      SCCACHE_DIR: ${{ github.workspace }}/.sccache
+      SCCACHE_CACHE_SIZE: '1G'
+      SCCACHE_IGNORE_SERVER_IO_ERROR: '1'
+
     strategy:
       fail-fast: false
       matrix:
@@ -71,9 +86,10 @@ jobs:
             cc: gcc
             cxx: g++
             metal: 'OFF'
-          - name: macOS AppleClang Release
-            # GitHub moves this alias only to generally available images.
-            os: macos-latest
+          - name: macOS AppleClang Release (${{ inputs.macos_arch == 'arm64' && 'ARM64' || 'x64' }})
+            # Use the free Intel pool for routine checks. ARM64 remains available
+            # on dispatch; its hosted pool has encountered long capacity queues.
+            os: ${{ inputs.macos_arch == 'arm64' && 'macos-latest' || 'macos-15-intel' }}
             cc: clang
             cxx: clang++
             metal: 'ON'
@@ -90,6 +106,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
+            ninja-build \
             libegl1-mesa-dev \
             libgl1-mesa-dev \
             libx11-dev \
@@ -98,8 +115,43 @@ jobs:
             libxcb1-dev \
             mesa-common-dev
 
+      - name: Set up Ninja and build parallelism
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            if ! command -v ninja >/dev/null 2>&1; then
+              brew install ninja
+            fi
+            build_jobs="$(sysctl -n hw.logicalcpu)"
+          else
+            build_jobs="$(nproc)"
+          fi
+          test "$build_jobs" -ge 1
+          printf 'CMAKE_BUILD_PARALLEL_LEVEL=%s\n' "$build_jobs" >> "$GITHUB_ENV"
+          printf 'Ninja build parallelism: %s\n' "$build_jobs"
+          ninja --version
+
       - name: Validate generated product identity
         run: python3 util/buildscripts/generate_product_identity.py --check
+
+      # Restore a rolling snapshot; sccache validates each compiler invocation
+      # against its source, headers, arguments and compiler before reusing it.
+      - name: Restore compiler cache
+        if: ${{ !inputs.cold_build }}
+        continue-on-error: true
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ env.SCCACHE_DIR }}
+          key: cmake-sccache-v1-${{ runner.os }}-${{ runner.arch }}-${{ matrix.cc }}-Release-v0.18.0-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            cmake-sccache-v1-${{ runner.os }}-${{ runner.arch }}-${{ matrix.cc }}-Release-v0.18.0-
+
+      - name: Set up sccache
+        id: sccache
+        uses: Mozilla-Actions/sccache-action@v0.0.11
+        with:
+          version: 'v0.18.0'
+          disable_annotations: 'true'
 
       # RenderDoc's CMake build is the POSIX build path. Windows intentionally
       # rejects CMake and is covered by the separate MSBuild workflow.
@@ -108,14 +160,71 @@ jobs:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
         run: >-
-          cmake -S . -B build
+          cmake -S . -B build -G Ninja
           -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          -DCMAKE_C_COMPILER_LAUNCHER=sccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
           -DENABLE_METAL=${{ matrix.metal }}
           -DENABLE_PYRENDERDOC=OFF
           -DENABLE_QRENDERDOC=OFF
 
+      - name: Report resolved Release compiler flags
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import collections
+          import json
+          import pathlib
+          import re
+          import shlex
+
+          entries = json.loads(pathlib.Path('build/compile_commands.json').read_text())
+          profiles = collections.Counter()
+          for entry in entries:
+              arguments = entry.get('arguments') or shlex.split(entry['command'])
+              optimization = [arg for arg in arguments if re.fullmatch(r'-O(?:[0-3sgz]|fast)', arg)]
+              profiles[(optimization[-1] if optimization else '(none)', '-DNDEBUG' in arguments)] += 1
+              if pathlib.Path(entry['file']).as_posix().endswith('/renderdoc/core/core.cpp'):
+                  print('Core compilation:', shlex.join(arguments))
+          for (optimization, ndebug), count in sorted(profiles.items()):
+              print(f'{count} compile commands: {optimization}, NDEBUG={ndebug}')
+          PY
+
       - name: Build
-        run: cmake --build build --config Release --parallel 2
+        id: build
+        run: cmake --build build --config Release --parallel "$CMAKE_BUILD_PARALLEL_LEVEL"
+
+      # Shutdown waits for pending writes and prints this server's statistics.
+      # Keep successful translation units even if a later compilation fails.
+      - name: Flush compiler cache writes and collect statistics
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        continue-on-error: true
+        shell: bash
+        run: sccache --stop-server | tee "$RUNNER_TEMP/sccache-stats.txt"
+
+      # Save after the writer has stopped. Actions keeps pull-request caches in
+      # their scope; cache persistence does not change a failed build's outcome.
+      - name: Save compiler cache
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        continue-on-error: true
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ env.SCCACHE_DIR }}
+          key: cmake-sccache-v1-${{ runner.os }}-${{ runner.arch }}-${{ matrix.cc }}-Release-v0.18.0-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Report compiler cache statistics
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        continue-on-error: true
+        shell: bash
+        env:
+          CACHE_BUILD_NAME: ${{ matrix.name }}
+        run: |
+          {
+            printf '### sccache (%s)\n\n```text\n' "$CACHE_BUILD_NAME"
+            cat "$RUNNER_TEMP/sccache-stats.txt"
+            printf '```\n'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Smoke-test command line executable
         run: ./build/bin/renderdoccmd version
@@ -127,3 +236,4 @@ jobs:
         env:
           DESTDIR: ${{ github.workspace }}/install-root
         run: cmake --install build --config Release --prefix /usr/local
+
