@@ -45,7 +45,7 @@ action arguments remain available through `action.json`.
 - integer, UNORM, and sRGB resources: PNG;
 - floating-point and depth resources: EXR;
 - BCn resources: DDS;
-- ASTC, ETC, and EAC: raw bytes because v1.45 has no KTX2 destination;
+- ASTC, ETC, and EAC: raw bytes; the exporter has no KTX2 writer;
 - previews: PNG and always marked as an approximation.
 
 Mip, slice, sample, format, sRGB, resource identity, binding EID, and

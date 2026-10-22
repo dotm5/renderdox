@@ -15,7 +15,7 @@ only calls the public replay API on an existing capture.
 
 ```powershell
 python tools\rdx-analysis-service\rdx-health.py health `
-  --qrenderdoc D:\rdoc-port\dcomp-isolated\x64\Development\dgcoreui.exe `
+  --qrenderdoc D:\DComp\dgcoreui.exe `
   --input D:\captures `
   --output D:\reports\capture-health
 ```
@@ -65,7 +65,7 @@ queries over newline-delimited JSON-RPC 2.0 on stdin/stdout:
 
 ```powershell
 python tools\rdx-analysis-service\rdx-service.py `
-  --qrenderdoc D:\rdoc-port\dcomp-isolated\x64\Development\dgcoreui.exe `
+  --qrenderdoc D:\DComp\dgcoreui.exe `
   --output-root D:\rdx-service-data
 ```
 

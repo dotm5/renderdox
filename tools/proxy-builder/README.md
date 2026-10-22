@@ -1,85 +1,75 @@
 # Proxy Builder 0.4.1
 
-`build` 默认使用统一路径运行时。七种原生 profile、六种激活时机、代理链、
-DATA 转发及 ASI/JVM/OpenXR/Vulkan Layer 自动构建见 [ROUTES.md](ROUTES.md)。
-可运行 `proxy-builder.exe profiles` 查看接口；需要逐个目标验证实际捕获。
+只读解析输入 PE，在新目录生成、编译并验证 x64 代理。便携 `proxy-builder.exe`
+自带 Python；编译需要 Visual Studio C++/MASM，JVM 宿主额外需要 JDK。
+完整配置见 [ROUTES.md](ROUTES.md)，版本结论见 [实现状态](../../docs/current-status.md)。
 
-0.4.1 恢复专用 Aftermath proxy 的独立 worker 启动与惰性原件转发。
-Aftermath 自动识别为 `aftermath`，不需要额外 JSON 才能在 DLL 加载后激活 Core。
-SDK/普通加载槽默认 worker；DXGI/D3D/OpenGL、Streamline 图形 provider、Vulkan/Agility
-默认首次调用。显式 activation 始终优先。Core 是否能早于设备创建，仍按目标验证。
+## 当前生成路径
 
-```powershell
-proxy-builder.exe build D:\original\GFSDK_Aftermath_Lib.x64.dll --output D:\proxy-build\aftermath-041 --copy-original --core D:\DComp\dgcore.dll --enable-core
-```
+`build` 默认使用统一运行时和 `--profile auto`。auto 根据 DLL basename 与已知接口
+选择 profile；`--route` 保留 system-dll、app-local、streamline-bootstrap 三种路由标记。
 
-以下是保留的 0.3.1 模板说明，适用于未传 profile/config 的旧 `generate` 命令。
-新版 `build` 的默认时序、控制导出、数据处理和验收边界以 ROUTES.md 为准。
-
-只读解析 PE，不加载候选 DLL，也不执行第三方仓库代码。生成器复用本项目现有
-bootstrap 运行时，输出锁定导出契约、DEF、C++、ASM 和独立 MSBuild 项目。
-开发时需要现代 Python；交付的 `proxy-builder.exe` 自带运行时。编译需要 Visual Studio C++/MASM，工具会自动发现 MSBuild，支持 MSVC / ClangCL。
-
-一条命令制作 DLL（只向新的输出目录写入，不部署到游戏）：
+| Profile | 行为 |
+| --- | --- |
+| generic | 精确函数导出、provider 链、激活和插件配置 |
+| aftermath | Core worker 与惰性 SDK 转发独立，支持三个原件改名 |
+| streamline | 物理 EAT stub 与已有 Core provider 接入 |
+| ngx | 精确 SDK 转发及可配置激活 |
+| nvapi | 数字查询分发，保留未知 ID、NULL 与原件返回地址 |
+| vulkan | instance/device 查询分别转发，保留 handle |
+| agility | D3D12GetInterface 及显式 DATA 契约 |
 
 ```powershell
+proxy-builder.exe profiles
 proxy-builder.exe build D:\original\vendor.dll --output D:\proxy-build\vendor --copy-original
 proxy-builder.exe build C:\Windows\System32\dxgi.dll --output D:\proxy-build\dxgi --toolchain ClangCL
-proxy-builder.exe build D:\original\GFSDK_Aftermath_Lib.x64.dll --output D:\proxy-build\aftermath --route streamline-bootstrap --original GFSDK_Aftermath_Lib_orig.dll --copy-original --core D:\DComp\dgcore.dll --enable-core
+proxy-builder.exe build D:\original\GFSDK_Aftermath_Lib.x64.dll --output D:\proxy-build\aftermath --copy-original --core D:\DComp\dgcore.dll --enable-core
 ```
 
-`build` 完成解析、生成、编译、导出契约检查。成功返回 `status=verified` 与 DLL 路径，
-保存 `build.log`、`build-result.json`、`exports.json` 和自带头文件的可再次编译工程。
-源码、原 DLL、Core 复制和产物均绑定 SHA256；编译失败或输入/生成文件改变不会被接受。
-`--copy-original` 把原 DLL 复制为输出中同目录的改名原件；`--core` 复制 Core，
-`--enable-core` 在输出目录生成 `dgcore.enable`。省略启用参数时不生成 marker。
-`--msbuild` 可指定编译器位置。已有输出目录不被覆盖。
+默认图形 provider 使用 first-call；SDK/普通加载槽使用 worker。支持 worker、first-call、
+export、entry-point、manual、module-load 六种 activation，显式配置优先。
+Aftermath 即使沿用 streamline profile 或 streamline-bootstrap 路由，仍默认使用 worker。
+Core 激活与原件首次解析分别初始化；满足门槛后发布 ASM 快路径。
 
-`--route` 的三种路径：
+`--copy-original` 复制 sibling 原件，`--core` 验证并复制 Core，`--enable-core` 创建
+`dgcore.enable`。已有内容的输出目录拒绝覆盖；输入、源码、头文件和产物绑定 SHA256。
+成功输出 `build.log`、`build-result.json`、`exports.json` 和可独立重编译的工程。
 
-|路径|转发和接入方式|验收边界|
-|---|---|---|
-|system-dll|System32 原件，复用 DXGI/D3D 模板首次调用握手|具体图形对象创建顺序|
-|app-local|同目录改名原件，复用 Aftermath 的异步 Core 激活|每个应用的时序|
-|streamline-bootstrap|同目录改名原件及 Aftermath 激活方式，显式标记 Streamline 场景|物理 EAT stub 转发已自测，完整 interposer/Core 路由需真实应用验证|
+## DATA 导出
 
-`auto` 根据导出模块名选择 system-dll 或 app-local；不会仅凭导出表宣称识别了 Streamline。
-[#3257](https://github.com/baldurk/renderdoc/issues/3257) 描述了 `sl.interposer` 直接遍历 EAT，
-绕过 IAT/GetProcAddress hook 的路径。本项目 Core 的 `win32_hook.cpp` 有 inline/topmost-provider
-接入逻辑；Builder 复用已有 bootstrap，不把导出转发成功当成 Core hook 成功。
-生成的是有物理地址的 x64 stub，支持导入、GetProcAddress 和直接 EAT 地址调用。
-自有 raw-eat 测试验证了后者的 16 线程、整数/浮点/ordinal/别名转发。
+统一运行时支持显式 DATA 声明。例：输入 D3D12 DLL 包含非执行区导出时，保存配置：
+
+```json
+{
+  "provider":{"kind":"sibling","path":"d3d12_orig.dll"},
+  "dataExports":{"D3D12DeviceRemovedExtendedData":{"type":"opaque-address"}},
+  "activation":"first-call"
+}
+```
 
 ```powershell
-python proxy_builder.py inspect C:\Windows\System32\dxgi.dll
-python proxy_builder.py generate C:\Windows\System32\dxgi.dll --template system --output D:\proxy-build\dxgi
-python proxy_builder.py generate D:\original\vendor.dll --template app-local --original vendor_orig.dll --output D:\proxy-build\vendor
-MSBuild D:\proxy-build\vendor\proxy.vcxproj /p:Configuration=Release /p:Platform=x64
-python proxy_builder.py verify D:\original\vendor.dll D:\proxy-build\vendor\bin\Release\vendor.dll
+proxy-builder.exe build D:\original\d3d12.dll --output D:\proxy-build\d3d12 --profile agility --config data.json --copy-original
 ```
 
-便携包附带 `runtime-templates`，生成与编译不依赖开发机源码目录。
-输出目录必须为空；生成是确定性的，锁文件包含输入哈希、生成器哈希和全部生成源码/头文件哈希。
-数据/未知导出、非 x64、无效 ordinal 和无法安全表示的名字会明确拒绝，不丢弃导出。
-名称、ordinal-only、forwarder 及同 RVA/forwarder 的别名关系均保留并在 verify 中检查。
-输出调用约定由已有 x64 汇编转发保留，不能从 PE 推断具体函数签名。
+DATA 使用指向原件存储的 PE forwarder，并生成经过验证的类型化导入库。原件须满足
+loader 的 DLL 搜索规则。纯 DATA 导入可先于代理 DllMain；DATA/linker 转发直接由 loader
+解析，物理函数 stub 的 activation 与运行时检查在其自身路径执行。
 
-`system` 只允许 DXGI/D3D11/D3D12，且当前 DLL 必须包含所选运行时的基线名称。
-当前测试系统 D3D12 的 `D3D12DeviceRemovedExtendedData` 位于非执行区，完整生成会
-被拒绝。该拒绝是检测结果，不代表已经解决数据导出，也不是自动改动已有代理。
+## 旧模板入口
 
-`app-local` 使用同目录改名原 DLL；独立线程负责可选 Core 激活。
-`DCOMP_BOOTSTRAP_ENABLE=1` 或同目录 `dgcore.enable` 开启激活。它不能保证接入早于
-图形对象创建。`system` 继续使用现有首次导出调用初始化与握手失败回退策略。
-代理仅供明确拥有或获授权的应用；部署前备份原 DLL，按应用单独验证。
+`generate --template system/app-local` 在省略 profile/config 时保留 0.3.1 模板。
+该兼容入口仍拒绝 DATA/未知导出；图形系统模板限 DXGI/D3D11/D3D12。
+需要当前统一运行时时，使用 `build`，或为 `generate` 显式传入 profile/config。
 
-静态与自有原生验证：
+## 验证
 
 ```powershell
-pwsh -NoProfile -File tests\run_static_acceptance.ps1 -Python C:\Python312\python.exe -OutputDirectory D:\proxy-acceptance
+python -m unittest discover -s tools/proxy-builder/tests -p test*.py
+python tools/proxy-builder/tests/run_route_acceptance.py --output D:\route-acceptance --toolchain Both
+pwsh -NoProfile -File tools/proxy-builder/tests/run_static_acceptance.ps1 -Python C:\Python312\python.exe -OutputDirectory D:\legacy-acceptance
 ```
 
-套件编译 MSVC/ClangCL 生成代理和 D3D12 样例，检查导出契约，验证 16 线程首次调用、
-8 参数整数/浮点转发、ordinal-only、别名地址一致、forwarder、关闭 Core 和 Core 缺失。
-测试 DLL 与模拟程序不作为实际应用的生产代理发布。原版 Aftermath 的 43-name union proxy 保持独立；
-自动生成器按指定原 DLL 的精确名称和 ordinal 契约生成，不擅自替换已有 union 部署。
+原生用例覆盖双编译器 ABI/raw EAT、DATA、查询分发、原件链、激活时序和宿主。
+`status=verified` 验证编译、导出契约及哈希；Core `state=2` 记录 API 握手。
+实际应用另行记录加载链、设备包装、RDC 生成与回放。
+专用 43-name union Aftermath proxy 保持独立，生成器匹配每份输入原件的精确契约。

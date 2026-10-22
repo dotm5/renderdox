@@ -64,7 +64,7 @@ SUBSETS = {
     # application loads from its own tree (deployed as
     # ...\Engine\Binaries\ThirdParty\NVIDIA\NVaftermath\Win64\GFSDK_Aftermath_Lib.x64.dll).
     "aftermath": [
-        "bootstrap/gfsdk_aftermath_stub/GFSDK_Aftermath_Lib.x64.dll",
+        "bootstrap/aftermath_proxy/GFSDK_Aftermath_Lib.x64.dll",
         "dgcore.dll",
     ],
 }

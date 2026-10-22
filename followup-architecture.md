@@ -3,7 +3,13 @@
 ## Design constraints
 
 The stable Windows port remains the base. New behavior is layered above the
-existing Core/UI/CMD/Shim identity contract and official v1.45 replay code.
+existing Core/UI/CMD/Shim identity contract and RenderDoc v1.46 replay code,
+with upstream maintenance through `36b1c78ec`. Current implementation and
+validation status is tracked in [the status reference](docs/current-status.md).
+
+This document covers the read-only RDX and evidence components. The portable
+MCP service has separate target-control and shader-replacement routes,
+documented in [its current reference](tools/renderdoc-mcp/README.md).
 
 The architecture follows five rules:
 

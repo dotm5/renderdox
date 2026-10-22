@@ -8,8 +8,8 @@
 // ---------------------------------------------------------------------------
 // GFSDK Aftermath forwarding stub + DComp capture engine bootstrap.
 //
-// This DLL is statically imported by Strinova-Win64-Shipping.exe (import slot
-// #4, early in the loader order). It forwards the 9 GFSDK_Aftermath_* exports
+// An application can import this DLL before creating its graphics device.
+// It forwards the 9 GFSDK_Aftermath_* exports
 // to the renamed original, and - when the DComp capture engine is enabled -
 // loads dgcore.dll from the adjacent directory.
 //
@@ -167,10 +167,8 @@ static DWORD WINAPI LoadCoreThread(LPVOID param)
             g_CoreModule = core;
             BootstrapLog(L"DComp GFSDK bootstrap: core loaded at %p\n", core);
 
-            // ProxyOnly: skip every IAT patch and page-protection change. The ATS
-            // component of the anti-cheat checks import tables and module memory
-            // integrity, so on a protected target the only load-bearing hooks are
-            // the graphics *entry* detours, which ProxyOnly keeps.
+            // Select proxy-only integration for this app-local provider route.
+            // Graphics entry detours remain available in this mode.
             typedef void(__cdecl *SetHookModeFn)(int);
             SetHookModeFn setHookMode =
                 (SetHookModeFn)GetProcAddress(core, "DCOMP_SetHookMode");
@@ -223,7 +221,7 @@ static DWORD WINAPI LoadCoreThread(LPVOID param)
 // Enable check: prefers the env var, falls back to an adjacent marker file
 // <ourdir>\dgcore.enable. The marker file is more reliable than a user env var
 // (Steam does not forward newly-set user env vars to already-running parents)
-// and is stealthier (no environment footprint for ACE to scan).
+// The marker also keeps activation scoped to the deployment directory.
 // ---------------------------------------------------------------------------
 static bool EnableRequested(void)
 {
@@ -583,12 +581,8 @@ static void StartFailFastWatchdog(void)
 // ---------------------------------------------------------------------------
 // First-frame hang capture.
 //
-// With the graphics hooks live the game goes unresponsive at the first frame:
-// every thread ends up in Wait, the CPU time stops advancing and the window
-// stops answering, sometimes for minutes. The game's anti-cheat denies
-// cross-process OpenProcess, so neither an external debugger nor an outside
-// MiniDumpWriteDump can reach it - but from inside the process both work, and
-// that is where this watchdog runs.
+// This optional watchdog records a diagnostic dump when the application's
+// message pump stops responding. It runs inside the current process.
 //
 // It polls the main window with a short SendMessageTimeout. After a few
 // consecutive timeouts the message pump is not running, so it snapshots the

@@ -1,5 +1,9 @@
 # Capability audit — 2026-10-01
 
+Status reviewed 2026-10-22: the current service is 0.3.2 with 72 tools, bilingual
+analysis resources and the nested-capture attachment export fix. The 44-tool
+investigation below retains its original capture and backend scope.
+
 This is a dated audit of the 0.3.1 analysis baseline, not a promise that every current session supports every operation. The character investigation exercised 44 distinct tools across two D3D11 captures. Check current schemas, capabilities and actual results before relying on a backend feature.
 
 ## Implemented and exercised in the character investigation
@@ -20,6 +24,6 @@ Shader replacement/restoration exists. A reconstructed character-shader baseline
 - The observed trace comparison included untyped raw union values. Unknown/truncated values prevent a claim of full typed equivalence.
 - Dependency traversal is resource-level and bounded; truncated graphs are incomplete. The case had no useful engine pass-marker ancestry.
 - Missing Nsight Perf SDK counters were placeholders and must be excluded from performance conclusions.
-- The evidence exporter had omitted nested capture attachments; the source fix and regression test address packaging completeness. Verify the deployed server version and exported archive before relying on it.
+- Nested capture attachments omitted by 0.3.1 are collected by 0.3.2 and the current portable builds. The regression test `test_bundle_includes_nested_capture_artifacts` covers this path.
 
 Conclusion: current tools provide a substantial evidence foundation, but do not fully automate or validate all article-style experiments. LLM-led reasoning and writing are the intended workflow; shader baselines, internal-effect ablations and unsupported evidence remain explicit validation tasks.

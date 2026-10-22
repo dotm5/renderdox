@@ -6,6 +6,9 @@ The repository entry points describe the current RenderDox package, capture inte
 and portable MCP service. The Sphinx sources in this directory document capture and replay
 concepts, desktop tools and public API details.
 
+[Current implementation status](current-status.md) reconciles dated validation records
+with the current source and release contents.
+
 ## Building the reference documentation
 
 The reference sources use reStructuredText and Sphinx. `make.bat` and `make.sh` expose the

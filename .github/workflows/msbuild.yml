@@ -696,6 +696,8 @@ jobs:
             }
             python util/buildscripts/check_windows_runtime_closure.py $unpacked --quiet
             if($LASTEXITCODE -ne 0) { throw "$package archive has missing DLL dependencies" }
+            python util/buildscripts/check_public_content.py --directory $unpacked
+            if($LASTEXITCODE -ne 0) { throw "$package archive failed public content policy" }
             $python = Join-Path $env:RUNNER_TEMP 'mcp-build-venv/Scripts/python.exe'
             & $python tools/renderdoc-mcp/tests/skill_acceptance.py `
               --package $unpacked --output (Join-Path $env:RUNNER_TEMP "skill-acceptance-$package")

@@ -2,12 +2,12 @@ name: Automatic Windows release
 
 on:
   workflow_run:
-    workflows: [MSBuild, CMake]
+    workflows: [MSBuild, CMake, Public content]
     types: [completed]
 
 # This privileged workflow never checks out or executes triggering content. It
 # only accepts artifacts from a successful push run in this repository's
-# default branch, requires both matching builds, then publishes the exact
+# default branch, requires matching builds and content checks, then publishes the exact
 # archives already attested by MSBuild.
 permissions:
   actions: read
@@ -29,7 +29,7 @@ jobs:
     timeout-minutes: 45
 
     steps:
-      - name: Check both builds for this commit
+      - name: Check builds and public content for this commit
         id: builds
         uses: actions/github-script@v9
         with:
@@ -39,7 +39,7 @@ jobs:
             const repository = `${context.repo.owner}/${context.repo.repo}`;
             const builds = {};
 
-            for (const workflow of ['msbuild', 'cmake']) {
+            for (const workflow of ['msbuild', 'cmake', 'public-content']) {
               const response = await github.rest.actions.listWorkflowRuns({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
