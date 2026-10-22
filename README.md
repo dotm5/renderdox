@@ -32,7 +32,7 @@ Features
 | Early capture | Optional DXGI, D3D11, D3D12 and x64 Aftermath proxies, direct injection, and child-process propagation |
 | Windows hook performance | SafetyHook and Zydis, indexed GetProcAddress lookups, and direct proxy forwarding after initialization |
 | Portable distribution | Complete Windows x64 MSVC and ClangCL packages with Python, PySide2/Shiboken2, Qt plugins, MCP and all four bootstrap DLLs |
-| MCP capture and replay | 66 tools for target discovery, runtime capture sequences, replay inspection, shader/mesh/texture queries and pixel history |
+| MCP capture and replay | 72 tools for target discovery, runtime capture sequences, replay inspection, shader/mesh/texture queries and pixel history |
 | Cross-capture investigation | EID and resource alignment, numeric output Diff, draw contribution images, GPU counters and constant timelines |
 | Analysis export | Capture/pass analysis, persistent annotations, structured evidence, and Markdown/JSON/ZIP export |
 

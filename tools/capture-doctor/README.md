@@ -24,6 +24,9 @@ MCP `capture_doctor(orderMatrixPath="D:\\order-results-new\\matrix.json")` 可�
 不一致或旧 schema 会拒绝。结果的 `orderMatrixEvidence` 独立呈现自有样例的加载、创建、Present、
 开始/保存捕获状态，不填充当前游戏的对象包装状态，不把创建成功当成包装成功。
 
-2026-10-01 的当前 Core 实测：early 捕获并回放成功；after-factory 创建交换链失败
+2026-10-01 当时 Core 的历史实测：early 捕获并回放成功；after-factory 创建交换链失败
 `0x80004002`；after-swapchain Present 成功但捕获数为 0。两种编译器结果一致。
-这是样例的创建顺序边界，不能代替包含 `sl.interposer` 的真实游戏验证。
+当前 Core 已集成后续 DX12 closure 修复；该日期的错误值保留原构建范围。
+当前 Core 的创建顺序结论由匹配其 SHA256 的新矩阵提供。矩阵文件由
+`run_order_matrix.ps1` 生成，Doctor 使用 `order_matrix_evidence` 校验。
+各应用及 `sl.interposer` 路径继续使用对应应用的加载链、捕获和回放记录。

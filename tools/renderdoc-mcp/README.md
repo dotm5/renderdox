@@ -3,7 +3,7 @@
 ## 0.3.2：LLM 渲染分析 skill（默认中文）
 
 共 72 个工具。MCP 提供证据，LLM 负责归组、解释、实验设计与图文/HLSL 写作。
-按 Claude 的 `SKILL.md` 格式提供两套完整文档，中文面向 TA，并设为默认：
+按 `SKILL.md` 格式提供两套完整文档，中文面向 TA，并设为默认：
 
 - `list_analysis_skills()` 列出两套 skill 及参考资料。
 - `get_analysis_skill()` 默认读取 `game-rendering-analysis/SKILL.md`（中文）。

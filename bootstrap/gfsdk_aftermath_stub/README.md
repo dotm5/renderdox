@@ -1,5 +1,9 @@
 # GFSDK Aftermath bootstrap (non-system proxy slot)
 
+This is the standalone diagnostic stub. Portable releases use the
+[dedicated Aftermath proxy](../aftermath_proxy/README.md), with its worker and
+lazy forwarding contract. The diagnostic build below is compiled separately.
+
 A proxy for the NVIDIA Aftermath DLL that the application loads from its own
 tree, used as the capture foothold for an application that cannot be injected
 into.  It replaces `GFSDK_Aftermath_Lib.x64.dll` in place, forwards the nine

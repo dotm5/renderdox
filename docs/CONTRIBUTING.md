@@ -17,6 +17,7 @@ Development decisions are made within this project.
 - [Developing a change](CONTRIBUTING/Developing-Change.md)
 - [Recording commits](CONTRIBUTING/Preparing-Commits.md)
 - [Trying a change](CONTRIBUTING/Testing.md)
+- [Public content checks](public-content-policy.md)
 - [Issues and questions](CONTRIBUTING/Filing-Issues.md)
 
 ## License

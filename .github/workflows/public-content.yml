@@ -1,0 +1,36 @@
+name: Public content
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-content-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  policy:
+    name: Public content policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out complete commit ancestry
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Test public content checks
+        run: python3 -m unittest discover -s util/buildscripts/tests -p 'test_public_*.py' -v
+
+      - name: Check snapshot and introduced commit versions
+        env:
+          SCAN_HEAD: ${{ github.event.pull_request.head.sha || github.event.after || github.sha }}
+          SCAN_BASE: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+        run: >-
+          python3 util/buildscripts/check_public_content.py
+          --repo . --revision "$SCAN_HEAD" --base "$SCAN_BASE"

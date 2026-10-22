@@ -6,9 +6,9 @@ These standalone projects provide a loader-safe bootstrap for an owned or
 explicitly authorised Windows application whose graphics imports must be
 intercepted before normal DComp injection or attachment can run.
 
-The bootstrap is intentionally separate from `renderdoc.sln` and is not
-installed or enabled by default. The three system-DLL proxies perform these
-steps:
+The bootstrap projects are separate from `renderdoc.sln`. Both portable Windows
+packages include all four proxies; deployment to an application and Core
+activation are opt-in. The three system-DLL proxies perform these steps:
 
 1. `DllMain` records its own module and the original `GetProcAddress`, then
    disables thread notifications.

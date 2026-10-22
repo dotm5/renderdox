@@ -18,7 +18,7 @@ to exercised and instrumented paths, not all private/vendor interfaces or extern
 msbuild tools/dx12-closure/sample.vcxproj -p:Configuration=Release -p:Platform=x64
 python -X utf8 tools/dx12-closure/run.py `
   --sample tools/dx12-closure/bin/dx12-closure-sample.exe `
-  --bin x64/Release --output D:/rdoc-port/tmp-rel/closure-new-run `
+  --bin x64/Release --output D:/capture-tests/closure-new-run `
   --agility C:/path/to/existing/D3D12/x64
 ```
 

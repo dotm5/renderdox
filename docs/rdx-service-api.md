@@ -3,12 +3,12 @@
 RDX Analysis Service is a local, out-of-process, read-only JSON-RPC 2.0
 interface to existing RDC files. It uses newline-delimited requests and
 responses over stdin/stdout. It does not listen on a TCP interface, launch a
-target, inject a process, modify a capture, or expose donor debug-agent code.
+target, inject a process, or modify a capture.
 Protocol schema version `1` is defined in `schemas/rdx-protocol.schema.json`.
 
 ```powershell
 python tools\rdx-analysis-service\rdx-service.py `
-  --qrenderdoc D:\rdoc-port\dcomp-isolated\x64\Development\dgcoreui.exe `
+  --qrenderdoc D:\DComp\dgcoreui.exe `
   --output-root D:\rdx-service-data
 ```
 

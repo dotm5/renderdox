@@ -1,0 +1,10 @@
+#!/bin/sh
+set -eu
+repository_root=$(git rev-parse --show-toplevel)
+if command -v python3 >/dev/null 2>&1; then
+    policy_python=python3
+else
+    policy_python=python
+fi
+exec "$policy_python" "$repository_root/util/buildscripts/check_public_content.py" \
+    --repo "$repository_root" --staged
