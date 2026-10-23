@@ -2511,7 +2511,7 @@ bool ThreadState::ExecuteInstruction(const rdcarray<ThreadState> &workgroup)
             if(resRef)
             {
               const rdcarray<ShaderVariable> *list = NULL;
-              // a static known handle which should be in the global resources container
+              // try to find a static known handle which should be in the global resources container
               switch(resRef->resourceBase.resClass)
               {
                 case ResourceClass::CBuffer: list = &m_GlobalState.constantBlocks; break;
@@ -2538,6 +2538,11 @@ bool ThreadState::ExecuteInstruction(const rdcarray<ThreadState> &workgroup)
                   break;
                 }
               }
+              // arrayed SRV/UAV/Sampler resource : force dynamic lookup
+              if((resRef->resourceBase.resClass != ResourceClass::CBuffer) &&
+                 (resRef->resourceBase.regCount > 1))
+                result.name.clear();
+
               if(result.name.isEmpty())
               {
                 if((resRef->resourceBase.resClass == ResourceClass::SRV) ||
@@ -2553,11 +2558,23 @@ bool ThreadState::ExecuteInstruction(const rdcarray<ThreadState> &workgroup)
                     uint32_t arrayIndex = arg.value.u32v[0];
                     RDCASSERT(arrayIndex >= resRef->resourceBase.regBase);
                     arrayIndex -= resRef->resourceBase.regBase;
-                    bool isSRV = (resRef->resourceBase.resClass == ResourceClass::SRV);
-                    DescriptorCategory category = isSRV ? DescriptorCategory::ReadOnlyResource
-                                                        : DescriptorCategory::ReadWriteResource;
+                    DescriptorCategory category = DescriptorCategory::Unknown;
+                    if(resRef->resourceBase.resClass == ResourceClass::SRV)
+                    {
+                      category = DescriptorCategory::ReadOnlyResource;
+                      result.type = VarType::ReadOnlyResource;
+                    }
+                    else if(resRef->resourceBase.resClass == ResourceClass::UAV)
+                    {
+                      category = DescriptorCategory::ReadWriteResource;
+                      result.type = VarType::ReadWriteResource;
+                    }
+                    else if(resRef->resourceBase.resClass == ResourceClass::Sampler)
+                    {
+                      category = DescriptorCategory::Sampler;
+                      result.type = VarType::Sampler;
+                    }
                     result.SetBindIndex(ShaderBindIndex(category, resRef->resourceIndex, arrayIndex));
-                    result.type = isSRV ? VarType::ReadOnlyResource : VarType::ReadWriteResource;
                     // Default to unannotated handle
                     ClearAnnotatedHandle(result);
                   }
@@ -2569,8 +2586,11 @@ bool ThreadState::ExecuteInstruction(const rdcarray<ThreadState> &workgroup)
                 }
                 else
                 {
-                  RDCERR("Unknown resource handle %s class %s", resName.c_str(),
-                         ToStr(resRef->resourceBase.resClass).c_str());
+                  m_Debugger.AddDebugMessage(
+                      MessageCategory::Execution, MessageSeverity::High,
+                      MessageSource::RuntimeWarning,
+                      StringFormat::Fmt("Unknown resource handle %s class %s", resName.c_str(),
+                                        ToStr(resRef->resourceBase.resClass).c_str()));
                 }
               }
               else
@@ -2587,14 +2607,7 @@ bool ThreadState::ExecuteInstruction(const rdcarray<ThreadState> &workgroup)
                       RDCASSERT(GetShaderVariable(inst.args[resIndexArgId], opCode, dxOpCode, arg));
                       arrayIndex = arg.value.u32v[0];
                       RDCASSERT(arrayIndex >= resRef->resourceBase.regBase);
-                      if(arrayIndex >= resRef->resourceBase.regBase)
-                      {
-                        arrayIndex -= resRef->resourceBase.regBase;
-                        RDCASSERT(arrayIndex < result.members.size(), arrayIndex,
-                                  result.members.size());
-                        if(arrayIndex < result.members.size())
-                          RDCASSERT(!result.members[arrayIndex].members.empty());
-                      }
+                      arrayIndex -= resRef->resourceBase.regBase;
                     }
                     else
                     {
@@ -2646,12 +2659,19 @@ bool ThreadState::ExecuteInstruction(const rdcarray<ThreadState> &workgroup)
                     }
                     else
                     {
-                      RDCERR("No data for constant block %s", result.name.c_str());
+                      m_Debugger.AddDebugMessage(
+                          MessageCategory::Execution, MessageSeverity::High,
+                          MessageSource::RuntimeWarning,
+                          StringFormat::Fmt("cbuffer data is empty %s", resultSSAName.c_str()));
                     }
                   }
                   else
                   {
-                    RDCERR("Can't find the data for constant block %s", result.name.c_str());
+                    m_Debugger.AddDebugMessage(
+                        MessageCategory::Execution, MessageSeverity::High,
+                        MessageSource::RuntimeWarning,
+                        StringFormat::Fmt("Failed to find data for cbuffer %s",
+                                          resultSSAName.c_str()));
                   }
                   result = cbufferVar;
                 }
@@ -2659,7 +2679,9 @@ bool ThreadState::ExecuteInstruction(const rdcarray<ThreadState> &workgroup)
             }
             else
             {
-              RDCERR("Unknown Base Resource for %s", resultSSAName.c_str());
+              m_Debugger.AddDebugMessage(
+                  MessageCategory::Execution, MessageSeverity::High, MessageSource::RuntimeWarning,
+                  StringFormat::Fmt("Unknown Resource %s", resultSSAName.c_str()));
             }
             result.name = resultSSAName;
             break;
@@ -2732,13 +2754,17 @@ bool ThreadState::ExecuteInstruction(const rdcarray<ThreadState> &workgroup)
                 }
                 else
                 {
-                  RDCERR("Failed to find data for constant block data for %s",
-                         handleVar.name.c_str());
+                  m_Debugger.AddDebugMessage(MessageCategory::Execution, MessageSeverity::High,
+                                             MessageSource::RuntimeWarning,
+                                             StringFormat::Fmt("Failed to find data for cbuffer %s",
+                                                               handleVar.name.c_str()));
                 }
               }
               else
               {
-                RDCERR("Failed to find data for cbuffer %s", handleVar.name.c_str());
+                m_Debugger.AddDebugMessage(
+                    MessageCategory::Execution, MessageSeverity::High, MessageSource::RuntimeWarning,
+                    StringFormat::Fmt("Failed to find cbuffer %s", handleVar.name.c_str()));
               }
             }
 
@@ -5413,7 +5439,6 @@ bool ThreadState::ExecuteInstruction(const rdcarray<ThreadState> &workgroup)
       result.type = baseType;
       result.rows = (uint8_t)countElems;
 
-      RDCASSERT(offset + size <= allocation.size);
       if(offset + size <= allocation.size)
       {
         memory += offset;
@@ -5427,7 +5452,10 @@ bool ThreadState::ExecuteInstruction(const rdcarray<ThreadState> &workgroup)
       }
       else
       {
-        RDCERR("Invalid GEP offset %u size %u for allocation size %u", offset, size, allocation.size);
+        m_Debugger.AddDebugMessage(
+            MessageCategory::Execution, MessageSeverity::High, MessageSource::RuntimeWarning,
+            StringFormat::Fmt("Pointer %s invalid offset %u size %u for allocation size %u GSM %d",
+                              result.name.c_str(), offset, size, allocation.size, allocation.gsm));
       }
       break;
     }
@@ -6286,6 +6314,7 @@ bool ThreadState::ExecuteInstruction(const rdcarray<ThreadState> &workgroup)
     }
     case Operation::CompareExchange:
     {
+      SCOPED_LOCK(m_Debugger.GetAtomicMemoryLock());
       OperationAtomic(inst, opCode, dxOpCode, resultId, result);
       break;
     }
@@ -9316,9 +9345,6 @@ ShaderDebugTrace *Debugger::BeginDebug(DebugAPIWrapper *apiWrapper, uint32_t eve
     for(uint32_t i = 0; i < list.resources.size(); i++)
     {
       const ShaderResource &res = list.resources[i];
-      // Ignore arrays the debugger execution will mark specific array elements used
-      if(res.bindArraySize > 1)
-        continue;
 
       // Fetch the resource name
       BindingSlot slot(res.fixedBindNumber, res.fixedBindSetOrSpace);
@@ -10360,6 +10386,7 @@ rdcarray<ShaderDebugState> Debugger::ContinueDebug()
 
     do
     {
+      ProcessQueuedDebugMessages();
       ProcessQueuedDeviceThreadSteps();
       // Convert the simulation threads queued operations into pending operations i.e. GPU commands
       ProcessQueuedOps();
@@ -10560,11 +10587,6 @@ bool Debugger::TypedResourceStore(DXIL::ResourceClass resClass, const BindingSlo
   {
     DXIL_DEBUG_RDCASSERT(m_ApiWrapper->IsUAVCached(slot));
     return m_ApiWrapper->TypedUAVStore(slot, fmt, dataOffset, value);
-  }
-  else if(resClass == DXIL::ResourceClass::SRV)
-  {
-    DXIL_DEBUG_RDCASSERT(m_ApiWrapper->IsSRVCached(slot));
-    return m_ApiWrapper->TypedSRVStore(slot, fmt, dataOffset, value);
   }
   RDCERR("Unexpected resource class %s", ToStr(resClass).c_str());
   return false;
@@ -10986,6 +11008,25 @@ void Debugger::SimulationJobHelper()
       }
     }
   };
+}
+
+// Must be called from the replay manager thread (the debugger thread)
+void Debugger::ProcessQueuedDebugMessages()
+{
+  rdcarray<DebugMessage> msgs;
+  {
+    SCOPED_LOCK(m_QueuedDebugMessagesLock);
+    m_QueuedDebugMessages.swap(msgs);
+  }
+  for(const DebugMessage &dbgMsg : msgs)
+    m_ApiWrapper->AddDebugMessage(dbgMsg.cat, dbgMsg.sev, dbgMsg.src, dbgMsg.desc);
+}
+
+// Called from any thread
+void Debugger::AddDebugMessage(MessageCategory c, MessageSeverity sv, MessageSource src, rdcstr d) const
+{
+  SCOPED_LOCK(m_QueuedDebugMessagesLock);
+  m_QueuedDebugMessages.push_back({c, sv, src, d});
 }
 
 };    // namespace DXILDebug

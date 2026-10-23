@@ -50,8 +50,6 @@ public:
                            uint64_t dataOffset) const override;
   bool TypedUAVStore(const BindingSlot &slot, const DXILDebug::ViewFmt &fmt, uint64_t dataOffset,
                      const ShaderValue &value) override;
-  bool TypedSRVStore(const BindingSlot &slot, const DXILDebug::ViewFmt &fmt, uint64_t dataOffset,
-                     const ShaderValue &value) override;
   void GetCBV(const BindingSlot &slot) override;
   UAVInfo GetUAV(const BindingSlot &slot) override;
   SRVInfo GetSRV(const BindingSlot &slot) override;
@@ -128,6 +126,8 @@ public:
   const rdcarray<ShaderVariable> &GetThreadsInputs() const override { return m_ThreadsInputs; }
   const rdcarray<SourceVariableMapping> &GetSourceVars() const override { return m_SourceVars; }
   const ShaderVariable &GetInputPlaceholder() const override { return m_InputPlaceholder; }
+  void AddDebugMessage(MessageCategory cat, MessageSeverity sev, MessageSource src,
+                       const rdcstr &desc) override;
 
 private:
   bool IsDeviceThread() const { return Threading::GetCurrentID() == m_DeviceThreadID; }
