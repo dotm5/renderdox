@@ -1955,6 +1955,12 @@ struct IReplayManager
 )");
   virtual RemoteHost CurrentRemote() = 0;
 
+  DOCUMENT("Returns whether the replay worker is running.");
+  virtual bool IsRunning() = 0;
+
+  DOCUMENT("Returns whether the caller is the running replay worker.");
+  virtual bool IsReplayThread() = 0;
+
   DOCUMENT(R"(Retrieves the capture access handle for the currently open file.
 
 :return: The file handle active, or ``None`` if no capture is open.
@@ -2097,6 +2103,52 @@ If no tag is present, the callback will be processed as normal.
   Callback function signature must match :func:`ReplayInvokeCallback`.
 )");
   virtual void BlockInvoke(ReplayInvokeCallback method) = 0;
+
+#if !defined(SWIG) && !defined(SWIG_GENERATED)
+  // Synchronous local access can run directly on the UI thread. Async access
+  // always uses the replay worker, including local file operations.
+  //
+  // Returns false when capture access is unavailable, or an async request has
+  // no running worker. Synchronous access also works before replay starts.
+  //
+  // Hidden from swig: Python uses a force-blocking capture-access invoker.
+  bool AccessInvoke(std::function<void(ICaptureAccess *)> callback, bool blocking, rdcstr tag)
+  {
+    if(!GetCaptureAccess())
+      return false;
+
+    auto invoke = [this, callback](IReplayController *) {
+      if(ICaptureAccess *access = GetCaptureAccess())
+        callback(access);
+    };
+
+    if(!blocking)
+    {
+      if(!IsRunning())
+        return false;
+      AsyncInvoke(invoke, tag);
+    }
+    else if(CurrentRemote().IsConnected() && IsRunning())
+    {
+      BlockInvoke(invoke);
+    }
+    else
+    {
+      // GPU enumeration must also work before a remote capture starts a worker.
+      callback(GetCaptureAccess());
+    }
+
+    return true;
+  }
+  bool BlockAccessInvoke(std::function<void(ICaptureAccess *)> callback)
+  {
+    return AccessInvoke(callback, true, "");
+  }
+  bool AsyncAccessInvoke(std::function<void(ICaptureAccess *)> callback)
+  {
+    return AccessInvoke(callback, false, "");
+  }
+#endif
 
 protected:
   IReplayManager() = default;

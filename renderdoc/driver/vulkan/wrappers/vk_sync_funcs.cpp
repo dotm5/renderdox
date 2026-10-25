@@ -97,6 +97,41 @@ void WrappedVulkan::RemapQueueFamilyIndices(uint32_t &srcQueueFamily, uint32_t &
   }
 }
 
+void WrappedVulkan::RemapMemoryRangeBarriers(const VkDependencyInfo &info)
+{
+  const VkMemoryRangeBarriersInfoKHR *ranges = (const VkMemoryRangeBarriersInfoKHR *)FindNextStruct(
+      info.pNext, VK_STRUCTURE_TYPE_MEMORY_RANGE_BARRIERS_INFO_KHR);
+  if(!ranges)
+    return;
+
+  // Called only for freshly deserialised replay data, never application memory.
+  // The array is owned by this read scope despite the API's const pointer type.
+  for(uint32_t i = 0; i < ranges->memoryRangeBarrierCount; i++)
+  {
+    VkMemoryRangeBarrierKHR &barrier =
+        const_cast<VkMemoryRangeBarrierKHR &>(ranges->pMemoryRangeBarriers[i]);
+    RemapQueueFamilyIndices(barrier.srcQueueFamilyIndex, barrier.dstQueueFamilyIndex);
+  }
+}
+
+bool WrappedVulkan::HasDescriptorBufferBarrier(const VkDependencyInfo &info)
+{
+  for(uint32_t i = 0; i < info.bufferMemoryBarrierCount; i++)
+    if(info.pBufferMemoryBarriers[i].dstAccessMask & VK_ACCESS_2_DESCRIPTOR_BUFFER_READ_BIT_EXT)
+      return true;
+  for(uint32_t i = 0; i < info.memoryBarrierCount; i++)
+    if(info.pMemoryBarriers[i].dstAccessMask & VK_ACCESS_2_DESCRIPTOR_BUFFER_READ_BIT_EXT)
+      return true;
+
+  const VkMemoryRangeBarriersInfoKHR *ranges = (const VkMemoryRangeBarriersInfoKHR *)FindNextStruct(
+      info.pNext, VK_STRUCTURE_TYPE_MEMORY_RANGE_BARRIERS_INFO_KHR);
+  if(ranges)
+    for(uint32_t i = 0; i < ranges->memoryRangeBarrierCount; i++)
+      if(ranges->pMemoryRangeBarriers[i].dstAccessMask & VK_ACCESS_2_DESCRIPTOR_BUFFER_READ_BIT_EXT)
+        return true;
+  return false;
+}
+
 template <typename SerialiserType>
 bool WrappedVulkan::Serialise_vkCreateFence(SerialiserType &ser, VkDevice device,
                                             const VkFenceCreateInfo *pCreateInfo,
@@ -1273,6 +1308,7 @@ bool WrappedVulkan::Serialise_vkCmdWaitEvents2(SerialiserType &ser, VkCommandBuf
       bufBarriers.clear();
 
       const VkDependencyInfo &depInfo = pDependencyInfos[evIdx];
+      RemapMemoryRangeBarriers(depInfo);
 
       for(uint32_t i = 0; i < depInfo.bufferMemoryBarrierCount; i++)
       {
@@ -1335,17 +1371,7 @@ bool WrappedVulkan::Serialise_vkCmdWaitEvents2(SerialiserType &ser, VkCommandBuf
           bool descBarrier = false;
 
           for(uint32_t ev = 0; ev < eventCount; ev++)
-          {
-            for(uint32_t i = 0; i < pDependencyInfos[ev].bufferMemoryBarrierCount; i++)
-              if(pDependencyInfos[ev].pBufferMemoryBarriers[i].dstAccessMask &
-                 VK_ACCESS_2_DESCRIPTOR_BUFFER_READ_BIT_EXT)
-                descBarrier = true;
-
-            for(uint32_t i = 0; i < pDependencyInfos[ev].memoryBarrierCount; i++)
-              if(pDependencyInfos[ev].pMemoryBarriers[i].dstAccessMask &
-                 VK_ACCESS_2_DESCRIPTOR_BUFFER_READ_BIT_EXT)
-                descBarrier = true;
-          }
+            descBarrier |= HasDescriptorBufferBarrier(pDependencyInfos[ev]);
 
           if(descBarrier)
             VersionDescriptorBuffers(commandBuffer);

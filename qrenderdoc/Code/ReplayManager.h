@@ -52,7 +52,8 @@ public:
                    RENDERDOC_ProgressCallback progress);
   void DeleteCapture(const rdcstr &capturefile, bool local);
 
-  bool IsRunning();
+  bool IsRunning() override;
+  bool IsReplayThread() override { return IsRunning() && m_Thread->isCurrentThread(); }
   ResultDetails GetCreateStatus() { return m_CreateResult; }
   void SetFatalErrorCallback(std::function<void()> cb) { m_FatalErrorCallback = cb; }
   ResultDetails GetFatalError() { return m_FatalError; }

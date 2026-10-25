@@ -36,6 +36,7 @@
 #include <QProgressDialog>
 #include <QRegularExpression>
 #include <QTimer>
+#include <atomic>
 #include "Code/Resources.h"
 #include "Code/pyrenderdoc/PythonContext.h"
 #include "Widgets/AnnotationDisplay.h"
@@ -1228,29 +1229,32 @@ void CaptureContext::LoadCaptureThreaded(const QString &captureFile, const Repla
             .arg(origFilename));
   }
 
-  ICaptureAccess *access = Replay().GetCaptureAccess();
-
-  if(access)
-  {
+  Replay().BlockAccessInvoke([this](ICaptureAccess *access) {
     int idx = access->FindSectionByType(SectionType::ResourceRenames);
     if(idx >= 0)
     {
       bytebuf buf = access->GetSectionContents(idx);
-      LoadRenames(QString::fromUtf8((const char *)buf.data(), buf.count()));
+      GUIInvoke::call(m_MainWindow, [this, buf]() {
+        LoadRenames(QString::fromUtf8((const char *)buf.data(), buf.count()));
+      });
     }
 
     idx = access->FindSectionByType(SectionType::Bookmarks);
     if(idx >= 0)
     {
       bytebuf buf = access->GetSectionContents(idx);
-      LoadBookmarks(QString::fromUtf8((const char *)buf.data(), buf.count()));
+      GUIInvoke::call(m_MainWindow, [this, buf]() {
+        LoadBookmarks(QString::fromUtf8((const char *)buf.data(), buf.count()));
+      });
     }
 
     idx = access->FindSectionByType(SectionType::Notes);
     if(idx >= 0)
     {
       bytebuf buf = access->GetSectionContents(idx);
-      LoadNotes(QString::fromUtf8((const char *)buf.data(), buf.count()));
+      GUIInvoke::call(m_MainWindow, [this, buf]() {
+        LoadNotes(QString::fromUtf8((const char *)buf.data(), buf.count()));
+      });
     }
 
     idx = access->FindSectionByType(SectionType::EditedShaders);
@@ -1271,7 +1275,7 @@ void CaptureContext::LoadCaptureThreaded(const QString &captureFile, const Repla
     {
       ANALYTIC_ADDUNIQ(APIs, driver);
     }
-  }
+  });
 
   m_LoadInProgress = false;
   m_CaptureLoaded = true;
@@ -1316,6 +1320,10 @@ void CaptureContext::RecompressCapture()
 
     destFilename = m_MainWindow->GetSavePath();
 
+    // the user can also cancel the save dialog after clicking yes
+    if(destFilename.isEmpty())
+      return;
+
     // if it's already local, we'll do the save as part of the recompression convert. If it's
     // remote, we need to copy it first, but we copy it to a temporary so we can do the conversion
     // to the target location
@@ -1349,6 +1357,11 @@ void CaptureContext::RecompressCapture()
   {
     // for local files we already have a handle. We'll reuse it, then re-open
     cap = m_Replay.GetCaptureFile();
+    if(!cap)
+    {
+      m_Replay.ReopenCaptureFile(m_CaptureFile);
+      cap = m_Replay.GetCaptureFile();
+    }
   }
   else
   {
@@ -3169,26 +3182,24 @@ void CaptureContext::AddDockWindow(QWidget *newWindow, DockReference ref, QWidge
 
 void CaptureContext::EmbedDependentFiles()
 {
-  if(!m_Replay.GetCaptureAccess())
-    return;
-
   // Always operate on the capture access (local or remote)
   QString tag = lit("replayEmbedDependenciesIntoCapture");
-  bool done = false;
+  std::atomic<bool> done(false);
 
-  Replay().AsyncInvoke(tag, [this, &done](IReplayController *) {
-    m_Replay.GetCaptureAccess()->EmbedDependenciesIntoCapture();
-    done = true;
-  });
+  if(!Replay().AccessInvoke(
+         [&done](ICaptureAccess *access) {
+           access->EmbedDependenciesIntoCapture();
+           done.store(true);
+         },
+         false, tag))
+    return;
 
   // wait a short while before displaying the progress dialog
-  for(int i = 0; !done && (i < 100 || m_Replay.GetCurrentProcessingTag().isEmpty() ||
-                           m_Replay.GetCurrentProcessingTag() == tag);
-      i++)
+  for(int i = 0; !done.load() && i < 100; i++)
     QThread::msleep(5);
 
   ShowProgressDialog(m_MainWindow->Widget(), tr("Please wait, working..."),
-                     [&done]() { return done; });
+                     [&done]() { return done.load(); });
 
   // Local replay
   if(m_Replay.GetCaptureFile())
@@ -3214,26 +3225,24 @@ void CaptureContext::EmbedDependentFiles()
 
 void CaptureContext::RemoveDependentFiles()
 {
-  if(!m_Replay.GetCaptureAccess())
-    return;
-
   // Always operate on the capture access (local or remote)
   QString tag = lit("replayRemoveDependenciesFromCapture");
-  bool done = false;
+  std::atomic<bool> done(false);
 
-  Replay().AsyncInvoke(tag, [this, &done](IReplayController *) {
-    m_Replay.GetCaptureAccess()->RemoveDependenciesFromCapture();
-    done = true;
-  });
+  if(!Replay().AccessInvoke(
+         [&done](ICaptureAccess *access) {
+           access->RemoveDependenciesFromCapture();
+           done.store(true);
+         },
+         false, tag))
+    return;
 
   // wait a short while before displaying the progress dialog
-  for(int i = 0; !done && (i < 100 || m_Replay.GetCurrentProcessingTag().isEmpty() ||
-                           m_Replay.GetCurrentProcessingTag() == tag);
-      i++)
+  for(int i = 0; !done.load() && i < 100; i++)
     QThread::msleep(5);
 
   ShowProgressDialog(m_MainWindow->Widget(), tr("Please wait, working..."),
-                     [&done]() { return done; });
+                     [&done]() { return done.load(); });
 
   // Local replay
   if(m_Replay.GetCaptureFile())

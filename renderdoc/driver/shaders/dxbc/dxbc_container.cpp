@@ -1336,10 +1336,8 @@ bool DXBCContainer::UsesExtensionUAV(uint32_t slot, uint32_t space, const void *
     if(*fourcc == FOURCC_SHEX || *fourcc == FOURCC_SHDR)
       return DXBCBytecode::Program::UsesExtensionUAV(slot, space, chunkContents, *chunkSize);
 
-    // far too expensive to figure out if a DXIL blob references the shader UAV. Just assume it does
-    // - this is only as an opportunistic thing to avoid requiring vendor extensions on programs
-    // that initialise but don't use them. If a user is bothering with DXIL they deserve what they
-    // get.
+    // Preserve vendor initialization when a registered extension UAV cannot be
+    // inspected in DXIL here. This does not imply shader-debugging support.
     if(*fourcc == FOURCC_DXIL || *fourcc == FOURCC_ILDB)
       return true;
   }
