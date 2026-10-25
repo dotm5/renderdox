@@ -5315,6 +5315,17 @@ void WrappedVulkan::vkCmdTraceRaysIndirect2KHR(VkCommandBuffer commandBuffer,
   }
 }
 
+void WrappedVulkan::RecordDeviceAddressUsage(VkDeviceAddress address, ResourceUsage usage)
+{
+  ResourceId id = GetResIDFromAddr(address);
+  if(id == ResourceId())
+    return;
+  auto entry = make_rdcpair(id, usage);
+  rdcarray<rdcpair<ResourceId, ResourceUsage>> &usages = GetLastEventNode().resourceUsage;
+  if(!usages.contains(entry))
+    usages.push_back(entry);
+}
+
 template <typename SerialiserType>
 bool WrappedVulkan::Serialise_vkCmdCopyImageToMemoryKHR(
     SerialiserType &ser, VkCommandBuffer commandBuffer,
@@ -5385,6 +5396,8 @@ bool WrappedVulkan::Serialise_vkCmdCopyImageToMemoryKHR(
 
         VulkanEventNode &eventNode = GetLastEventNode();
         eventNode.resourceUsage.push_back(make_rdcpair(imgid, ResourceUsage::CopySrc));
+        for(uint32_t i = 0; i < CopyInfo.regionCount; i++)
+          RecordDeviceAddressUsage(CopyInfo.pRegions[i].addressRange.address, ResourceUsage::CopyDst);
       }
     }
   }
@@ -5487,6 +5500,20 @@ bool WrappedVulkan::Serialise_vkCmdCopyMemoryKHR(SerialiserType &ser, VkCommandB
         }
 
         AddAction(action);
+
+        for(uint32_t i = 0; i < CopyInfo.regionCount; i++)
+        {
+          const auto &region = CopyInfo.pRegions[i];
+          ResourceId srcid = GetResIDFromAddr(region.srcRange.address);
+          ResourceId dstid = GetResIDFromAddr(region.dstRange.address);
+          if(srcid == dstid)
+            RecordDeviceAddressUsage(region.srcRange.address, ResourceUsage::Copy);
+          else
+          {
+            RecordDeviceAddressUsage(region.srcRange.address, ResourceUsage::CopySrc);
+            RecordDeviceAddressUsage(region.dstRange.address, ResourceUsage::CopyDst);
+          }
+        }
       }
     }
   }
@@ -5568,6 +5595,7 @@ bool WrappedVulkan::Serialise_vkCmdFillMemoryKHR(SerialiserType &ser, VkCommandB
         action.copyDestinationSubresource = Subresource();
 
         AddAction(action);
+        RecordDeviceAddressUsage(DstRange.address, ResourceUsage::Clear);
       }
     }
   }
@@ -5658,6 +5686,7 @@ bool WrappedVulkan::Serialise_vkCmdUpdateMemoryKHR(SerialiserType &ser, VkComman
         action.copyDestinationSubresource = Subresource();
 
         AddAction(action);
+        RecordDeviceAddressUsage(DstRange.address, ResourceUsage::CopyDst);
       }
     }
   }
@@ -5762,6 +5791,8 @@ bool WrappedVulkan::Serialise_vkCmdCopyMemoryToImageKHR(
 
         VulkanEventNode &eventNode = GetLastEventNode();
         eventNode.resourceUsage.push_back(make_rdcpair(imgid, ResourceUsage::CopyDst));
+        for(uint32_t i = 0; i < CopyInfo.regionCount; i++)
+          RecordDeviceAddressUsage(CopyInfo.pRegions[i].addressRange.address, ResourceUsage::CopySrc);
       }
     }
   }

@@ -1356,6 +1356,9 @@ public:
   void Apply_InitialState(WrappedVkRes *live, VkInitialContents &initial);
 
   void RemapQueueFamilyIndices(uint32_t &srcQueueFamily, uint32_t &dstQueueFamily);
+  void RemapMemoryRangeBarriers(const VkDependencyInfo &info);
+  bool HasDescriptorBufferBarrier(const VkDependencyInfo &info);
+  void RecordDeviceAddressUsage(VkDeviceAddress address, ResourceUsage usage);
   uint32_t GetQueueFamilyIndex() const { return m_QueueFamilyIdx; }
   bool ReleaseResource(WrappedVkRes *res);
   const rdcarray<uint32_t> &GetQueueFamilyIndices() const { return m_QueueFamilyIndices; }

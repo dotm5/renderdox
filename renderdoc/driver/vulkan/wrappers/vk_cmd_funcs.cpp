@@ -4834,6 +4834,7 @@ bool WrappedVulkan::Serialise_vkCmdPipelineBarrier2(SerialiserType &ser,
   if(IsReplayingAndReading())
   {
     m_LastCmdBufferID = GetResID(commandBuffer);
+    RemapMemoryRangeBarriers(DependencyInfo);
 
     for(uint32_t i = 0; i < DependencyInfo.bufferMemoryBarrierCount; i++)
     {
@@ -4907,19 +4908,7 @@ bool WrappedVulkan::Serialise_vkCmdPipelineBarrier2(SerialiserType &ser,
     {
       if(IsLoading(m_State))
       {
-        bool descBarrier = false;
-
-        for(uint32_t i = 0; i < DependencyInfo.bufferMemoryBarrierCount; i++)
-          if(DependencyInfo.pBufferMemoryBarriers[i].dstAccessMask &
-             VK_ACCESS_2_DESCRIPTOR_BUFFER_READ_BIT_EXT)
-            descBarrier = true;
-
-        for(uint32_t i = 0; i < DependencyInfo.memoryBarrierCount; i++)
-          if(DependencyInfo.pMemoryBarriers[i].dstAccessMask &
-             VK_ACCESS_2_DESCRIPTOR_BUFFER_READ_BIT_EXT)
-            descBarrier = true;
-
-        if(descBarrier)
+        if(HasDescriptorBufferBarrier(DependencyInfo))
           VersionDescriptorBuffers(commandBuffer);
       }
 

@@ -63,6 +63,43 @@ class UpstreamReviewTests(unittest.TestCase):
         self.assertIn("renderstate.xfbbuffers[firstBinding + i].buf = ResourceId();", bindings)
         self.assertIn("pBindingInfos ? GetResIDFromAddr", bindings)
 
+    def test_memory_range_barriers_use_shared_replay_mapping(self):
+        commands = source("renderdoc/driver/vulkan/wrappers/vk_cmd_funcs.cpp")
+        sync = source("renderdoc/driver/vulkan/wrappers/vk_sync_funcs.cpp")
+        self.assertIn("RemapMemoryRangeBarriers(DependencyInfo);", commands)
+        self.assertIn("RemapMemoryRangeBarriers(depInfo);", sync)
+        helper = sync.split("void WrappedVulkan::RemapMemoryRangeBarriers", 1)[1].split("bool WrappedVulkan::HasDescriptorBufferBarrier", 1)[0]
+        self.assertIn("RemapQueueFamilyIndices(barrier.srcQueueFamilyIndex, barrier.dstQueueFamilyIndex)", helper)
+
+    def test_descriptor_versions_include_all_dependency_info_entries(self):
+        commands = source("renderdoc/driver/vulkan/wrappers/vk_cmd_funcs.cpp")
+        sync = source("renderdoc/driver/vulkan/wrappers/vk_sync_funcs.cpp")
+        self.assertIn("HasDescriptorBufferBarrier(DependencyInfo)", commands)
+        self.assertIn("HasDescriptorBufferBarrier(pDependencyInfos[ev])", sync)
+        helper = sync.split("bool WrappedVulkan::HasDescriptorBufferBarrier", 1)[1].split("template <typename SerialiserType>", 1)[0]
+        self.assertIn("ranges->pMemoryRangeBarriers[i].dstAccessMask", helper)
+        self.assertIn("VK_ACCESS_2_DESCRIPTOR_BUFFER_READ_BIT_EXT", helper)
+
+    def test_device_address_actions_record_buffer_usage(self):
+        body = source("renderdoc/driver/vulkan/wrappers/vk_draw_funcs.cpp")
+        checks = {
+            "vkCmdCopyMemoryKHR": ("ResourceUsage::Copy", "ResourceUsage::CopySrc", "ResourceUsage::CopyDst"),
+            "vkCmdFillMemoryKHR": ("ResourceUsage::Clear",),
+            "vkCmdUpdateMemoryKHR": ("ResourceUsage::CopyDst",),
+            "vkCmdCopyMemoryToImageKHR": ("RecordDeviceAddressUsage(CopyInfo.pRegions[i].addressRange.address, ResourceUsage::CopySrc)",),
+            "vkCmdCopyImageToMemoryKHR": ("RecordDeviceAddressUsage(CopyInfo.pRegions[i].addressRange.address, ResourceUsage::CopyDst)",),
+        }
+        for name, required in checks.items():
+            function = body.split("bool WrappedVulkan::Serialise_" + name + "(", 1)[1].split("void WrappedVulkan::" + name + "(", 1)[0]
+            for text in required:
+                self.assertIn(text, function)
+            self.assertIn("RecordDeviceAddressUsage", function)
+
+    def test_registered_dxil_vendor_uav_retains_compatibility(self):
+        body = source("renderdoc/driver/shaders/dxbc/dxbc_container.cpp").split("bool DXBCContainer::UsesExtensionUAV(", 1)[1].split("bool DXBCContainer::CheckForDebugInfo(", 1)[0]
+        self.assertIn("slot == ~0U && space == ~0U", body)
+        self.assertRegex(body, r"if\(\*fourcc == FOURCC_DXIL \|\| \*fourcc == FOURCC_ILDB\)\s+return true;")
+
 
 if __name__ == "__main__":
     unittest.main()
