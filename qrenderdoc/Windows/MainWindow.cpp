@@ -2969,6 +2969,9 @@ void MainWindow::on_action_Create_RGP_Profile_triggered()
     }
   });
 
+  if(abort)
+    return;
+
   QDialog popup;
   popup.setWindowFlags(popup.windowFlags() & ~Qt::WindowContextHelpButtonHint);
   popup.setWindowIcon(windowIcon());

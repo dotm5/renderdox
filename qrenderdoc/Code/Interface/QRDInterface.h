@@ -1955,6 +1955,12 @@ struct IReplayManager
 )");
   virtual RemoteHost CurrentRemote() = 0;
 
+  DOCUMENT("Returns whether the replay worker is running.");
+  virtual bool IsRunning() = 0;
+
+  DOCUMENT("Returns whether the caller is the running replay worker.");
+  virtual bool IsReplayThread() = 0;
+
   DOCUMENT(R"(Retrieves the capture access handle for the currently open file.
 
 :return: The file handle active, or ``None`` if no capture is open.
@@ -2112,7 +2118,9 @@ If no tag is present, the callback will be processed as normal.
     if(!GetCaptureAccess())
       return false;
 
-    if(CurrentRemote().IsConnected())
+    // A connected remote can enumerate GPUs before a capture starts its worker.
+    // PushInvoke cannot execute a callback until that worker is running.
+    if(CurrentRemote().IsConnected() && IsRunning())
     {
       if(blocking)
         BlockInvoke([this, callback](IReplayController *) { callback(GetCaptureAccess()); });

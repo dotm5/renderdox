@@ -874,12 +874,18 @@ struct CaptureAccessInvoker : ICaptureAccess
 
     // ensure we either call on replay thread (if needed) or UI thread. Capture access isn't thread
     // safe so we don't want it to race otherwise
-    if(m_Replay.CurrentRemote().IsConnected())
-      m_Replay.BlockInvoke(
-          [this, &callback](IReplayController *) { callback(m_Replay.GetCaptureAccess()); });
+    // A Python replay callback may be running while the UI waits in BlockInvoke.
+    // Calling back synchronously to that UI would deadlock both threads.
+    auto invoke = [this, callback]() {
+      if(ICaptureAccess *access = m_Replay.GetCaptureAccess())
+        callback(access);
+    };
+    if(m_Replay.IsReplayThread())
+      invoke();
+    else if(m_Replay.CurrentRemote().IsConnected() && m_Replay.IsRunning())
+      m_Replay.BlockInvoke([invoke](IReplayController *) { invoke(); });
     else
-      GUIInvoke::blockcall(m_Ctx.GetMainWindow()->Widget(),
-                           [this, callback]() { callback(m_Replay.GetCaptureAccess()); });
+      GUIInvoke::blockcall(m_Ctx.GetMainWindow()->Widget(), invoke);
 
     PythonContext::ResumePythonThreading(ctx);
     return ret;
@@ -986,6 +992,9 @@ struct ReplayInvoker : IReplayManager
   void CancelReplayLoop() { return m_Replay.CancelReplayLoop(); }
 
   RemoteHost CurrentRemote() { return m_Replay.CurrentRemote(); }
+
+  bool IsRunning() override { return m_Replay.IsRunning(); }
+  bool IsReplayThread() override { return m_Replay.IsReplayThread(); }
 
   ICaptureAccess *GetCaptureAccess()
   {

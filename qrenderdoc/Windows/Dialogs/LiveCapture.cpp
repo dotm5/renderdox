@@ -915,9 +915,10 @@ bool LiveCapture::checkAllowClose(int totalUnsavedCaptures, bool &noToAll)
       // need to wait for the transfer to finish before exiting, when captureCopied() is called
       // cap->local will become true. Otherwise wait until the transfer is finished or we disconnect
       // for another reason - and offer a cancel button
-      ShowProgressDialog(
-          this, tr("Transferring file."), [this, cap]() { return !IsConnected() || cap->local; },
-          NULL, [&success]() { success = false; });
+      if(success)
+        ShowProgressDialog(
+            this, tr("Transferring file."), [this, cap]() { return !IsConnected() || cap->local; },
+            NULL, [&success]() { success = false; });
 
       if(!success)
       {

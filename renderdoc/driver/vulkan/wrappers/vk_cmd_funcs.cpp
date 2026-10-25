@@ -10808,9 +10808,10 @@ void WrappedVulkan::vkCmdCopyQueryPoolResultsToMemoryKHR(
         const uint64_t availability = 1;
         for(size_t i = 0; i < queryCount; ++i)
           ObjDisp(commandBuffer)
-              ->CmdUpdateBuffer(Unwrap(commandBuffer), qpInfo->m_Buffer.UnwrappedBuffer(),
-                                offs + (i * resultSize) + resultSize, resultSize,
-                                (uint32_t *)&availability);
+              ->CmdUpdateBuffer(Unwrap(commandBuffer),
+                                Unwrap(GetResourceManager()->GetHandle<VkBuffer>(id)),
+                                offs + (i * pDstRange->stride) + resultSize, resultSize,
+                                &availability);
       }
     }
   }
@@ -10969,8 +10970,16 @@ bool WrappedVulkan::Serialise_vkCmdBeginTransformFeedback2EXT(
           renderstate.xfbcounters.resize(counterRangeCount);
 
           for(uint32_t i = 0; i < counterRangeCount; i++)
-            GetResIDFromAddr(pCounterInfos[i].addressRange.address, renderstate.xfbcounters[i].buf,
-                             renderstate.xfbcounters[i].offs);
+          {
+            if(pCounterInfos)
+              GetResIDFromAddr(pCounterInfos[i].addressRange.address, renderstate.xfbcounters[i].buf,
+                               renderstate.xfbcounters[i].offs);
+            else
+            {
+              renderstate.xfbcounters[i].buf = ResourceId();
+              renderstate.xfbcounters[i].offs = 0;
+            }
+          }
         }
 
         ObjDisp(commandBuffer)
@@ -11053,10 +11062,19 @@ bool WrappedVulkan::Serialise_vkCmdBindTransformFeedbackBuffers2EXT(
 
           for(uint32_t i = 0; i < bindingCount; i++)
           {
-            GetResIDFromAddr(pBindingInfos[i].addressRange.address,
-                             renderstate.xfbbuffers[firstBinding + i].buf,
-                             renderstate.xfbbuffers[firstBinding + i].offs);
-            renderstate.xfbbuffers[firstBinding + i].size = pBindingInfos[i].addressRange.size;
+            if(pBindingInfos)
+            {
+              GetResIDFromAddr(pBindingInfos[i].addressRange.address,
+                               renderstate.xfbbuffers[firstBinding + i].buf,
+                               renderstate.xfbbuffers[firstBinding + i].offs);
+              renderstate.xfbbuffers[firstBinding + i].size = pBindingInfos[i].addressRange.size;
+            }
+            else
+            {
+              renderstate.xfbbuffers[firstBinding + i].buf = ResourceId();
+              renderstate.xfbbuffers[firstBinding + i].offs = 0;
+              renderstate.xfbbuffers[firstBinding + i].size = 0;
+            }
           }
         }
       }
@@ -11069,7 +11087,7 @@ bool WrappedVulkan::Serialise_vkCmdBindTransformFeedbackBuffers2EXT(
 
       for(uint32_t i = 0; i < bindingCount; i++)
         m_BakedCmdBufferInfo[m_LastCmdBufferID].state.xfbbuffers[firstBinding + i].buf =
-            GetResIDFromAddr(pBindingInfos[i].addressRange.address);
+            pBindingInfos ? GetResIDFromAddr(pBindingInfos[i].addressRange.address) : ResourceId();
 
       ObjDisp(commandBuffer)
           ->CmdBindTransformFeedbackBuffers2EXT(Unwrap(commandBuffer), firstBinding, bindingCount,
