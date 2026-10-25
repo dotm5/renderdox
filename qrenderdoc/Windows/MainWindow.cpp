@@ -56,6 +56,7 @@
 #include <QToolTip>
 #include <QUuid>
 #include <QWindow>
+#include <atomic>
 #include "Code/QRDUtils.h"
 #include "Code/Resources.h"
 #include "Code/pyrenderdoc/PythonContext.h"
@@ -2788,21 +2789,7 @@ void MainWindow::on_action_Resolve_Symbols_triggered()
 {
   ANALYTIC_SET(UIFeatures.CallstackResolve, true);
 
-  float progress = 0.0f;
-  bool finished = false;
-
-  if(!m_Ctx.Replay().AsyncAccessInvoke([this, &progress, &finished](ICaptureAccess *access) {
-       ResultDetails success = access->InitResolver(true, [&progress](float p) { progress = p; });
-
-       if(!success.OK())
-       {
-         RDDialog::critical(
-             this, tr("Error loading symbols"),
-             tr("Couldn't load symbols for callstack resolution.\n\n%1").arg(success.Message()));
-       }
-
-       finished = true;
-     }))
+  if(!m_Ctx.Replay().GetCaptureAccess() || !m_Ctx.Replay().IsRunning())
   {
     RDDialog::critical(
         this, tr("Not Available"),
@@ -2810,9 +2797,33 @@ void MainWindow::on_action_Resolve_Symbols_triggered()
     return;
   }
 
+  std::atomic<float> progress(0.0f);
+  std::atomic<bool> finished(false);
+  ResultDetails result = {};
+
+  // Resolver initialization can load PDBs or contact symbol servers. Keep it on
+  // the replay worker even for local captures; the modal progress dialog keeps
+  // capture-changing UI actions disabled until this work has completed.
+  m_Ctx.Replay().AsyncInvoke([this, &progress, &finished, &result](IReplayController *) {
+    ICaptureAccess *access = m_Ctx.Replay().GetCaptureAccess();
+    if(access)
+      result = access->InitResolver(true, [&progress](float p) { progress.store(p); });
+    else
+      result = ResultCode::DataNotAvailable;
+
+    finished.store(true);
+  });
+
   ShowProgressDialog(
-      this, tr("Resolving symbols, please wait..."), [&finished]() { return finished; },
-      [&progress]() { return progress; });
+      this, tr("Resolving symbols, please wait..."), [&finished]() { return finished.load(); },
+      [&progress]() { return progress.load(); });
+
+  if(!result.OK())
+  {
+    RDDialog::critical(
+        this, tr("Error loading symbols"),
+        tr("Couldn't load symbols for callstack resolution.\n\n%1").arg(result.Message()));
+  }
 
   if(m_Ctx.HasAPIInspector())
     m_Ctx.GetAPIInspector()->Refresh();

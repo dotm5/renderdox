@@ -11,6 +11,22 @@ def source(path):
 
 
 class UpstreamReviewTests(unittest.TestCase):
+    def test_symbol_initialization_uses_the_replay_worker(self):
+        body = source("qrenderdoc/Windows/MainWindow.cpp").split(
+            "void MainWindow::on_action_Resolve_Symbols_triggered()", 1
+        )[1].split("void MainWindow::on_action_Recompress_Capture_triggered()", 1)[0]
+        self.assertNotIn("AsyncAccessInvoke", body)
+        self.assertIn("!m_Ctx.Replay().GetCaptureAccess() || !m_Ctx.Replay().IsRunning()", body)
+        self.assertIn("m_Ctx.Replay().AsyncInvoke(", body)
+        worker = body.split("m_Ctx.Replay().AsyncInvoke(", 1)[1].split("ShowProgressDialog", 1)[0]
+        self.assertIn("access->InitResolver", worker)
+        self.assertIn("finished.store(true)", worker)
+        self.assertIn("std::atomic<float>", body)
+        self.assertIn("std::atomic<bool>", body)
+        self.assertIn("finished.load()", body)
+        self.assertIn("progress.load()", body)
+        self.assertGreater(body.index("if(!result.OK())"), body.index("ShowProgressDialog"))
+
     def test_rgp_refusal_returns_before_profile_creation(self):
         body = source("qrenderdoc/Windows/MainWindow.cpp").split(
             "void MainWindow::on_action_Create_RGP_Profile_triggered()", 1
