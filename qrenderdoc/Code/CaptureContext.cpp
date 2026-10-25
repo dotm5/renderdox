@@ -36,6 +36,7 @@
 #include <QProgressDialog>
 #include <QRegularExpression>
 #include <QTimer>
+#include <atomic>
 #include "Code/Resources.h"
 #include "Code/pyrenderdoc/PythonContext.h"
 #include "Widgets/AnnotationDisplay.h"
@@ -3183,24 +3184,22 @@ void CaptureContext::EmbedDependentFiles()
 {
   // Always operate on the capture access (local or remote)
   QString tag = lit("replayEmbedDependenciesIntoCapture");
-  bool done = false;
+  std::atomic<bool> done(false);
 
   if(!Replay().AccessInvoke(
          [&done](ICaptureAccess *access) {
            access->EmbedDependenciesIntoCapture();
-           done = true;
+           done.store(true);
          },
          false, tag))
     return;
 
   // wait a short while before displaying the progress dialog
-  for(int i = 0; !done && (i < 100 || m_Replay.GetCurrentProcessingTag().isEmpty() ||
-                           m_Replay.GetCurrentProcessingTag() == tag);
-      i++)
+  for(int i = 0; !done.load() && i < 100; i++)
     QThread::msleep(5);
 
   ShowProgressDialog(m_MainWindow->Widget(), tr("Please wait, working..."),
-                     [&done]() { return done; });
+                     [&done]() { return done.load(); });
 
   // Local replay
   if(m_Replay.GetCaptureFile())
@@ -3228,24 +3227,22 @@ void CaptureContext::RemoveDependentFiles()
 {
   // Always operate on the capture access (local or remote)
   QString tag = lit("replayRemoveDependenciesFromCapture");
-  bool done = false;
+  std::atomic<bool> done(false);
 
   if(!Replay().AccessInvoke(
          [&done](ICaptureAccess *access) {
            access->RemoveDependenciesFromCapture();
-           done = true;
+           done.store(true);
          },
          false, tag))
     return;
 
   // wait a short while before displaying the progress dialog
-  for(int i = 0; !done && (i < 100 || m_Replay.GetCurrentProcessingTag().isEmpty() ||
-                           m_Replay.GetCurrentProcessingTag() == tag);
-      i++)
+  for(int i = 0; !done.load() && i < 100; i++)
     QThread::msleep(5);
 
   ShowProgressDialog(m_MainWindow->Widget(), tr("Please wait, working..."),
-                     [&done]() { return done; });
+                     [&done]() { return done.load(); });
 
   // Local replay
   if(m_Replay.GetCaptureFile())

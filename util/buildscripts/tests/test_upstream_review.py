@@ -11,6 +11,29 @@ def source(path):
 
 
 class UpstreamReviewTests(unittest.TestCase):
+    def test_async_capture_access_never_executes_inline(self):
+        body = source("qrenderdoc/Code/Interface/QRDInterface.h").split(
+            "bool AccessInvoke(", 1
+        )[1].split("bool BlockAccessInvoke(", 1)[0]
+        asynchronous = body.split("if(!blocking)", 1)[1].split("else if(", 1)[0]
+        self.assertRegex(asynchronous, r"if\(!IsRunning\(\)\)\s+return false;")
+        self.assertIn("AsyncInvoke(invoke, tag)", asynchronous)
+        self.assertNotIn("callback(", asynchronous)
+        self.assertIn("if(ICaptureAccess *access = GetCaptureAccess())", body)
+        self.assertIn("else if(CurrentRemote().IsConnected() && IsRunning())", body)
+
+    def test_dependency_progress_waits_are_bounded_and_atomic(self):
+        body = source("qrenderdoc/Code/CaptureContext.cpp").split(
+            "void CaptureContext::EmbedDependentFiles()", 1
+        )[1]
+        for operation in ("EmbedDependenciesIntoCapture", "RemoveDependenciesFromCapture"):
+            self.assertIn("access->" + operation + "()", body)
+        self.assertEqual(body.count("std::atomic<bool> done(false)"), 2)
+        self.assertEqual(body.count("done.store(true)"), 2)
+        self.assertEqual(body.count("for(int i = 0; !done.load() && i < 100; i++)"), 2)
+        self.assertEqual(body.count("[&done]() { return done.load(); }"), 2)
+        self.assertNotIn("GetCurrentProcessingTag", body)
+
     def test_symbol_initialization_uses_the_replay_worker(self):
         body = source("qrenderdoc/Windows/MainWindow.cpp").split(
             "void MainWindow::on_action_Resolve_Symbols_triggered()", 1
