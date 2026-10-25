@@ -167,7 +167,11 @@ bool Socket::SendDataBlocking(const void *buf, uint32_t length)
 
   while(sent < length)
   {
-    ssize_t ret = send((int)socket, src, length - sent, 0);
+    int sendflags = 0;
+#if ENABLED(RDOC_LINUX)
+    sendflags = MSG_NOSIGNAL;
+#endif
+    ssize_t ret = send((int)socket, src, length - sent, sendflags);
 
     if(ret <= 0)
     {

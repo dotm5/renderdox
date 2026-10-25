@@ -2344,7 +2344,9 @@ void MainWindow::OnCaptureLoaded()
   statusProgress->setVisible(false);
 
   // don't allow capture recompress on opened images
-  QString driver = m_Ctx.Replay().GetCaptureAccess()->DriverName();
+  QString driver;
+  m_Ctx.Replay().BlockAccessInvoke(
+      [&driver](ICaptureAccess *access) { driver = access->DriverName(); });
   bool is_image = driver == lit("Image");
   ui->action_Recompress_Capture->setEnabled(!is_image);
 
@@ -2354,9 +2356,8 @@ void MainWindow::OnCaptureLoaded()
 
   ui->action_Open_RGP_Profile->setEnabled(false);
   ui->action_Create_RGP_Profile->setEnabled(m_Ctx.APIProps().rgpCapture && m_Ctx.IsCaptureLocal());
-  m_Ctx.Replay().AsyncInvoke([this](IReplayController *) {
-    bool hasAMDGRPPorfile =
-        (m_Ctx.Replay().GetCaptureAccess()->FindSectionByType(SectionType::AMDRGPProfile) >= 0);
+  m_Ctx.Replay().AsyncAccessInvoke([this](ICaptureAccess *access) {
+    bool hasAMDGRPPorfile = (access->FindSectionByType(SectionType::AMDRGPProfile) >= 0);
 
     GUIInvoke::call(this, [this, hasAMDGRPPorfile]() {
       ui->action_Open_RGP_Profile->setEnabled(hasAMDGRPPorfile);
@@ -2367,8 +2368,8 @@ void MainWindow::OnCaptureLoaded()
 
   ui->action_Resolve_Symbols->setEnabled(false);
 
-  m_Ctx.Replay().AsyncInvoke([this](IReplayController *) {
-    bool hasResolver = m_Ctx.Replay().GetCaptureAccess()->HasCallstacks();
+  m_Ctx.Replay().AsyncAccessInvoke([this](ICaptureAccess *access) {
+    bool hasResolver = access->HasCallstacks();
 
     GUIInvoke::call(this, [this, hasResolver]() {
       ui->action_Resolve_Symbols->setEnabled(hasResolver);
@@ -2787,30 +2788,27 @@ void MainWindow::on_action_Resolve_Symbols_triggered()
 {
   ANALYTIC_SET(UIFeatures.CallstackResolve, true);
 
-  if(!m_Ctx.Replay().GetCaptureAccess())
+  float progress = 0.0f;
+  bool finished = false;
+
+  if(!m_Ctx.Replay().AsyncAccessInvoke([this, &progress, &finished](ICaptureAccess *access) {
+       ResultDetails success = access->InitResolver(true, [&progress](float p) { progress = p; });
+
+       if(!success.OK())
+       {
+         RDDialog::critical(
+             this, tr("Error loading symbols"),
+             tr("Couldn't load symbols for callstack resolution.\n\n%1").arg(success.Message()));
+       }
+
+       finished = true;
+     }))
   {
     RDDialog::critical(
         this, tr("Not Available"),
         tr("Callstack resolution is not available.\n\nCheck remote server connection."));
     return;
   }
-
-  float progress = 0.0f;
-  bool finished = false;
-
-  m_Ctx.Replay().AsyncInvoke([this, &progress, &finished](IReplayController *) {
-    ResultDetails success = m_Ctx.Replay().GetCaptureAccess()->InitResolver(
-        true, [&progress](float p) { progress = p; });
-
-    if(!success.OK())
-    {
-      RDDialog::critical(
-          this, tr("Error loading symbols"),
-          tr("Couldn't load symbols for callstack resolution.\n\n%1").arg(success.Message()));
-    }
-
-    finished = true;
-  });
 
   ShowProgressDialog(
       this, tr("Resolving symbols, please wait..."), [&finished]() { return finished; },
@@ -2920,26 +2918,33 @@ void MainWindow::on_action_Open_RGP_Profile_triggered()
   if(!m_Ctx.IsCaptureLoaded())
     return;
 
-  int idx = m_Ctx.Replay().GetCaptureAccess()->FindSectionByType(SectionType::AMDRGPProfile);
+  QString path;
+  m_Ctx.Replay().BlockAccessInvoke([&path](ICaptureAccess *access) {
+    int idx = access->FindSectionByType(SectionType::AMDRGPProfile);
 
-  if(idx < 0)
+    if(idx < 0)
+      return;
+
+    path = QDir::temp().absoluteFilePath(lit("renderdoc_extracted.rgp"));
+
+    QFile f(path);
+    if(f.open(QIODevice::WriteOnly | QIODevice::Truncate))
+    {
+      bytebuf buf = access->GetSectionContents(idx);
+
+      f.write((const char *)buf.data(), (qint64)buf.size());
+      f.flush();
+    }
+    else
+    {
+      qCritical() << "Couldn't open temporary file " << path << " for write";
+      path = QString();
+      return;
+    }
+  });
+
+  if(path.isEmpty())
     return;
-
-  QString path = QDir::temp().absoluteFilePath(lit("renderdoc_extracted.rgp"));
-
-  QFile f(path);
-  if(f.open(QIODevice::WriteOnly | QIODevice::Truncate))
-  {
-    bytebuf buf = m_Ctx.Replay().GetCaptureAccess()->GetSectionContents(idx);
-
-    f.write((const char *)buf.data(), (qint64)buf.size());
-    f.flush();
-  }
-  else
-  {
-    qCritical() << "Couldn't open temporary file " << path << " for write";
-    return;
-  }
 
   m_Ctx.OpenRGPProfile(path);
 }
@@ -2949,15 +2954,20 @@ void MainWindow::on_action_Create_RGP_Profile_triggered()
   if(!m_Ctx.IsCaptureLoaded())
     return;
 
-  if(m_Ctx.Replay().GetCaptureAccess()->FindSectionByType(SectionType::AMDRGPProfile) >= 0)
-  {
-    QMessageBox::StandardButton res = RDDialog::question(
-        this, tr("Existing RGP profile"), tr("Capture already contains an RGP profile. Overwrite?"),
-        QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+  bool abort = false;
 
-    if(res != QMessageBox::Yes)
-      return;
-  }
+  m_Ctx.Replay().BlockAccessInvoke([this, &abort](ICaptureAccess *access) {
+    if(access->FindSectionByType(SectionType::AMDRGPProfile) >= 0)
+    {
+      QMessageBox::StandardButton res =
+          RDDialog::question(this, tr("Existing RGP profile"),
+                             tr("Capture already contains an RGP profile. Overwrite?"),
+                             QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+
+      if(res != QMessageBox::Yes)
+        abort = true;
+    }
+  });
 
   QDialog popup;
   popup.setWindowFlags(popup.windowFlags() & ~Qt::WindowContextHelpButtonHint);
@@ -2995,7 +3005,8 @@ void MainWindow::on_action_Create_RGP_Profile_triggered()
       props.version = 1;
       props.flags = SectionFlags::ZstdCompressed;
 
-      m_Ctx.Replay().GetCaptureAccess()->WriteSection(props, buf);
+      m_Ctx.Replay().BlockAccessInvoke(
+          [props, &buf](ICaptureAccess *access) { access->WriteSection(props, buf); });
 
       ui->action_Open_RGP_Profile->setEnabled(true);
     }
@@ -3196,18 +3207,15 @@ void MainWindow::updateToolsMenuOptions()
 {
   updateAnalysisSuiteActions();
 
-  if(m_Ctx.Replay().GetCaptureAccess())
-  {
-    m_Ctx.Replay().AsyncInvoke([this](IReplayController *) {
-      bool hasEmbeddedDependencies = m_Ctx.Replay().GetCaptureAccess()->HasEmbeddedDependencies();
-      bool hasPendingDependencies = m_Ctx.Replay().GetCaptureAccess()->HasPendingDependencies();
+  m_Ctx.Replay().AsyncAccessInvoke([this](ICaptureAccess *access) {
+    bool hasEmbeddedDependencies = access->HasEmbeddedDependencies();
+    bool hasPendingDependencies = access->HasPendingDependencies();
 
-      GUIInvoke::call(this, [this, hasEmbeddedDependencies, hasPendingDependencies]() {
-        ui->action_EmbedExternalFiles->setEnabled(!hasEmbeddedDependencies && hasPendingDependencies);
-        ui->action_RemoveExternalFiles->setEnabled(hasEmbeddedDependencies);
-      });
+    GUIInvoke::call(this, [this, hasEmbeddedDependencies, hasPendingDependencies]() {
+      ui->action_EmbedExternalFiles->setEnabled(!hasEmbeddedDependencies && hasPendingDependencies);
+      ui->action_RemoveExternalFiles->setEnabled(hasEmbeddedDependencies);
     });
-  }
+  });
 }
 
 QAbstractItemView *MainWindow::focusedExportView() const
