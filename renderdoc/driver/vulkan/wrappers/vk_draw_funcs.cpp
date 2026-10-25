@@ -5902,6 +5902,7 @@ bool WrappedVulkan::Serialise_vkCmdDispatchIndirect2KHR(SerialiserType &ser,
 
         VulkanEventNode &eventNode = GetLastEventNode();
         eventNode.indirectPatch = indirectPatch;
+        RecordDeviceAddressUsage(Info.addressRange.address, ResourceUsage::Indirect);
       }
     }
   }
@@ -6199,6 +6200,7 @@ bool WrappedVulkan::Serialise_vkCmdDrawIndexedIndirect2KHR(SerialiserType &ser,
 
         VulkanEventNode &eventNode = GetLastEventNode();
         eventNode.indirectPatch = indirectPatch;
+        RecordDeviceAddressUsage(Info.addressRange.address, ResourceUsage::Indirect);
 
         return true;
       }
@@ -6219,7 +6221,7 @@ bool WrappedVulkan::Serialise_vkCmdDrawIndexedIndirect2KHR(SerialiserType &ser,
 
       VulkanEventNode &eventNode = GetLastEventNode();
       eventNode.indirectPatch = indirectPatch;
-      eventNode.resourceUsage.push_back(make_rdcpair(id, ResourceUsage::Indirect));
+      RecordDeviceAddressUsage(Info.addressRange.address, ResourceUsage::Indirect);
 
       for(uint32_t i = 0; i < Info.drawCount; i++)
       {
@@ -6550,6 +6552,7 @@ bool WrappedVulkan::Serialise_vkCmdDrawIndirect2KHR(SerialiserType &ser,
 
         VulkanEventNode &eventNode = GetLastEventNode();
         eventNode.indirectPatch = indirectPatch;
+        RecordDeviceAddressUsage(Info.addressRange.address, ResourceUsage::Indirect);
 
         return true;
       }
@@ -6569,6 +6572,7 @@ bool WrappedVulkan::Serialise_vkCmdDrawIndirect2KHR(SerialiserType &ser,
 
       VulkanEventNode &eventNode = GetLastEventNode();
       eventNode.indirectPatch = indirectPatch;
+      RecordDeviceAddressUsage(Info.addressRange.address, ResourceUsage::Indirect);
 
       for(uint32_t i = 0; i < Info.drawCount; i++)
       {
@@ -6870,6 +6874,8 @@ bool WrappedVulkan::Serialise_vkCmdDrawMeshTasksIndirectCount2EXT(
 
       VulkanEventNode &eventNode = GetLastEventNode();
       eventNode.indirectPatch = indirectPatch;
+      RecordDeviceAddressUsage(Info.addressRange.address, ResourceUsage::Indirect);
+      RecordDeviceAddressUsage(Info.countAddressRange.address, ResourceUsage::Indirect);
 
       // only allocate up to one indirect sub-command to avoid pessimistic allocation if
       // maxDrawCount is very high but the actual action count is low.
@@ -7198,6 +7204,7 @@ bool WrappedVulkan::Serialise_vkCmdDrawMeshTasksIndirect2EXT(SerialiserType &ser
 
         VulkanEventNode &eventNode = GetLastEventNode();
         eventNode.indirectPatch = indirectPatch;
+        RecordDeviceAddressUsage(Info.addressRange.address, ResourceUsage::Indirect);
 
         return true;
       }
@@ -7217,6 +7224,7 @@ bool WrappedVulkan::Serialise_vkCmdDrawMeshTasksIndirect2EXT(SerialiserType &ser
 
       VulkanEventNode &eventNode = GetLastEventNode();
       eventNode.indirectPatch = indirectPatch;
+      RecordDeviceAddressUsage(Info.addressRange.address, ResourceUsage::Indirect);
 
       for(uint32_t i = 0; i < Info.drawCount; i++)
       {
@@ -7353,6 +7361,7 @@ bool WrappedVulkan::Serialise_vkCmdDrawIndirectByteCount2EXT(
 
       VulkanEventNode &eventNode = GetLastEventNode();
       eventNode.indirectPatch = indirectPatch;
+      RecordDeviceAddressUsage(CounterInfo.addressRange.address, ResourceUsage::Indirect);
 
       return true;
     }
@@ -7624,6 +7633,8 @@ bool WrappedVulkan::Serialise_vkCmdDrawIndexedIndirectCount2KHR(
 
       VulkanEventNode &eventNode = GetLastEventNode();
       eventNode.indirectPatch = indirectPatch;
+      RecordDeviceAddressUsage(Info.addressRange.address, ResourceUsage::Indirect);
+      RecordDeviceAddressUsage(Info.countAddressRange.address, ResourceUsage::Indirect);
 
       if(Info.maxDrawCount > 0)
         eventNode.action.flags = flags;
@@ -7928,6 +7939,8 @@ bool WrappedVulkan::Serialise_vkCmdDrawIndirectCount2KHR(SerialiserType &ser,
 
       VulkanEventNode &eventNode = GetLastEventNode();
       eventNode.indirectPatch = indirectPatch;
+      RecordDeviceAddressUsage(Info.addressRange.address, ResourceUsage::Indirect);
+      RecordDeviceAddressUsage(Info.countAddressRange.address, ResourceUsage::Indirect);
 
       if(Info.maxDrawCount > 0)
         eventNode.action.flags = flags;

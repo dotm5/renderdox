@@ -11,6 +11,29 @@ def source(path):
 
 
 class UpstreamReviewTests(unittest.TestCase):
+    def test_indirect_address_operations_record_each_loading_event(self):
+        body = source("renderdoc/driver/vulkan/wrappers/vk_draw_funcs.cpp")
+        operations = {
+            "vkCmdDispatchIndirect2KHR": (1, "Info.addressRange.address", False),
+            "vkCmdDrawIndexedIndirect2KHR": (2, "Info.addressRange.address", False),
+            "vkCmdDrawIndirect2KHR": (2, "Info.addressRange.address", False),
+            "vkCmdDrawMeshTasksIndirectCount2EXT": (1, "Info.addressRange.address", True),
+            "vkCmdDrawMeshTasksIndirect2EXT": (2, "Info.addressRange.address", False),
+            "vkCmdDrawIndirectByteCount2EXT": (1, "CounterInfo.addressRange.address", False),
+            "vkCmdDrawIndexedIndirectCount2KHR": (1, "Info.addressRange.address", True),
+            "vkCmdDrawIndirectCount2KHR": (1, "Info.addressRange.address", True),
+        }
+        for name, (sites, address, counted) in operations.items():
+            function = body.split("bool WrappedVulkan::Serialise_" + name + "(", 1)[1].split("void WrappedVulkan::" + name + "(", 1)[0]
+            use = "RecordDeviceAddressUsage(" + address + ", ResourceUsage::Indirect);"
+            self.assertEqual(function.count(use), sites, name)
+            self.assertEqual(len(re.findall(r"eventNode\.indirectPatch = indirectPatch;\s+" + re.escape(use), function)), sites, name)
+            if counted:
+                self.assertIn("RecordDeviceAddressUsage(Info.countAddressRange.address, ResourceUsage::Indirect);", function)
+            if sites == 2:
+                single = function.split("if(Info.drawCount == 1)", 1)[1].split("return true;", 1)[0]
+                self.assertIn(use, single, name)
+
     def test_async_capture_access_never_executes_inline(self):
         body = source("qrenderdoc/Code/Interface/QRDInterface.h").split(
             "bool AccessInvoke(", 1
