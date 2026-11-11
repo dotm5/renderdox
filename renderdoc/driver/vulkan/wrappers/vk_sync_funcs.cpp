@@ -100,7 +100,7 @@ void WrappedVulkan::RemapQueueFamilyIndices(uint32_t &srcQueueFamily, uint32_t &
 void WrappedVulkan::RemapMemoryRangeBarriers(const VkDependencyInfo &info)
 {
   const VkMemoryRangeBarriersInfoKHR *ranges = (const VkMemoryRangeBarriersInfoKHR *)FindNextStruct(
-      info.pNext, VK_STRUCTURE_TYPE_MEMORY_RANGE_BARRIERS_INFO_KHR);
+      &info, VK_STRUCTURE_TYPE_MEMORY_RANGE_BARRIERS_INFO_KHR);
   if(!ranges)
     return;
 
@@ -124,7 +124,7 @@ bool WrappedVulkan::HasDescriptorBufferBarrier(const VkDependencyInfo &info)
       return true;
 
   const VkMemoryRangeBarriersInfoKHR *ranges = (const VkMemoryRangeBarriersInfoKHR *)FindNextStruct(
-      info.pNext, VK_STRUCTURE_TYPE_MEMORY_RANGE_BARRIERS_INFO_KHR);
+      &info, VK_STRUCTURE_TYPE_MEMORY_RANGE_BARRIERS_INFO_KHR);
   if(ranges)
     for(uint32_t i = 0; i < ranges->memoryRangeBarrierCount; i++)
       if(ranges->pMemoryRangeBarriers[i].dstAccessMask & VK_ACCESS_2_DESCRIPTOR_BUFFER_READ_BIT_EXT)
