@@ -35,15 +35,24 @@ public:
 
   bool Write(const void *data, uint64_t numBytes);
   bool Finish();
+  void ConfigureParallelCompression(uint32_t workers);
 
 private:
   bool FlushPage0();
+  bool SubmitParallelBlock();
+  bool DrainParallelBlock();
+  struct ParallelState;
+  ParallelState *m_Parallel = NULL;
 
   byte *m_Page[2];
   byte *m_CompressBuffer;
   uint64_t m_PageOffset;
 
   LZ4_stream_t *m_LZ4Comp;
+
+  bool m_InputStarted = false;
+  bool m_Finished = false;
+  bool m_Failed = false;
 };
 
 class LZ4Decompressor : public Decompressor

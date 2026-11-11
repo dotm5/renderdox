@@ -110,6 +110,47 @@ TEST_CASE("Test LZ4 compression/decompression", "[streamio][lz4]")
   delete[] randomData;
 };
 
+TEST_CASE("Parallel LZ4 retains stream order and dictionary history", "[streamio][lz4]")
+{
+  const size_t block = 1024 * 1024;
+  bytebuf input;
+  input.resize(8 * block + 37);
+  uint32_t state = 1;
+  for(size_t i = 0; i < block; i++)
+  {
+    state = 1664525U * state + 1013904223U;
+    input[i] = byte(state >> 24);
+  }
+
+  // The beginning of each block can match bytes at the end of its predecessor.
+  for(size_t i = block; i < input.size(); i++)
+    input[i] = input[i - 32768];
+
+  for(uint32_t workers : {2U, 3U, 4U})
+  {
+    StreamWriter buffer(StreamWriter::DefaultScratchSize);
+    LZ4Compressor *compressor = new LZ4Compressor(&buffer, Ownership::Nothing);
+    compressor->ConfigureParallelCompression(workers);
+    StreamWriter writer(compressor, Ownership::Stream);
+    for(size_t offset = 0; offset < input.size();)
+    {
+      const size_t count = RDCMIN(size_t(129013), input.size() - offset);
+      REQUIRE(writer.Write(input.data() + offset, count));
+      offset += count;
+    }
+    REQUIRE(writer.Finish());
+
+    StreamReader reader(
+        new LZ4Decompressor(new StreamReader(buffer.GetData(), buffer.GetOffset()), Ownership::Stream),
+        input.size(), Ownership::Stream);
+    bytebuf decoded;
+    decoded.resize(input.size());
+    REQUIRE(reader.Read(decoded.data(), decoded.size()));
+    CHECK(reader.AtEnd());
+    CHECK(memcmp(decoded.data(), input.data(), input.size()) == 0);
+  }
+}
+
 TEST_CASE("Test ZSTD compression/decompression", "[streamio][zstd]")
 {
   StreamWriter buf(StreamWriter::DefaultScratchSize);

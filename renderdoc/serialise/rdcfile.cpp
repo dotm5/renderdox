@@ -27,10 +27,14 @@
 #include "api/replay/version.h"
 #include "common/dds_readwrite.h"
 #include "common/formatting.h"
+#include "core/settings.h"
 #include "jpeg-compressor/jpge.h"
 #include "stb/stb_image.h"
 #include "lz4io.h"
 #include "zstdio.h"
+
+RDOC_CONFIG(uint32_t, Capture_LZ4Workers, 1U,
+            "LZ4 workers for frame capture sections. Set to 2 through 4 for parallel compression.");
 
 // not provided by tinyexr, just do by hand
 bool is_exr_file(const byte *headerBuffer, size_t size)
@@ -1278,8 +1282,10 @@ StreamWriter *RDCFile::WriteSection(const SectionProperties &props)
   {
     // the user will delete the compressed writer, and then it will delete the compressor and the
     // file writer
-    compWriter =
-        new StreamWriter(new LZ4Compressor(fileWriter, Ownership::Stream), Ownership::Stream);
+    LZ4Compressor *compressor = new LZ4Compressor(fileWriter, Ownership::Stream);
+    if(props.type == SectionType::FrameCapture)
+      compressor->ConfigureParallelCompression(Capture_LZ4Workers());
+    compWriter = new StreamWriter(compressor, Ownership::Stream);
   }
   else if(props.flags & SectionFlags::ZstdCompressed)
   {
