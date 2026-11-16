@@ -229,7 +229,7 @@ try
       }
     }
 
-    & $bootstrapExportCheck -Toolchain $Toolchain -Platform $Platform
+    & $bootstrapExportCheck -Toolchain $Toolchain -Platform $Platform -DumpbinPath $dumpbinPath
     if($LASTEXITCODE -ne 0)
     {
       throw 'Bootstrap export validation failed'

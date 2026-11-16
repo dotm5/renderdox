@@ -4,25 +4,24 @@ param(
   [string]$Toolchain = 'MSVC',
 
   [ValidateSet('Win32', 'x64')]
-  [string]$Platform = 'x64'
+  [string]$Platform = 'x64',
+
+  [string]$DumpbinPath
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
-$vswherePath = Join-Path ${env:ProgramFiles(x86)} `
-  'Microsoft Visual Studio\Installer\vswhere.exe'
-if(-not (Test-Path -LiteralPath $vswherePath -PathType Leaf))
+if(-not $DumpbinPath)
 {
-  throw "vswhere.exe was not found: $vswherePath"
+  . (Join-Path $PSScriptRoot 'windows_toolchain.ps1')
+  $selectedToolchain = Get-DCompWindowsToolchain
+  $DumpbinPath = Join-Path $selectedToolchain.ToolsRoot 'bin\Hostx64\x64\dumpbin.exe'
 }
-
-$dumpbinPath = & $vswherePath -latest -products * `
-  -find 'VC\Tools\MSVC\**\bin\Hostx64\x64\dumpbin.exe' | Select-Object -First 1
-if(-not $dumpbinPath)
+if(-not (Test-Path -LiteralPath $DumpbinPath -PathType Leaf))
 {
-  throw 'dumpbin.exe was not found'
+  throw "dumpbin.exe was not found: $DumpbinPath"
 }
 
 function Get-ExportMap([string]$Path)
