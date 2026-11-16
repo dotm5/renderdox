@@ -2111,42 +2111,32 @@ If no tag is present, the callback will be processed as normal.
   // Returns false when capture access is unavailable, or an async request has
   // no running worker. Synchronous access also works before replay starts.
   //
-  // Hidden from swig: Python uses a force-blocking capture-access invoker.
+  // this is hidden from swig as for python the threading is less controlled there so we wrap the
+  // ICaptureAccess with a force-blocking invoker
+  virtual bool AccessInvoke(std::function<void(ICaptureAccess *)> callback, bool blocking,
+                            bool forceReplay, rdcstr tag) = 0;
+
+  // Capture operations can use a replay-worker tag for progress reporting.
   bool AccessInvoke(std::function<void(ICaptureAccess *)> callback, bool blocking, rdcstr tag)
   {
-    if(!GetCaptureAccess())
-      return false;
-
-    auto invoke = [this, callback](IReplayController *) {
-      if(ICaptureAccess *access = GetCaptureAccess())
-        callback(access);
-    };
-
-    if(!blocking)
-    {
-      if(!IsRunning())
-        return false;
-      AsyncInvoke(invoke, tag);
-    }
-    else if(CurrentRemote().IsConnected() && IsRunning())
-    {
-      BlockInvoke(invoke);
-    }
-    else
-    {
-      // GPU enumeration must also work before a remote capture starts a worker.
-      callback(GetCaptureAccess());
-    }
-
-    return true;
+    return AccessInvoke(callback, blocking, !blocking, tag);
   }
+
+  // simple blocking access
   bool BlockAccessInvoke(std::function<void(ICaptureAccess *)> callback)
   {
-    return AccessInvoke(callback, true, "");
+    return AccessInvoke(callback, true, false, "");
   }
+  // Asynchronous access on the replay worker.
   bool AsyncAccessInvoke(std::function<void(ICaptureAccess *)> callback)
   {
-    return AccessInvoke(callback, false, "");
+    return AccessInvoke(callback, false, false, "");
+  }
+  // async access, will always be on the replay thread even locally so the UI thread can e.g.
+  // display a progress spinner
+  bool SlowAsyncAccessInvoke(std::function<void(ICaptureAccess *)> callback)
+  {
+    return AccessInvoke(callback, false, true, "");
   }
 #endif
 

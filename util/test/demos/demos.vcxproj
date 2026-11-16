@@ -158,6 +158,7 @@
     <ClCompile Include="d3d11\d3d11_shader_linkage_zoo.cpp" />
     <ClCompile Include="d3d11\d3d11_simple_dispatch.cpp" />
     <ClCompile Include="d3d11\d3d11_simple_triangle.cpp" />
+    <ClCompile Include="d3d11\d3d11_storage_raster.cpp" />
     <ClCompile Include="d3d11\d3d11_stream_out.cpp" />
     <ClCompile Include="d3d11\d3d11_stripped_shaders.cpp" />
     <ClCompile Include="d3d11\d3d11_structured_buffer_misaligned_dirty.cpp" />
@@ -214,6 +215,7 @@
     <ClCompile Include="d3d12\d3d12_sharing.cpp" />
     <ClCompile Include="d3d12\d3d12_simple_dispatch.cpp" />
     <ClCompile Include="d3d12\d3d12_simple_triangle.cpp" />
+    <ClCompile Include="d3d12\d3d12_stripped_shaders.cpp" />
     <ClCompile Include="d3d12\d3d12_subgroup_zoo.cpp" />
     <ClCompile Include="d3d12\d3d12_swapchain_zoo.cpp" />
     <ClCompile Include="d3d12\d3d12_template.cpp" />
@@ -348,6 +350,8 @@
     <ClCompile Include="vk\vk_shader_printf.cpp" />
     <ClCompile Include="vk\vk_spec_constants.cpp" />
     <ClCompile Include="vk\vk_spirv_13_shaders.cpp" />
+    <ClCompile Include="vk\vk_storage_raster.cpp" />
+    <ClCompile Include="vk\vk_stripped_shaders.cpp" />
     <ClCompile Include="vk\vk_subgroup_zoo.cpp" />
     <ClCompile Include="vk\vk_sync2.cpp" />
     <ClCompile Include="vk\vk_template.cpp" />
@@ -356,7 +360,6 @@
     <ClCompile Include="vk\vk_buffer_truncation.cpp" />
     <ClCompile Include="vk\vk_validation_use.cpp" />
     <ClCompile Include="vk\vk_vertex_attr_zoo.cpp" />
-    <ClCompile Include="vk\vk_ext_buffer_address.cpp" />
     <ClCompile Include="vk\vk_cbuffer_zoo.cpp" />
     <ClCompile Include="vk\vk_descriptor_index.cpp" />
     <ClCompile Include="vk\vk_discard_rects.cpp" />

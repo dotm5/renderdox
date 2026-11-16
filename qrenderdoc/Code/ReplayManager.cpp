@@ -303,6 +303,36 @@ void ReplayManager::BlockInvoke(ReplayManager::ReplayInvokeCallback m)
   delete cmd;
 }
 
+bool ReplayManager::AccessInvoke(std::function<void(ICaptureAccess *)> callback, bool blocking,
+                                 bool forceReplay, rdcstr tag)
+{
+  if(!GetCaptureAccess())
+    return false;
+
+  auto invoke = [this, callback](IReplayController *) {
+    if(ICaptureAccess *access = GetCaptureAccess())
+      callback(access);
+  };
+
+  if(!blocking)
+  {
+    if(!IsRunning())
+      return false;
+    AsyncInvoke(invoke, tag);
+  }
+  else if((CurrentRemote().IsConnected() || forceReplay) && IsRunning())
+  {
+    BlockInvoke(invoke);
+  }
+  else
+  {
+    // Synchronous queries such as GPU enumeration also run before replay starts.
+    callback(GetCaptureAccess());
+  }
+
+  return true;
+}
+
 void ReplayManager::CancelReplayLoop()
 {
   m_Renderer->CancelReplayLoop();

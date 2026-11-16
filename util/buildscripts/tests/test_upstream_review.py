@@ -35,15 +35,14 @@ class UpstreamReviewTests(unittest.TestCase):
                 self.assertIn(use, single, name)
 
     def test_async_capture_access_never_executes_inline(self):
-        body = source("qrenderdoc/Code/Interface/QRDInterface.h").split(
-            "bool AccessInvoke(", 1
-        )[1].split("bool BlockAccessInvoke(", 1)[0]
+        body = source("qrenderdoc/Code/ReplayManager.cpp").split(
+            "bool ReplayManager::AccessInvoke(", 1
+        )[1].split("void ReplayManager::CancelReplayLoop(", 1)[0]
         asynchronous = body.split("if(!blocking)", 1)[1].split("else if(", 1)[0]
         self.assertRegex(asynchronous, r"if\(!IsRunning\(\)\)\s+return false;")
         self.assertIn("AsyncInvoke(invoke, tag)", asynchronous)
         self.assertNotIn("callback(", asynchronous)
         self.assertIn("if(ICaptureAccess *access = GetCaptureAccess())", body)
-        self.assertIn("else if(CurrentRemote().IsConnected() && IsRunning())", body)
 
     def test_dependency_progress_waits_are_bounded_and_atomic(self):
         body = source("qrenderdoc/Code/CaptureContext.cpp").split(
@@ -86,7 +85,9 @@ class UpstreamReviewTests(unittest.TestCase):
 
     def test_remote_access_requires_a_running_replay_worker(self):
         body = source("qrenderdoc/Code/Interface/QRDInterface.h")
-        self.assertIn("if(CurrentRemote().IsConnected() && IsRunning())", body)
+        implementation = source("qrenderdoc/Code/ReplayManager.cpp")
+        self.assertIn("else if((CurrentRemote().IsConnected() || forceReplay) && IsRunning())",
+                      implementation)
         self.assertIn("virtual bool IsRunning() = 0;", body)
         self.assertIn("virtual bool IsReplayThread() = 0;", body)
 
@@ -122,8 +123,12 @@ class UpstreamReviewTests(unittest.TestCase):
         self.assertIn("renderstate.xfbcounters[i].offs = 0;", counters)
         bindings = body.split("bool WrappedVulkan::Serialise_vkCmdBindTransformFeedbackBuffers2EXT", 1)[1].split("void WrappedVulkan::vkCmdBindTransformFeedbackBuffers2EXT", 1)[0]
         self.assertIn("if(pBindingInfos)", bindings)
-        self.assertIn("renderstate.xfbbuffers[firstBinding + i].buf = ResourceId();", bindings)
-        self.assertIn("pBindingInfos ? GetResIDFromAddr", bindings)
+        self.assertIn("auto &binding = renderstate.xfbbuffers[firstBinding + i];", bindings)
+        self.assertIn("binding.buf = ResourceId();", bindings)
+        self.assertIn("binding.offs = 0;", bindings)
+        self.assertIn("binding.size = 0;", bindings)
+        self.assertIn("if(InRerecordRange(m_LastCmdBufferID))", bindings)
+        self.assertIn("if(!loading)", bindings)
 
     def test_memory_range_barriers_use_shared_replay_mapping(self):
         commands = source("renderdoc/driver/vulkan/wrappers/vk_cmd_funcs.cpp")

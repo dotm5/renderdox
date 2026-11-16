@@ -33,6 +33,7 @@
 #include <string>
 
 #define DEBUG_BREAK() raise(SIGTRAP)
+#define UNCONDITIONAL_DEBUG_BREAK() raise(SIGTRAP)
 
 #define MAX_PATH 256
 
@@ -41,6 +42,8 @@
 #define EXECUTABLE_SUFFIX ""
 
 #define MakeDir(dir) mkdir(dir, 0755)
+
+#define SetEnv(name, value) setenv(name, value, 1)
 
 std::string GetExecutableName();
 uint32_t GetPID();

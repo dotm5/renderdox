@@ -120,10 +120,29 @@ static VkBool32 VKAPI_PTR vulkanCallback(VkDebugUtilsMessageSeverityFlagBitsEXT 
                                          const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
                                          void *pUserData)
 {
+  VulkanGraphicsTest *test = (VulkanGraphicsTest *)pUserData;
+
+  // semaphore nonsense
   if(strstr(pCallbackData->pMessageIdName, "-01779"))
     return false;
 
+  // GPU-VA enabling features
+  if(strstr(pCallbackData->pMessageIdName, "WARNING-Setting-Limit-Adjusted"))
+    return false;
+
+  if(test)
+  {
+    for(std::string &msg : test->mutedMessages)
+    {
+      if(strstr(pCallbackData->pMessageIdName, msg.c_str()))
+        return false;
+    }
+  }
+
   TEST_WARN("Vulkan message: [%s] %s", pCallbackData->pMessageIdName, pCallbackData->pMessage);
+
+  if(test && test->breakOnDebug)
+    UNCONDITIONAL_DEBUG_BREAK();
 
   return false;
 }
@@ -146,6 +165,8 @@ std::vector<const char *> enabledLayers;
 void VulkanGraphicsTest::Prepare(int argc, char **argv)
 {
   GraphicsTest::Prepare(argc, argv);
+
+  SetEnv("DISABLE_VULKAN_OBS_CAPTURE", "1");
 
   static bool prepared = false;
 
@@ -318,6 +339,7 @@ void VulkanGraphicsTest::Prepare(int argc, char **argv)
             {
               featuresEXT.pNext = instInfoNext;
               instInfoNext = &featuresEXT;
+              break;
             }
           }
         }
@@ -688,7 +710,7 @@ bool VulkanGraphicsTest::Init()
   {
     CHECK_VKR(vkCreateDebugUtilsMessengerEXT(
         instance,
-        vkh::DebugUtilsMessengerCreateInfoEXT(&vulkanCallback, NULL,
+        vkh::DebugUtilsMessengerCreateInfoEXT(&vulkanCallback, this,
                                               VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
                                                   VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT),
         NULL, &debugUtilsMessenger));
@@ -1009,9 +1031,12 @@ VkPipelineShaderStageCreateInfo VulkanGraphicsTest::LoadShaderModule(const std::
 
 VkPipelineShaderStageCreateInfo VulkanGraphicsTest::CompileShaderModule(
     const std::string &source_text, ShaderLang lang, ShaderStage stage, const char *entry_point,
-    const std::map<std::string, std::string> &macros, SPIRVTarget target)
+    const std::map<std::string, std::string> &macros, SPIRVTarget target, uint32_t compileOptions)
 {
   VkShaderModule ret = VK_NULL_HANDLE;
+
+  const bool separateDebug = ((compileOptions & CompileOptionFlags::SeparateDebug) != 0);
+  const bool relativeDebugName = ((compileOptions & CompileOptionFlags::RelativeDebugName) != 0);
 
   std::vector<uint32_t> spirv =
       ::CompileShaderToSpv(demoName, source_text, target, lang, stage, entry_point, macros);
@@ -1019,7 +1044,49 @@ VkPipelineShaderStageCreateInfo VulkanGraphicsTest::CompileShaderModule(
   if(spirv.empty())
     return {};
 
+  std::string path;
+  if(separateDebug)
+  {
+    path = tmpPath + "/";
+
+    std::string filenames[] = {
+        "shader_vs.dbg", "shader_hs.dbg", "shader_ds.dbg", "shader_gs.dbg",
+        "shader_ps.dbg", "shader_cs.dbg", "shader_ms.dbg", "shader_as.dbg",
+    };
+
+    path += filenames[(int)stage];
+
+    FILE *f = fopen(path.c_str(), "wb");
+    if(f)
+    {
+      fwrite(spirv.data(), 1, spirv.size() * sizeof(uint32_t), f);
+      fclose(f);
+    }
+
+    spirv =
+        ::CompileShaderToSpv(demoName, source_text, target, lang, stage, entry_point, macros, false);
+  }
+
   CHECK_VKR(vkCreateShaderModule(device, vkh::ShaderModuleCreateInfo(spirv), NULL, &ret));
+
+  if(relativeDebugName)
+  {
+    path.erase(0, path.find_last_of("/\\") + 1);
+    // keep the demo name so we don't have to set up tons of search paths
+    path = std::string(demoName) + "/" + path;
+  }
+
+  if(vkSetDebugUtilsObjectTagEXT && !path.empty())
+  {
+    VkDebugUtilsObjectTagInfoEXT info = {};
+    info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_TAG_INFO_EXT;
+    info.objectType = VK_OBJECT_TYPE_SHADER_MODULE;
+    info.objectHandle = (uint64_t)ret;
+    info.pTag = path.c_str();
+    info.tagSize = path.size();
+    info.tagName = RENDERDOC_ShaderDebugMagicValue_truncated;
+    vkSetDebugUtilsObjectTagEXT(device, &info);
+  }
 
   shaders.push_back(ret);
 
@@ -1100,6 +1167,12 @@ template <>
 void VulkanGraphicsTest::setName(VkSemaphore obj, const std::string &name)
 {
   setName(VK_OBJECT_TYPE_SEMAPHORE, (uint64_t)obj, name);
+}
+
+template <>
+void VulkanGraphicsTest::setName(VkEvent obj, const std::string &name)
+{
+  setName(VK_OBJECT_TYPE_EVENT, (uint64_t)obj, name);
 }
 
 template <>
@@ -1704,16 +1777,6 @@ bool VulkanWindow::CreateSwapchain()
 
     renderPassCreateInfo.addSubpass({VkAttachmentReference({0, VK_IMAGE_LAYOUT_GENERAL})});
 
-    // add deps to allow clear/copy on the main target before or after
-    renderPassCreateInfo.dependencies.push_back(vkh::SubpassDependency(
-        ~0U, 0, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT,
-        VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT));
-    renderPassCreateInfo.dependencies.push_back(vkh::SubpassDependency(
-        0, ~0U, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-        VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT));
-
     rp = m_Test->createRenderPass(renderPassCreateInfo);
   }
 
@@ -1828,12 +1891,15 @@ void VulkanWindow::MultiPresent(VkQueue queue, std::vector<VulkanWindow *> windo
   }
 }
 
-void VulkanWindow::Present(VkQueue queue)
+void VulkanWindow::Present(VkQueue queue, bool queueWaitIdle)
 {
   if(swap == VK_NULL_HANDLE)
     return;
 
-  vkDeviceWaitIdle(m_Test->device);
+  if(queueWaitIdle)
+    vkQueueWaitIdle(queue);
+  else
+    vkDeviceWaitIdle(m_Test->device);
 
   VkResult vkr =
       vkQueuePresentKHR(queue, vkh::PresentInfoKHR(swap, imgIndex, &renderEndSemaphore[semIdx]));

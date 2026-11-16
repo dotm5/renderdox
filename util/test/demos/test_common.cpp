@@ -253,27 +253,38 @@ void LoadXPM(const char **XPM, Texture &tex)
 }
 
 static std::string externalCompiler;
+static std::string externalASMCompiler;
+
+bool CheckCompiler(std::string compiler)
+{
+  FILE *pipe = popen((compiler + EXECUTABLE_SUFFIX " --version 2>&1").c_str(), "r");
+
+  if(!pipe)
+    return false;
+
+  char dummy[512];
+  while(!feof(pipe))
+  {
+    fread(dummy, 1, 512, pipe);
+  }
+
+  int code = pclose(pipe);
+
+  return (WEXITSTATUS(code) == 0);
+}
 
 bool SpvCompilationSupported()
 {
+  if(CheckCompiler("spirv-as"))
+    externalASMCompiler = "spirv-as";
+
   for(std::string compiler : {"glslc", "glslangValidator"})
   {
-    FILE *pipe = popen((compiler + EXECUTABLE_SUFFIX " --version 2>&1").c_str(), "r");
-
-    if(!pipe)
-      continue;
-
-    char dummy[512];
-    while(!feof(pipe))
-    {
-      fread(dummy, 1, 512, pipe);
-    }
-
-    int code = pclose(pipe);
-
-    if(WEXITSTATUS(code) == 0)
+    if(CheckCompiler(compiler))
     {
       externalCompiler = compiler;
+      if(externalASMCompiler.empty())
+        externalASMCompiler = compiler;
       return true;
     }
   }
@@ -284,7 +295,8 @@ bool SpvCompilationSupported()
 std::vector<uint32_t> CompileShaderToSpv(const char *demo_name, const std::string &source_text,
                                          SPIRVTarget target, ShaderLang lang, ShaderStage stage,
                                          const char *entry_point,
-                                         const std::map<std::string, std::string> &macros)
+                                         const std::map<std::string, std::string> &macros,
+                                         bool debug_info)
 {
   std::vector<uint32_t> ret;
 
@@ -301,9 +313,29 @@ std::vector<uint32_t> CompileShaderToSpv(const char *demo_name, const std::strin
   std::string infile = path + "/input";
   std::string outfile = path + "/output";
 
-  if(externalCompiler == "glslc")
+  if(lang == ShaderLang::spvasm && externalASMCompiler == "spirv-as")
   {
-    command_line = "glslc" EXECUTABLE_SUFFIX " -g -O0";
+    command_line = "spirv-as" EXECUTABLE_SUFFIX;
+
+    if(target == SPIRVTarget::opengl)
+      command_line += " --target-env=opengl";
+    else if(target == SPIRVTarget::vulkan)
+      command_line += " --target-env=vulkan1.0";
+    else if(target == SPIRVTarget::vulkan11)
+      command_line += " --target-env=vulkan1.1";
+    else if(target == SPIRVTarget::vulkan12)
+      command_line += " --target-env=vulkan1.2";
+
+    command_line += " -o ";
+    command_line += outfile;
+    command_line += " ";
+    command_line += infile;
+  }
+  else if(externalCompiler == "glslc")
+  {
+    command_line = "glslc" EXECUTABLE_SUFFIX;
+    if(debug_info)
+      command_line += " -g -O0";
     command_line += " -fentry-point=";
     command_line += entry_point;
 
@@ -349,7 +381,9 @@ std::vector<uint32_t> CompileShaderToSpv(const char *demo_name, const std::strin
   }
   else if(externalCompiler == "glslangValidator")
   {
-    command_line = "glslangValidator" EXECUTABLE_SUFFIX " -g ";
+    command_line = "glslangValidator" EXECUTABLE_SUFFIX;
+    if(debug_info)
+      command_line += " -g ";
     command_line += " --entry-point ";
     command_line += entry_point;
 
@@ -440,6 +474,7 @@ std::string GraphicsTest::dataRoot;
 int GraphicsTest::screenWidth = 400;
 int GraphicsTest::screenHeight = 300;
 bool GraphicsTest::debugDevice = false;
+bool GraphicsTest::breakOnDebug = false;
 
 void GraphicsTest::Prepare(int argc, char **argv)
 {
@@ -458,12 +493,22 @@ void GraphicsTest::Prepare(int argc, char **argv)
   if(dataRoot.empty())
     dataRoot = GetCWD() + "/data/demos/";
 
+  tmpPath = GetExecutableName();
+  tmpPath.erase(tmpPath.find_last_of("/\\"));
+  tmpPath += "/tmp";
+  MakeDir(tmpPath.c_str());
+
   // parse parameters
   for(int i = 0; i < argc; i++)
   {
     if(!strcmp(argv[i], "--debug") || !strcmp(argv[i], "--validate"))
     {
       debugDevice = true;
+    }
+
+    if(!strcmp(argv[i], "--break-on-debug"))
+    {
+      breakOnDebug = true;
     }
 
     if(i + 1 < argc && (!strcmp(argv[i], "--frames") || !strcmp(argv[i], "--framecount") ||
@@ -475,6 +520,11 @@ void GraphicsTest::Prepare(int argc, char **argv)
     if(i + 1 < argc && !strcmp(argv[i], "--log"))
     {
       logFile = fopen(argv[i + 1], "w");
+    }
+
+    if(i + 1 < argc && !strcmp(argv[i], "--tmp"))
+    {
+      tmpPath = argv[i + 1];
     }
 
     if(i + 1 < argc && (!strcmp(argv[i], "--width") || !strcmp(argv[i], "-w")))
@@ -505,6 +555,10 @@ void GraphicsTest::Prepare(int argc, char **argv)
       dataRoot += "/";
     }
   }
+
+  tmpPath += "/";
+  tmpPath += demoName;
+  MakeDir(tmpPath.c_str());
 
   pDCOMP_GetAPI DCOMP_GetAPI = NULL;
 

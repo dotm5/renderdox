@@ -164,7 +164,7 @@ struct VulkanWindow : public GraphicsWindow, public VulkanCommands
   void Submit(int index, int totalSubmits, const std::vector<VkCommandBuffer> &cmds,
               const std::vector<VkCommandBuffer> &seccmds, VkQueue q);
   static void MultiPresent(VkQueue queue, std::vector<VulkanWindow *> windows);
-  void Present(VkQueue q);
+  void Present(VkQueue q, bool queueWaitIdle = false);
 
   // forward GraphicsWindow functions to internal window
   void Resize(int width, int height) { m_Win->Resize(width, height); }
@@ -194,6 +194,13 @@ struct VulkanGraphicsTest : public GraphicsTest
 {
   static const TestAPI API = TestAPI::Vulkan;
 
+  enum CompileOptionFlags
+  {
+    None = 0,
+    SeparateDebug = 1 << 0,
+    RelativeDebugName = 1 << 1,
+  };
+
   VulkanGraphicsTest();
 
   void Prepare(int argc, char **argv);
@@ -222,7 +229,7 @@ struct VulkanGraphicsTest : public GraphicsTest
   VkPipelineShaderStageCreateInfo CompileShaderModule(
       const std::string &source_text, ShaderLang lang, ShaderStage stage,
       const char *entry_point = "main", const std::map<std::string, std::string> &macros = {},
-      SPIRVTarget target = SPIRVTarget::vulkan);
+      SPIRVTarget target = SPIRVTarget::vulkan, uint32_t compileOptions = CompileOptionFlags::None);
   VkCommandBuffer GetCommandBuffer(VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
                                    VulkanWindow *window = NULL);
 
@@ -335,6 +342,8 @@ struct VulkanGraphicsTest : public GraphicsTest
   bool vmaDedicated = false;
   bool vmaBDA = false;
   VmaAllocator allocator = VK_NULL_HANDLE;
+
+  std::vector<std::string> mutedMessages;
 
 private:
   static bool prepared_vk;

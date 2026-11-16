@@ -358,9 +358,6 @@
     <ClCompile Include="vk\vk_texture_zoo.cpp">
       <Filter>Vulkan\demos</Filter>
     </ClCompile>
-    <ClCompile Include="vk\vk_ext_buffer_address.cpp">
-      <Filter>Vulkan\demos</Filter>
-    </ClCompile>
     <ClCompile Include="vk\vk_khr_buffer_address.cpp">
       <Filter>Vulkan\demos</Filter>
     </ClCompile>
@@ -768,6 +765,18 @@
     </ClCompile>
     <ClCompile Include="vk\vk_device_address_commands.cpp">
       <Filter>Vulkan\demos</Filter>
+    </ClCompile>
+    <ClCompile Include="d3d12\d3d12_stripped_shaders.cpp">
+      <Filter>D3D12\demos</Filter>
+    </ClCompile>
+    <ClCompile Include="vk\vk_stripped_shaders.cpp">
+      <Filter>Vulkan\demos</Filter>
+    </ClCompile>
+    <ClCompile Include="vk\vk_storage_raster.cpp">
+      <Filter>Vulkan\demos</Filter>
+    </ClCompile>
+    <ClCompile Include="d3d11\d3d11_storage_raster.cpp">
+      <Filter>D3D11\demos</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

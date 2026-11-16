@@ -817,9 +817,7 @@ RenderDoc::~RenderDoc()
     UnloadCrashHandler();
   }
 
-  for(auto it = m_ShutdownFunctions.begin(); it != m_ShutdownFunctions.end(); ++it)
-    (*it)();
-  m_ShutdownFunctions.clear();
+  ShutdownReplay();
 
   for(size_t i = 0; i < m_Captures.size(); i++)
   {
@@ -1077,13 +1075,21 @@ void RenderDoc::ShutdownReplay()
 
   // call shutdown functions early, as we only want to do these in the RenderDoc destructor if we
   // have no other choice (i.e. we're capturing).
-  for(auto it = m_ShutdownFunctions.begin(); it != m_ShutdownFunctions.end(); ++it)
+  rdcarray<ShutdownFunction> funcs;
+  {
+    SCOPED_LOCK(m_ShutdownLock);
+    funcs.swap(m_ShutdownFunctions);
+  }
+
+  for(auto it = funcs.begin(); it != funcs.end(); ++it)
     (*it)();
-  m_ShutdownFunctions.clear();
+  funcs.clear();
 }
 
 void RenderDoc::RegisterShutdownFunction(ShutdownFunction func)
 {
+  SCOPED_LOCK(m_ShutdownLock);
+
   auto it = std::lower_bound(m_ShutdownFunctions.begin(), m_ShutdownFunctions.end(), func);
   if(it == m_ShutdownFunctions.end() || *it != func)
     m_ShutdownFunctions.insert(it - m_ShutdownFunctions.begin(), func);
@@ -2511,9 +2517,9 @@ bool RenderDoc::DoesTrackedFileExist(const rdcstr &nickname) const
 // return false if the nickname already exists
 bool RenderDoc::AddTrackedFileReference(const rdcstr &nickname, const rdcstr &filepath)
 {
-  if(DoesTrackedFileExist(nickname))
-    return false;
   SCOPED_WRITELOCK(m_TrackedFilesLock);
+  // do not allow duplicates, overwrite with latest if we add the same one
+  m_TrackedFiles.removeIf([nickname](const TrackedFile &f) { return f.nickname == nickname; });
   m_TrackedFiles.emplace_back(nickname, filepath);
   return true;
 }

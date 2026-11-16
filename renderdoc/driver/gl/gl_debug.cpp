@@ -1484,9 +1484,9 @@ GLuint GLReplay::MakeShaderDebugSampleProg(const SamplingProgramConfig &config)
   }
 
   rdcstr vs =
-      GenerateGLSLShader(GetEmbeddedResource(glsl_shaderdebug_sample_vert), shaderType, glslCSVer);
-  rdcstr ps = GenerateGLSLShader(GetEmbeddedResource(glsl_debug_sample_frag), shaderType, glslCSVer,
-                                 defines + DebugData.texSampleDefines);
+      GenerateGLSLShader(GetEmbeddedResource(glsl_shaderdebug_sample_vert), shaderType, glslVersion);
+  rdcstr ps = GenerateGLSLShader(GetEmbeddedResource(glsl_debug_sample_frag), shaderType,
+                                 glslVersion, defines + DebugData.texSampleDefines);
   GLuint prog = CreateShaderProgram(vs, ps, "");
 
   if(config.op == SamplingProgramConfig::SampleDref || config.op == SamplingProgramConfig::GatherDref)
@@ -1494,8 +1494,14 @@ GLuint GLReplay::MakeShaderDebugSampleProg(const SamplingProgramConfig &config)
 
   dim = "tex" + dim;
 
-  BindUBO(prog, "debugsample", 0);
+  GLuint prevProg = 0;
+  GL.glGetIntegerv(eGL_CURRENT_PROGRAM, (GLint *)&prevProg);
+
+  BindUBO(prog, "DebugSampleUBO", 0);
+  GL.glUseProgram(prog);
   GL.glUniform1i(GL.glGetUniformLocation(prog, dim.c_str()), 0);
+
+  GL.glUseProgram(prevProg);
 
   return m_ShaderDebugSampleProg[hash] = prog;
 }
