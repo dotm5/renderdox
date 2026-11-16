@@ -245,6 +245,7 @@ RD_TEST(VK_Resource_Usage, VulkanGraphicsTest)
     devExts.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
 
     features.multiDrawIndirect = VK_TRUE;
+    features.drawIndirectFirstInstance = VK_TRUE;
 
     optDevExts.push_back(VK_EXT_DESCRIPTOR_BUFFER_EXTENSION_NAME);
     optDevExts.push_back(VK_EXT_NESTED_COMMAND_BUFFER_EXTENSION_NAME);
@@ -542,6 +543,7 @@ RD_TEST(VK_Resource_Usage, VulkanGraphicsTest)
 
     VkPipelineLayout meshShaderLayout = createPipelineLayout(
         vkh::PipelineLayoutCreateInfo({}, {vkh::PushConstantRange(VK_SHADER_STAGE_ALL, 0, 8)}));
+    setName(meshShaderLayout, "Mesh Shader Pipeline Layout");
 
     VkPipeline meshShaderPipe = VK_NULL_HANDLE;
     if(meshShader)
@@ -563,6 +565,7 @@ RD_TEST(VK_Resource_Usage, VulkanGraphicsTest)
       vkMeshShaderPipeCreateInfo->pInputAssemblyState = NULL;
 
       meshShaderPipe = createGraphicsPipeline(vkMeshShaderPipeCreateInfo);
+      setName(meshShaderPipe, "Mesh Shader Pipeline");
     }
 
     VkDescriptorSetLayout compDescSetLayout =
@@ -574,7 +577,7 @@ RD_TEST(VK_Resource_Usage, VulkanGraphicsTest)
 
     VkPipelineLayout compDescSetPipeLayout =
         createPipelineLayout(vkh::PipelineLayoutCreateInfo({compDescSetLayout}));
-    setName(compDescSetPipeLayout, "Compute Pipeline Layout");
+    setName(compDescSetPipeLayout, "Compute Descriptor Set Pipeline Layout");
 
     vkh::ComputePipelineCreateInfo compDescSetPipeCreateInfo(
         compDescSetPipeLayout,
@@ -607,7 +610,7 @@ RD_TEST(VK_Resource_Usage, VulkanGraphicsTest)
     if(descBuffer)
     {
       compDescBuffPipeLayout = createPipelineLayout(vkh::PipelineLayoutCreateInfo({descBuffLayout}));
-      setName(compDescSetPipeLayout, "Compute Descriptor Buffer Pipeline Layout");
+      setName(compDescBuffPipeLayout, "Compute Descriptor Buffer Pipeline Layout");
 
       vkh::ComputePipelineCreateInfo compDescBuffPipeCreateInfo(
           compDescBuffPipeLayout,
@@ -827,6 +830,10 @@ RD_TEST(VK_Resource_Usage, VulkanGraphicsTest)
         {vkh::BufferMemoryBarrier(VK_ACCESS_NONE, VK_ACCESS_NONE, barrierBuffer.buffer)});
     vkEndCommandBuffer(barrierCmd);
 
+    VkEvent testEvent;
+    CHECK_VKR(vkCreateEvent(device, vkh::EventCreateInfo(), NULL, &testEvent));
+    setName(testEvent, "Test Event");
+
     VkFence barrierCmdSubmitFence;
     CHECK_VKR(vkCreateFence(device, vkh::FenceCreateInfo(VK_FENCE_CREATE_SIGNALED_BIT), NULL,
                             &barrierCmdSubmitFence));
@@ -836,6 +843,19 @@ RD_TEST(VK_Resource_Usage, VulkanGraphicsTest)
     {
       viewPort = {0.0f, 0.0f, sqSize, sqSize, 0.0f, 1.0f};
       setName(mainWindow->GetFB(), "Main Framebuffer");
+      std::vector<VkCommandBuffer> secondaries;
+
+      vkh::updateDescriptorSets(
+          device,
+          {
+              vkh::WriteDescriptorSet(compWriteDataDescSet, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                                      {vkh::DescriptorBufferInfo(indirectData.buffer)}),
+              vkh::WriteDescriptorSet(compDescSet, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                                      {vkh::DescriptorBufferInfo(compBufIn.buffer)}),
+              vkh::WriteDescriptorSet(
+                  descSet, 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                  {vkh::DescriptorImageInfo(offimgRTV, VK_IMAGE_LAYOUT_GENERAL, linearSampler)}),
+          });
 
       VkCommandBuffer barrierSecCmd = GetCommandBuffer(VK_COMMAND_BUFFER_LEVEL_SECONDARY);
       vkBeginCommandBuffer(barrierSecCmd, vkh::CommandBufferBeginInfo(
@@ -846,7 +866,7 @@ RD_TEST(VK_Resource_Usage, VulkanGraphicsTest)
           {vkh::BufferMemoryBarrier(VK_ACCESS_NONE, VK_ACCESS_NONE, barrier2Buffer.buffer)});
       vkEndCommandBuffer(barrierSecCmd);
 
-      VkCommandBuffer secCmdBuffers[3];
+      std::vector<VkCommandBuffer> secCmdBuffers;
       for(size_t i = 0; i < 2; i++)
       {
         VkCommandBuffer secCmd = GetCommandBuffer(VK_COMMAND_BUFFER_LEVEL_SECONDARY);
@@ -876,7 +896,7 @@ RD_TEST(VK_Resource_Usage, VulkanGraphicsTest)
         popMarker(secCmd);
 
         vkEndCommandBuffer(secCmd);
-        secCmdBuffers[i] = secCmd;
+        secCmdBuffers.push_back(secCmd);
       }
       {
         VkCommandBuffer emptySecCmd = GetCommandBuffer(VK_COMMAND_BUFFER_LEVEL_SECONDARY);
@@ -885,7 +905,7 @@ RD_TEST(VK_Resource_Usage, VulkanGraphicsTest)
                                                   VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
                                               vkh::CommandBufferInheritanceInfo(renderPass, 0)));
         vkEndCommandBuffer(emptySecCmd);
-        secCmdBuffers[2] = emptySecCmd;
+        secCmdBuffers.push_back(emptySecCmd);
       }
 
       VkCommandBuffer nestedCmd = GetCommandBuffer(VK_COMMAND_BUFFER_LEVEL_SECONDARY);
@@ -949,6 +969,7 @@ RD_TEST(VK_Resource_Usage, VulkanGraphicsTest)
       VkCommandBuffer cmd = GetCommandBuffer();
 
       vkBeginCommandBuffer(cmd, vkh::CommandBufferBeginInfo());
+      setMarker(cmd, "Resource Usage: Start");
 
       VkImage swapimg =
           StartUsingBackbuffer(cmd, VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_GENERAL);
@@ -999,9 +1020,9 @@ RD_TEST(VK_Resource_Usage, VulkanGraphicsTest)
             {vkh::BufferMemoryBarrier(VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
                                       indirectData.buffer)});
 
-        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, compWriteDataPipe);
         vkh::cmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, compWriteDataPipeLayout, 0,
                                    {compWriteDataDescSet}, {});
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, compWriteDataPipe);
 
         uint32_t mode = 0;
         vkCmdPushConstants(cmd, compWriteDataPipeLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, 4, &mode);
@@ -1068,7 +1089,8 @@ RD_TEST(VK_Resource_Usage, VulkanGraphicsTest)
         {
           vkCmdBeginRenderPass(cmd, mainWindow->beginRP(),
                                VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-          vkCmdExecuteCommands(cmd, 3, secCmdBuffers);
+          vkCmdExecuteCommands(cmd, (uint32_t)secCmdBuffers.size(), secCmdBuffers.data());
+          secondaries.insert(secondaries.end(), secCmdBuffers.begin(), secCmdBuffers.end());
           vkCmdEndRenderPass(cmd);
         }
         popMarker(cmd);
@@ -1092,6 +1114,7 @@ RD_TEST(VK_Resource_Usage, VulkanGraphicsTest)
         pushMarker(cmd, "Secondary Command Buffer");
         {
           vkCmdExecuteCommands(cmd, 1, &compSecCmd);
+          secondaries.push_back(compSecCmd);
         }
         popMarker(cmd);
       }
@@ -1101,9 +1124,9 @@ RD_TEST(VK_Resource_Usage, VulkanGraphicsTest)
       {
         pushMarker(cmd, "Indirect Dispatch Write IndirectDraw Data");
         {
-          vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, compWriteDataPipe);
           vkh::cmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, compWriteDataPipeLayout,
                                      0, {compWriteDataDescSet}, {});
+          vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, compWriteDataPipe);
 
           uint32_t mode = 1;
           vkCmdPushConstants(cmd, compWriteDataPipeLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, 4, &mode);
@@ -1187,9 +1210,9 @@ RD_TEST(VK_Resource_Usage, VulkanGraphicsTest)
                 {vkh::BufferMemoryBarrier(VK_ACCESS_TRANSFER_WRITE_BIT,
                                           VK_ACCESS_TRANSFER_WRITE_BIT, indirectData.buffer)});
 
-            vkCmdBindPipeline(indirectCompSecCmd, VK_PIPELINE_BIND_POINT_COMPUTE, compWriteDataPipe);
             vkh::cmdBindDescriptorSets(indirectCompSecCmd, VK_PIPELINE_BIND_POINT_COMPUTE,
                                        compWriteDataPipeLayout, 0, {compWriteDataDescSet}, {});
+            vkCmdBindPipeline(indirectCompSecCmd, VK_PIPELINE_BIND_POINT_COMPUTE, compWriteDataPipe);
 
             uint32_t mode = 0;
             vkCmdPushConstants(indirectCompSecCmd, compWriteDataPipeLayout,
@@ -1201,10 +1224,11 @@ RD_TEST(VK_Resource_Usage, VulkanGraphicsTest)
             vkCmdPushConstants(indirectCompSecCmd, compWriteDataPipeLayout,
                                VK_SHADER_STAGE_COMPUTE_BIT, 0, 4, &mode);
 
-            vkh::cmdPipelineBarrier(
-                indirectCompSecCmd, {},
-                {vkh::BufferMemoryBarrier(VK_ACCESS_TRANSFER_WRITE_BIT,
-                                          VK_ACCESS_TRANSFER_WRITE_BIT, indirectData.buffer)});
+            vkh::cmdPipelineBarrier(indirectCompSecCmd, {},
+                                    {vkh::BufferMemoryBarrier(VK_ACCESS_TRANSFER_WRITE_BIT,
+                                                              VK_ACCESS_TRANSFER_WRITE_BIT |
+                                                                  VK_ACCESS_INDIRECT_COMMAND_READ_BIT,
+                                                              indirectData.buffer)});
 
             setMarker(indirectCompSecCmd, "DispatchIndirect");
             vkCmdDispatchIndirect(indirectCompSecCmd, indirectData.buffer, 0);
@@ -1212,8 +1236,10 @@ RD_TEST(VK_Resource_Usage, VulkanGraphicsTest)
 
             vkh::cmdPipelineBarrier(
                 indirectCompSecCmd, {},
-                {vkh::BufferMemoryBarrier(VK_ACCESS_TRANSFER_WRITE_BIT,
-                                          VK_ACCESS_TRANSFER_WRITE_BIT, indirectData.buffer)});
+                {vkh::BufferMemoryBarrier(
+                    VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_INDIRECT_COMMAND_READ_BIT,
+                    VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_INDIRECT_COMMAND_READ_BIT,
+                    indirectData.buffer)});
 
             vkCmdDispatchIndirect(indirectCompSecCmd, indirectData.buffer, 0);
 
@@ -1226,6 +1252,7 @@ RD_TEST(VK_Resource_Usage, VulkanGraphicsTest)
           }
 
           vkCmdExecuteCommands(cmd, 1, &indirectCompSecCmd);
+          secondaries.push_back(indirectCompSecCmd);
 
           vkCmdBeginRenderPass(cmd, mainWindow->beginRP(),
                                VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
@@ -1242,14 +1269,13 @@ RD_TEST(VK_Resource_Usage, VulkanGraphicsTest)
             uint32_t strideDraw = sizeof(uvec4);
 
             vkCmdSetScissor(indirectDrawSecCmd, 0, 1, &mainWindow->scissor);
+            setMarker(indirectDrawSecCmd, "DrawIndirect: Single");
             vkh::cmdBindDescriptorSets(indirectDrawSecCmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                        descSetPipeLayout, 0, {descSet}, {});
             vkh::cmdBindVertexBuffers(indirectDrawSecCmd, 0, {vb.buffer}, {0});
             vkCmdBindIndexBuffer(indirectDrawSecCmd, ib.buffer, 0, VK_INDEX_TYPE_UINT32);
+
             vkCmdBindPipeline(indirectDrawSecCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, descSetPipe);
-
-            setMarker(indirectDrawSecCmd, "DrawIndirect: Single");
-
             vkCmdSetViewport(indirectDrawSecCmd, 0, 1, &viewPort);
             vkCmdDrawIndirect(indirectDrawSecCmd, indirectData.buffer, offset, 1, strideDraw);
             NextTest();
@@ -1272,6 +1298,7 @@ RD_TEST(VK_Resource_Usage, VulkanGraphicsTest)
             vkEndCommandBuffer(indirectDrawSecCmd);
           }
           vkCmdExecuteCommands(cmd, 1, &indirectDrawSecCmd);
+          secondaries.push_back(indirectDrawSecCmd);
 
           vkCmdEndRenderPass(cmd);
         }
@@ -1288,13 +1315,13 @@ RD_TEST(VK_Resource_Usage, VulkanGraphicsTest)
         vkCmdBeginRenderPass(cmd, mainWindow->beginRP(), VK_SUBPASS_CONTENTS_INLINE);
 
         vkCmdSetScissor(cmd, 0, 1, &mainWindow->scissor);
+        setMarker(cmd, "DrawIndirect: Single");
         vkh::cmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, descSetPipeLayout, 0,
                                    {descSet}, {});
         vkh::cmdBindVertexBuffers(cmd, 0, {vb.buffer}, {0});
         vkCmdBindIndexBuffer(cmd, ib.buffer, 0, VK_INDEX_TYPE_UINT32);
-        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, descSetPipe);
 
-        setMarker(cmd, "DrawIndirect: Single");
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, descSetPipe);
         vkCmdSetViewport(cmd, 0, 1, &viewPort);
         size_t drawIndirectOffset = offset;
         vkCmdDrawIndirect(cmd, indirectData.buffer, drawIndirectOffset, 1, strideDraw);
@@ -1315,9 +1342,11 @@ RD_TEST(VK_Resource_Usage, VulkanGraphicsTest)
                                  strideDrawIndexed);
         NextTest();
 
+        setMarker(cmd, "DrawIndexedIndirect-UnBind");
         vkCmdSetViewport(cmd, 0, 1, &viewPort);
         vkCmdBindIndexBuffer(cmd, indirectData.buffer, 1024, VK_INDEX_TYPE_UINT32);
         vkCmdDrawIndexedIndirect(cmd, indirectData.buffer, offset, 1, strideDrawIndexed);
+        setMarker(cmd, "DrawIndexedIndirect-Bind");
         vkCmdBindIndexBuffer(cmd, ib.buffer, 0, VK_INDEX_TYPE_UINT32);
         NextTest();
         offset += countDrawIndexed * strideDrawIndexed;
@@ -1379,7 +1408,8 @@ RD_TEST(VK_Resource_Usage, VulkanGraphicsTest)
 
       vkEndCommandBuffer(cmd);
 
-      Submit(0, 3, {cmd});
+      Submit(0, 2, {cmd}, secondaries);
+      secondaries.clear();
 
       cmd = GetCommandBuffer();
 
@@ -1397,10 +1427,12 @@ RD_TEST(VK_Resource_Usage, VulkanGraphicsTest)
         vkCmdBeginRenderPass(cmd, mainWindow->beginRP(),
                              VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
         vkCmdExecuteCommands(cmd, 1, &nestedCmd);
+        secondaries.push_back(nestedCmd);
         vkCmdEndRenderPass(cmd);
 
         setMarker(cmd, "Dispatch");
         vkCmdExecuteCommands(cmd, 1, &compNestedSecCmd);
+        secondaries.push_back(compNestedSecCmd);
 
         popMarker(cmd);
       }
@@ -1442,7 +1474,7 @@ RD_TEST(VK_Resource_Usage, VulkanGraphicsTest)
         vkh::cmdPipelineBarrier(
             restoreDescBufCmd, {},
             {
-                vkh::BufferMemoryBarrier(VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_TRANSFER_READ_BIT,
+                vkh::BufferMemoryBarrier(VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
                                          descBackupBuf.buffer),
                 vkh::BufferMemoryBarrier(VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
                                          descBuf.buffer),
@@ -1549,7 +1581,9 @@ RD_TEST(VK_Resource_Usage, VulkanGraphicsTest)
       vkEndCommandBuffer(cmd);
       cmds.push_back(cmd);
 
-      Submit(1, 3, cmds);
+      // Final submit related to backbuffer
+      Submit(1, 2, cmds, secondaries);
+      secondaries.clear();
 
       std::vector<VkCommandBuffer> cmds2;
       cmds2.push_back(barrierCmd);
@@ -1562,7 +1596,9 @@ RD_TEST(VK_Resource_Usage, VulkanGraphicsTest)
         vkWaitForFences(device, 1, &barrierCmdSubmitFence, VK_TRUE, UINT64_MAX);
       }
 
-      cmd = GetCommandBuffer();
+      CHECK_VKR(vkAllocateCommandBuffers(device, vkh::CommandBufferAllocateInfo(barrierCmdPool, 1),
+                                         &cmd));
+      setName(cmd, "Multiple Secondary Executes Command Buffer");
 
       vkBeginCommandBuffer(cmd, vkh::CommandBufferBeginInfo());
 
@@ -1575,9 +1611,19 @@ RD_TEST(VK_Resource_Usage, VulkanGraphicsTest)
         popMarker(cmd);
       }
 
+      setMarker(cmd, "Resource Usage: End");
       vkEndCommandBuffer(cmd);
 
-      Submit(2, 3, {cmd});
+      std::vector<VkCommandBuffer> cmds3;
+      cmds3.push_back(cmd);
+      submit = vkh::SubmitInfo(cmds3);
+      vkWaitForFences(device, 1, &barrierCmdSubmitFence, VK_TRUE, UINT64_MAX);
+      vkResetFences(device, 1, &barrierCmdSubmitFence);
+      vkSetEvent(device, testEvent);
+      vkResetEvent(device, testEvent);
+      vkGetEventStatus(device, testEvent);
+      CHECK_VKR(vkQueueSubmit(queue, 1, &submit, barrierCmdSubmitFence));
+      vkWaitForFences(device, 1, &barrierCmdSubmitFence, VK_TRUE, UINT64_MAX);
 
       Present();
     }

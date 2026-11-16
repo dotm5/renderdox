@@ -88,7 +88,8 @@ bool SpvCompilationSupported();
 std::vector<uint32_t> CompileShaderToSpv(const char *demo_name, const std::string &source_text,
                                          SPIRVTarget target, ShaderLang lang, ShaderStage stage,
                                          const char *entry_point,
-                                         const std::map<std::string, std::string> &macros = {});
+                                         const std::map<std::string, std::string> &macros = {},
+                                         bool debug_info = true);
 
 struct Vec2f
 {
@@ -222,8 +223,11 @@ struct GraphicsTest
   const char *screenTitle = "RenderDoc test program";
 
   bool headless = false;
+  bool subtest = false;
 
   RENDERDOC_API_1_7_0 *rdoc = NULL;
+
+  std::string tmpPath;
 
   // shared parameters
   static int maxFrameCount;
@@ -231,6 +235,7 @@ struct GraphicsTest
   static int screenWidth;
   static int screenHeight;
   static bool debugDevice;
+  static bool breakOnDebug;
 };
 
 enum class TestAPI

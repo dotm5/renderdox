@@ -461,6 +461,7 @@ VkResult WrappedVulkan::vkSetEvent(VkDevice device, VkEvent event)
     Serialise_vkSetEvent(ser, device, event);
 
     m_FrameCaptureRecord->AddChunk(scope.Get());
+    GetResourceManager()->MarkResourceFrameReferenced(GetResID(event), eFrameRef_Read);
   }
 
   return ret;
@@ -499,6 +500,7 @@ VkResult WrappedVulkan::vkResetEvent(VkDevice device, VkEvent event)
     Serialise_vkResetEvent(ser, device, event);
 
     m_FrameCaptureRecord->AddChunk(scope.Get());
+    GetResourceManager()->MarkResourceFrameReferenced(GetResID(event), eFrameRef_Read);
   }
 
   return ret;
@@ -549,6 +551,7 @@ VkResult WrappedVulkan::vkGetEventStatus(VkDevice device, VkEvent event)
       Serialise_vkGetEventStatus(ser, device, event);
 
       m_FrameCaptureRecord->AddChunk(scope.Get());
+      GetResourceManager()->MarkResourceFrameReferenced(GetResID(event), eFrameRef_Read);
     }
   }
 
@@ -658,17 +661,14 @@ bool WrappedVulkan::Serialise_vkCmdSetEvent(SerialiserType &ser, VkCommandBuffer
     m_LastCmdBufferID = GetResID(commandBuffer);
 
     // see top of this file for current event/fence handling
-
-    if(IsActiveReplaying(m_State))
+    if(InRerecordRange(m_LastCmdBufferID))
     {
-      if(InRerecordRange(m_LastCmdBufferID))
+      bool loading = IsLoading(m_State);
+      if(!loading)
         commandBuffer = RerecordCmdBuf(m_LastCmdBufferID);
-      else
-        commandBuffer = VK_NULL_HANDLE;
-    }
 
-    // if(commandBuffer != VK_NULL_HANDLE)
-    //   ObjDisp(commandBuffer)->CmdSetEvent(Unwrap(commandBuffer), Unwrap(event), stageMask);
+      // ObjDisp(commandBuffer)->CmdSetEvent(Unwrap(commandBuffer), Unwrap(event), stageMask);
+    }
   }
 
   return true;
@@ -713,17 +713,12 @@ bool WrappedVulkan::Serialise_vkCmdResetEvent(SerialiserType &ser, VkCommandBuff
     m_LastCmdBufferID = GetResID(commandBuffer);
 
     // see top of this file for current event/fence handling
-
-    if(IsActiveReplaying(m_State))
+    if(InRerecordRange(m_LastCmdBufferID))
     {
-      if(InRerecordRange(m_LastCmdBufferID))
+      bool loading = IsLoading(m_State);
+      if(!loading)
         commandBuffer = RerecordCmdBuf(m_LastCmdBufferID);
-      else
-        commandBuffer = VK_NULL_HANDLE;
-    }
 
-    if(commandBuffer != VK_NULL_HANDLE)
-    {
       // ObjDisp(commandBuffer)->CmdResetEvent(Unwrap(commandBuffer), Unwrap(event), mask);
     }
   }
@@ -799,60 +794,53 @@ bool WrappedVulkan::Serialise_vkCmdWaitEvents(
   {
     m_LastCmdBufferID = GetResID(commandBuffer);
 
-    for(uint32_t i = 0; i < bufferMemoryBarrierCount; i++)
+    bool loading = IsLoading(m_State);
+    if(InRerecordRange(m_LastCmdBufferID))
     {
-      if(pBufferMemoryBarriers[i].buffer != VK_NULL_HANDLE)
-      {
-        bufBarriers.push_back(pBufferMemoryBarriers[i]);
-        bufBarriers.back().buffer = Unwrap(bufBarriers.back().buffer);
-
-        RemapQueueFamilyIndices(bufBarriers.back().srcQueueFamilyIndex,
-                                bufBarriers.back().dstQueueFamilyIndex);
-      }
-    }
-
-    for(uint32_t i = 0; i < imageMemoryBarrierCount; i++)
-    {
-      if(pImageMemoryBarriers[i].image != VK_NULL_HANDLE)
-      {
-        imgBarriers.push_back(pImageMemoryBarriers[i]);
-        imgBarriers.back().image = Unwrap(imgBarriers.back().image);
-
-        RemapQueueFamilyIndices(imgBarriers.back().srcQueueFamilyIndex,
-                                imgBarriers.back().dstQueueFamilyIndex);
-      }
-    }
-
-    // see top of this file for current event/fence handling
-
-    VkEventCreateInfo evInfo = {
-        VK_STRUCTURE_TYPE_EVENT_CREATE_INFO,
-        NULL,
-        0,
-    };
-
-    if(IsActiveReplaying(m_State))
-    {
-      if(InRerecordRange(m_LastCmdBufferID))
+      if(!loading)
         commandBuffer = RerecordCmdBuf(m_LastCmdBufferID);
-      else
-        commandBuffer = VK_NULL_HANDLE;
-    }
-    else
-    {
-      for(uint32_t i = 0; i < imageMemoryBarrierCount; i++)
+
+      for(uint32_t i = 0; i < bufferMemoryBarrierCount; i++)
       {
-        const VkImageMemoryBarrier &b = pImageMemoryBarriers[i];
-        if(b.image != VK_NULL_HANDLE && b.oldLayout == VK_IMAGE_LAYOUT_UNDEFINED)
+        if(pBufferMemoryBarriers[i].buffer != VK_NULL_HANDLE)
         {
-          m_LoadingEventNode.resourceUsage.push_back(
-              make_rdcpair(GetResID(b.image), ResourceUsage::Discard));
+          bufBarriers.push_back(pBufferMemoryBarriers[i]);
+          bufBarriers.back().buffer = Unwrap(bufBarriers.back().buffer);
+
+          RemapQueueFamilyIndices(bufBarriers.back().srcQueueFamilyIndex,
+                                  bufBarriers.back().dstQueueFamilyIndex);
         }
       }
-    }
 
-    if(commandBuffer != VK_NULL_HANDLE)
-    {
+      for(uint32_t i = 0; i < imageMemoryBarrierCount; i++)
+      {
+        if(pImageMemoryBarriers[i].image != VK_NULL_HANDLE)
+        {
+          imgBarriers.push_back(pImageMemoryBarriers[i]);
+          imgBarriers.back().image = Unwrap(imgBarriers.back().image);
+
+          RemapQueueFamilyIndices(imgBarriers.back().srcQueueFamilyIndex,
+                                  imgBarriers.back().dstQueueFamilyIndex);
+        }
+      }
+
+      // see top of this file for current event/fence handling
+      VkEventCreateInfo evInfo = {
+          VK_STRUCTURE_TYPE_EVENT_CREATE_INFO,
+          NULL,
+          0,
+      };
+
+      if(loading)
+      {
+        for(uint32_t i = 0; i < imageMemoryBarrierCount; i++)
+        {
+          const VkImageMemoryBarrier &b = pImageMemoryBarriers[i];
+          if(b.image != VK_NULL_HANDLE && b.oldLayout == VK_IMAGE_LAYOUT_UNDEFINED)
+            AddEventResourceUsage(GetResID(b.image), ResourceUsage::Discard);
+        }
+      }
+
       // don't wrap this event
       VkEvent ev = VK_NULL_HANDLE;
       ObjDisp(commandBuffer)->CreateEvent(Unwrap(GetDev()), &evInfo, NULL, &ev);
@@ -878,7 +866,7 @@ bool WrappedVulkan::Serialise_vkCmdWaitEvents(
                           memoryBarrierCount, pMemoryBarriers, (uint32_t)bufBarriers.size(),
                           bufBarriers.data(), (uint32_t)imgBarriers.size(), imgBarriers.data());
 
-      if(m_ReplayOptions.optimisation != ReplayOptimisationLevel::Fastest)
+      if(!loading && m_ReplayOptions.optimisation != ReplayOptimisationLevel::Fastest)
       {
         for(uint32_t i = 0; i < imageMemoryBarrierCount; i++)
         {
@@ -1171,17 +1159,14 @@ bool WrappedVulkan::Serialise_vkCmdSetEvent2(SerialiserType &ser, VkCommandBuffe
     m_LastCmdBufferID = GetResID(commandBuffer);
 
     // see top of this file for current event/fence handling
-
-    if(IsActiveReplaying(m_State))
+    if(InRerecordRange(m_LastCmdBufferID))
     {
-      if(InRerecordRange(m_LastCmdBufferID))
+      bool loading = IsLoading(m_State);
+      if(!loading)
         commandBuffer = RerecordCmdBuf(m_LastCmdBufferID);
-      else
-        commandBuffer = VK_NULL_HANDLE;
-    }
 
-    // if(commandBuffer != VK_NULL_HANDLE)
-    //  ObjDisp(commandBuffer)->CmdSetEvent2(Unwrap(commandBuffer), Unwrap(event), &DependencyInfo);
+      //  ObjDisp(commandBuffer)->CmdSetEvent2(Unwrap(commandBuffer), Unwrap(event), &DependencyInfo);
+    }
   }
 
   return true;
@@ -1233,20 +1218,14 @@ bool WrappedVulkan::Serialise_vkCmdResetEvent2(SerialiserType &ser, VkCommandBuf
 
   if(IsReplayingAndReading())
   {
-    m_LastCmdBufferID = GetResID(commandBuffer);
-
     // see top of this file for current event/fence handling
 
-    if(IsActiveReplaying(m_State))
+    if(InRerecordRange(m_LastCmdBufferID))
     {
-      if(InRerecordRange(m_LastCmdBufferID))
+      bool loading = IsLoading(m_State);
+      if(!loading)
         commandBuffer = RerecordCmdBuf(m_LastCmdBufferID);
-      else
-        commandBuffer = VK_NULL_HANDLE;
-    }
 
-    if(commandBuffer != VK_NULL_HANDLE)
-    {
       // ObjDisp(commandBuffer)->CmdResetEvent2(Unwrap(commandBuffer), Unwrap(event), stageMask);
     }
   }
@@ -1299,74 +1278,68 @@ bool WrappedVulkan::Serialise_vkCmdWaitEvents2(SerialiserType &ser, VkCommandBuf
   {
     m_LastCmdBufferID = GetResID(commandBuffer);
 
-    rdcarray<VkImageMemoryBarrier2> imgBarriers;
-    rdcarray<VkBufferMemoryBarrier2> bufBarriers;
-
-    for(uint32_t evIdx = 0; evIdx < eventCount; evIdx++)
+    bool loading = IsLoading(m_State);
+    if(InRerecordRange(m_LastCmdBufferID))
     {
-      imgBarriers.clear();
-      bufBarriers.clear();
+      if(!loading)
+        commandBuffer = RerecordCmdBuf(m_LastCmdBufferID);
 
-      const VkDependencyInfo &depInfo = pDependencyInfos[evIdx];
-      RemapMemoryRangeBarriers(depInfo);
+      rdcarray<VkImageMemoryBarrier2> imgBarriers;
+      rdcarray<VkBufferMemoryBarrier2> bufBarriers;
 
-      for(uint32_t i = 0; i < depInfo.bufferMemoryBarrierCount; i++)
+      for(uint32_t evIdx = 0; evIdx < eventCount; evIdx++)
       {
-        if(depInfo.pBufferMemoryBarriers[i].buffer != VK_NULL_HANDLE)
+        imgBarriers.clear();
+        bufBarriers.clear();
+
+        const VkDependencyInfo &depInfo = pDependencyInfos[evIdx];
+        RemapMemoryRangeBarriers(depInfo);
+
+        for(uint32_t i = 0; i < depInfo.bufferMemoryBarrierCount; i++)
         {
-          bufBarriers.push_back(depInfo.pBufferMemoryBarriers[i]);
-          bufBarriers.back().buffer = Unwrap(bufBarriers.back().buffer);
-
-          RemapQueueFamilyIndices(bufBarriers.back().srcQueueFamilyIndex,
-                                  bufBarriers.back().dstQueueFamilyIndex);
-        }
-      }
-
-      for(uint32_t i = 0; i < depInfo.imageMemoryBarrierCount; i++)
-      {
-        if(depInfo.pImageMemoryBarriers[i].image != VK_NULL_HANDLE)
-        {
-          imgBarriers.push_back(depInfo.pImageMemoryBarriers[i]);
-          imgBarriers.back().image = Unwrap(imgBarriers.back().image);
-
-          RemapQueueFamilyIndices(imgBarriers.back().srcQueueFamilyIndex,
-                                  imgBarriers.back().dstQueueFamilyIndex);
-        }
-      }
-
-      // see top of this file for current event/fence handling
-
-      VkDependencyInfo UnwrappedDependencyInfo = depInfo;
-
-      UnwrappedDependencyInfo.pBufferMemoryBarriers = bufBarriers.data();
-      UnwrappedDependencyInfo.bufferMemoryBarrierCount = (uint32_t)bufBarriers.size();
-      UnwrappedDependencyInfo.pImageMemoryBarriers = imgBarriers.data();
-      UnwrappedDependencyInfo.imageMemoryBarrierCount = (uint32_t)imgBarriers.size();
-
-      if(IsActiveReplaying(m_State))
-      {
-        if(InRerecordRange(m_LastCmdBufferID))
-          commandBuffer = RerecordCmdBuf(m_LastCmdBufferID);
-        else
-          commandBuffer = VK_NULL_HANDLE;
-      }
-      else
-      {
-        for(uint32_t i = 0; i < depInfo.imageMemoryBarrierCount; i++)
-        {
-          const VkImageMemoryBarrier2 &b = depInfo.pImageMemoryBarriers[i];
-          if(b.image != VK_NULL_HANDLE && b.oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
-             b.newLayout != VK_IMAGE_LAYOUT_UNDEFINED)
+          if(depInfo.pBufferMemoryBarriers[i].buffer != VK_NULL_HANDLE)
           {
-            m_LoadingEventNode.resourceUsage.push_back(
-                make_rdcpair(GetResID(b.image), ResourceUsage::Discard));
+            bufBarriers.push_back(depInfo.pBufferMemoryBarriers[i]);
+            bufBarriers.back().buffer = Unwrap(bufBarriers.back().buffer);
+
+            RemapQueueFamilyIndices(bufBarriers.back().srcQueueFamilyIndex,
+                                    bufBarriers.back().dstQueueFamilyIndex);
           }
         }
-      }
 
-      if(commandBuffer != VK_NULL_HANDLE)
-      {
-        if(IsLoading(m_State) && evIdx == 0)
+        for(uint32_t i = 0; i < depInfo.imageMemoryBarrierCount; i++)
+        {
+          if(depInfo.pImageMemoryBarriers[i].image != VK_NULL_HANDLE)
+          {
+            imgBarriers.push_back(depInfo.pImageMemoryBarriers[i]);
+            imgBarriers.back().image = Unwrap(imgBarriers.back().image);
+
+            RemapQueueFamilyIndices(imgBarriers.back().srcQueueFamilyIndex,
+                                    imgBarriers.back().dstQueueFamilyIndex);
+          }
+        }
+
+        // see top of this file for current event/fence handling
+
+        VkDependencyInfo UnwrappedDependencyInfo = depInfo;
+
+        UnwrappedDependencyInfo.pBufferMemoryBarriers = bufBarriers.data();
+        UnwrappedDependencyInfo.bufferMemoryBarrierCount = (uint32_t)bufBarriers.size();
+        UnwrappedDependencyInfo.pImageMemoryBarriers = imgBarriers.data();
+        UnwrappedDependencyInfo.imageMemoryBarrierCount = (uint32_t)imgBarriers.size();
+
+        if(loading)
+        {
+          for(uint32_t i = 0; i < depInfo.imageMemoryBarrierCount; i++)
+          {
+            const VkImageMemoryBarrier2 &b = depInfo.pImageMemoryBarriers[i];
+            if(b.image != VK_NULL_HANDLE && b.oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
+               b.newLayout != VK_IMAGE_LAYOUT_UNDEFINED)
+              AddEventResourceUsage(GetResID(b.image), ResourceUsage::Discard);
+          }
+        }
+
+        if(loading && evIdx == 0)
         {
           bool descBarrier = false;
 
@@ -1404,8 +1377,8 @@ bool WrappedVulkan::Serialise_vkCmdWaitEvents2(SerialiserType &ser, VkCommandBuf
             continue;
           }
 
-          if(!IsLoading(m_State) && (barrier.oldLayout == VK_IMAGE_LAYOUT_PREINITIALIZED ||
-                                     barrier.oldLayout == VK_IMAGE_LAYOUT_ZERO_INITIALIZED_EXT))
+          if(!loading && (barrier.oldLayout == VK_IMAGE_LAYOUT_PREINITIALIZED ||
+                          barrier.oldLayout == VK_IMAGE_LAYOUT_ZERO_INITIALIZED_EXT))
           {
             // This is a transition from PRENITIALIZED, but we've already done this barrier once
             // (when loading); Since we couldn't transition back to PREINITIALIZED, we instead left
@@ -1422,7 +1395,7 @@ bool WrappedVulkan::Serialise_vkCmdWaitEvents2(SerialiserType &ser, VkCommandBuf
         ObjDisp(commandBuffer)->CmdSetEvent2(Unwrap(commandBuffer), ev, &UnwrappedDependencyInfo);
         ObjDisp(commandBuffer)->CmdWaitEvents2(Unwrap(commandBuffer), 1, &ev, &UnwrappedDependencyInfo);
 
-        if(m_ReplayOptions.optimisation != ReplayOptimisationLevel::Fastest)
+        if(!loading && m_ReplayOptions.optimisation != ReplayOptimisationLevel::Fastest)
         {
           for(uint32_t i = 0; i < depInfo.imageMemoryBarrierCount; i++)
           {

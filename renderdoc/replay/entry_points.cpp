@@ -890,17 +890,17 @@ extern "C" RENDERDOC_API int RENDERDOC_CC DCOMP_RunFunctionalTests(const rdcarra
 {
 #if ENABLED(RDOC_WIN32)
   const char *moduledir = "/pymodules";
-  const char *modulename = "dgcore.pyd";
+  const char *modulename = "renderdoc.pyd";
   rdcstr pythonlibs[] = {"python3?.dll"};
 #elif ENABLED(RDOC_LINUX)
   const char *moduledir = "";
-  const char *modulename = "dgcore.so";
+  const char *modulename = "renderdoc.so";
   // we don't care about pymalloc or not
   rdcstr pythonlibs[] = {"libpython3.?m.so.1.0", "libpython3.?.so.1.0", "libpython3.?m.so",
                          "libpython3.?.so"};
 #elif ENABLED(RDOC_APPLE)
   const char *moduledir = "";
-  const char *modulename = "dgcore.so";
+  const char *modulename = "renderdoc.so";
   rdcstr pythonlibs[] = {"libpython3.?.dylib"};
 #else
   const char *moduledir = "";
@@ -1007,10 +1007,10 @@ extern "C" RENDERDOC_API int RENDERDOC_CC DCOMP_RunFunctionalTests(const rdcarra
                          // specify script path
                          StringFormat::UTF82Wide(scriptPath),
                          // specify native library path
-                         L"--dgcore",
+                         L"--renderdoc",
                          StringFormat::UTF82Wide(libPath),
                          // specify python module path
-                         L"--pydgcore",
+                         L"--pyrenderdoc",
                          StringFormat::UTF82Wide(modulePath),
                      });
 

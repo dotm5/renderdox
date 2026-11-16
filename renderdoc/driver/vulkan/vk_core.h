@@ -134,6 +134,10 @@ struct VulkanEventNode
 {
   VulkanEventNode() = default;
   ~VulkanEventNode() = default;
+  void AddResourceUsage(ResourceId id, ResourceUsage usage)
+  {
+    resourceUsage.push_back(make_rdcpair(id, usage));
+  }
 
   // eventId is not used
   APIEvent event;
@@ -956,6 +960,7 @@ private:
   ResourceId GetPartialCommandBuffer();
 
   void UpdateRenderStateForSecondaries(BakedCmdBufferInfo &ancestorCB, BakedCmdBufferInfo &currentCB);
+  void ResetRenderStateForParent(BakedCmdBufferInfo &ancestorCB);
 
   // this info is stored in the record on capture, but we
   // need it on replay too
@@ -1195,6 +1200,12 @@ private:
 
   void ApplyInitialContents();
 
+  void AddEventResourceUsage(ResourceId id, ResourceUsage usage)
+  {
+    RDCASSERT(IsLoading(m_State));
+    m_LoadingEventNode.AddResourceUsage(id, usage);
+  }
+
   rdcarray<APIEvent> m_Events;
   VulkanEventNode m_LoadingEventNode;
   rdcarray<VulkanEventNode> m_EventNodes;
@@ -1258,10 +1269,16 @@ private:
 
   VulkanEventNode &GetLastEventNode()
   {
+    RDCASSERT(IsLoading(m_State));
     rdcarray<VulkanEventNode> &eventNodes =
         (m_LastCmdBufferID != ResourceId() ? m_BakedCmdBufferInfo[m_LastCmdBufferID].eventNodes
                                            : m_EventNodes);
     return eventNodes.back();
+  }
+  VulkanEventNode &GetLoadingEventNode()
+  {
+    RDCASSERT(IsLoading(m_State));
+    return m_LoadingEventNode;
   }
 
   void BakeEventNodes(ActionDescription &rootAction);

@@ -4016,6 +4016,7 @@ EventBrowser::EventBrowser(ICaptureContext &ctx, QWidget *parent)
   ui->bookmarkStrip->hide();
 
   m_BookmarkStripLayout = new FlowLayout(ui->bookmarkStrip, 0, 3, 3);
+  m_BookmarkStripLayout->setContentsMargins(6, 0, 6, 2);
   m_BookmarkSpacer = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
   ui->bookmarkStrip->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
@@ -4024,9 +4025,9 @@ EventBrowser::EventBrowser(ICaptureContext &ctx, QWidget *parent)
 
   {
     QHBoxLayout *box = new QHBoxLayout(ui->breadcrumbStrip);
-    box->setContentsMargins(QMargins(0, 0, 0, 0));
     box->setMargin(0);
     box->setSpacing(0);
+    box->setContentsMargins(QMargins(0, 0, 6, 2));
     m_Breadcrumbs = new MarkerBreadcrumbs(m_Ctx, this, this);
     box->addWidget(m_Breadcrumbs);
 
@@ -4266,6 +4267,8 @@ void EventBrowser::OnCaptureLoaded()
   ui->exportActions->setEnabled(true);
   ui->stepPrev->setEnabled(true);
   ui->stepNext->setEnabled(true);
+
+  updateStepNextPrevButtonState();
 }
 
 void EventBrowser::OnCaptureClosed()
@@ -4359,21 +4362,7 @@ void EventBrowser::events_currentChanged(const QModelIndex &current, const QMode
   m_Model->RefreshCache();
   m_Breadcrumbs->OnEventChanged(effectiveEID);
 
-  const ActionDescription *action = m_Ctx.GetAction(selectedEID);
-
-  if(action && action->IsFakeMarker())
-    action = &action->children.back();
-
-  ui->stepPrev->setEnabled(action && action->previousAction);
-  ui->stepNext->setEnabled(action && action->nextAction);
-
-  // special case for the first action in the frame
-  if(selectedEID == 0)
-    ui->stepNext->setEnabled(true);
-
-  // special case for the first 'virtual' action at EID 0
-  if(m_Ctx.GetFirstAction() && selectedEID == m_Ctx.GetFirstAction()->eventId)
-    ui->stepPrev->setEnabled(true);
+  updateStepNextPrevButtonState();
 
   highlightBookmarks();
 }
@@ -5527,9 +5516,24 @@ void EventBrowser::on_stepNext_clicked()
   if(!m_Ctx.IsCaptureLoaded() || !ui->stepNext->isEnabled())
     return;
 
+  const ActionDescription *action = NULL;
+  uint32_t selectedEID = 0;
   QModelIndex idx = ui->events->currentIndex();
-  uint32_t selectedEID = GetSelectedEID(idx);
-  const ActionDescription *action = m_Ctx.GetAction(selectedEID);
+  if(idx.isValid())
+  {
+    selectedEID = GetSelectedEID(idx);
+    action = m_Ctx.GetAction(selectedEID);
+  }
+  else
+  {
+    // No selected action use the current action
+    if(!action)
+      action = m_Ctx.CurAction();
+  }
+
+  // special case for the first 'virtual' action at EID 0
+  if(m_Ctx.CurEvent() == 0)
+    action = m_Ctx.GetFirstAction();
 
   if(action)
   {
@@ -5539,8 +5543,7 @@ void EventBrowser::on_stepNext_clicked()
       action = action->nextAction;
   }
 
-  // special case for the first 'virtual' action at EID 0
-  if(m_Ctx.CurEvent() == 0)
+  if(selectedEID == 0)
     action = m_Ctx.GetFirstAction();
 
   while(action)
@@ -5553,8 +5556,6 @@ void EventBrowser::on_stepNext_clicked()
     // which isn't
     action = action->nextAction;
   }
-  // special case for the first 'virtual' action at EID 0
-  SelectEvent(0);
 }
 
 void EventBrowser::on_stepPrev_clicked()
@@ -5562,9 +5563,17 @@ void EventBrowser::on_stepPrev_clicked()
   if(!m_Ctx.IsCaptureLoaded() || !ui->stepPrev->isEnabled())
     return;
 
+  const ActionDescription *action = NULL;
   QModelIndex idx = ui->events->currentIndex();
-  uint32_t selectedEID = GetSelectedEID(idx);
-  const ActionDescription *action = m_Ctx.GetAction(selectedEID);
+  if(idx.isValid())
+  {
+    uint32_t selectedEID = GetSelectedEID(idx);
+    action = m_Ctx.GetAction(selectedEID);
+  }
+
+  // No selected action use the current action
+  if(!action)
+    action = m_Ctx.CurAction();
 
   if(action)
   {
@@ -6786,6 +6795,24 @@ void EventBrowser::UpdateDurationColumn()
   m_TimeUnit = m_Ctx.Config().EventBrowser_TimeUnit;
 
   m_Model->UpdateDurationColumn();
+}
+
+void EventBrowser::updateStepNextPrevButtonState()
+{
+  QModelIndex current = ui->events->currentIndex();
+  if(current.isValid())
+  {
+    uint32_t selectedEID = GetSelectedEID(current);
+    const ActionDescription *action = m_Ctx.GetAction(selectedEID);
+    if(action && action->IsFakeMarker())
+      action = &action->children.back();
+
+    ui->stepPrev->setEnabled(action && action->previousAction);
+    ui->stepNext->setEnabled(action && action->nextAction);
+    // special case for the first action in the frame
+    if(selectedEID == 0)
+      ui->stepNext->setEnabled(true);
+  }
 }
 
 APIEvent EventBrowser::GetAPIEventForEID(uint32_t eid)

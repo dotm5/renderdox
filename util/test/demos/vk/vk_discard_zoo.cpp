@@ -67,14 +67,28 @@ void main()
     else if(img.createInfo.format == VK_FORMAT_S8_UINT)
       range.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
 
-    vkh::cmdPipelineBarrier(
-        cmd, {
-                 vkh::ImageMemoryBarrier(VK_ACCESS_TRANSFER_WRITE_BIT |
-                                             VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
-                                             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-                                         VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-                                         VK_IMAGE_LAYOUT_GENERAL, img.image, range),
-             });
+    if(range.aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT))
+    {
+      vkh::cmdPipelineBarrier(
+          cmd, {
+                   vkh::ImageMemoryBarrier(VK_ACCESS_TRANSFER_WRITE_BIT |
+                                               VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+                                               VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                                           VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+                                           VK_IMAGE_LAYOUT_GENERAL, img.image, range),
+               });
+    }
+    else
+    {
+      vkh::cmdPipelineBarrier(
+          cmd, {
+                   vkh::ImageMemoryBarrier(VK_ACCESS_TRANSFER_WRITE_BIT |
+                                               VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+                                               VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                                           VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+                                           VK_IMAGE_LAYOUT_GENERAL, img.image, range),
+               });
+    }
 
     VkClearDepthStencilValue val = {0.4f, 0x40};
 
@@ -105,6 +119,16 @@ void main()
 
       vkCmdCopyBufferToImage(cmd, emptyBuf.buffer, img.image, VK_IMAGE_LAYOUT_GENERAL,
                              (uint32_t)regions.size(), regions.data());
+
+      vkh::cmdPipelineBarrier(
+          cmd, {
+                   vkh::ImageMemoryBarrier(
+                       VK_ACCESS_TRANSFER_WRITE_BIT,
+                       VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+                           VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                       VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL, img.image, range),
+               });
+
       return;
     }
 
@@ -118,10 +142,28 @@ void main()
       else
         vkCmdClearColorImage(cmd, img.image, VK_IMAGE_LAYOUT_GENERAL,
                              vkh::ClearColorValue(0.0f, 1.0f, 0.0f, 1.0f), 1, range);
+
+      vkh::cmdPipelineBarrier(
+          cmd, {
+                   vkh::ImageMemoryBarrier(
+                       VK_ACCESS_TRANSFER_WRITE_BIT,
+                       VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+                           VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                       VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL, img.image, range),
+               });
     }
     else
     {
       vkCmdClearDepthStencilImage(cmd, img.image, VK_IMAGE_LAYOUT_GENERAL, &val, 1, range);
+
+      vkh::cmdPipelineBarrier(
+          cmd, {
+                   vkh::ImageMemoryBarrier(
+                       VK_ACCESS_TRANSFER_WRITE_BIT,
+                       VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+                           VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                       VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL, img.image, range),
+               });
     }
   }
 
@@ -148,9 +190,12 @@ void main()
   AllocatedImage MakeTex2D(VkFormat fmt, uint32_t width, uint32_t height, uint32_t mips = 1,
                            uint32_t arraySlices = 1)
   {
-    return AllocatedImage(this,
-                          vkh::ImageCreateInfo(width, height, 0, fmt,
-                                               VK_IMAGE_USAGE_TRANSFER_DST_BIT, mips, arraySlices),
+    VkImageCreateFlags flags = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    if(fmt == VK_FORMAT_D32_SFLOAT_S8_UINT || fmt == VK_FORMAT_D24_UNORM_S8_UINT ||
+       fmt == VK_FORMAT_D32_SFLOAT || fmt == VK_FORMAT_D16_UNORM || fmt == VK_FORMAT_S8_UINT)
+      flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+    return AllocatedImage(this, vkh::ImageCreateInfo(width, height, 0, fmt, flags, mips, arraySlices),
                           VmaAllocationCreateInfo({0, VMA_MEMORY_USAGE_GPU_ONLY}));
   }
 
@@ -319,10 +364,10 @@ void main()
 
     renderPassCreateInfo.attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     renderPassCreateInfo.attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    renderPassCreateInfo.attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-    renderPassCreateInfo.attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-    renderPassCreateInfo.attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-    renderPassCreateInfo.attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+    renderPassCreateInfo.attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    renderPassCreateInfo.attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    renderPassCreateInfo.attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    renderPassCreateInfo.attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     renderPassCreateInfo.attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     renderPassCreateInfo.attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     renderPassCreateInfo.attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;

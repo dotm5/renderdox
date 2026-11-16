@@ -118,12 +118,12 @@ set(VULKAN_SRC
         vk/vk_descriptor_reuse.cpp
         vk/vk_descriptor_variable_count.cpp
         vk/vk_descriptor_buffer_analyse.cpp
+        vk/vk_device_address_commands.cpp
         vk/vk_discard_rects.cpp
         vk/vk_discard_zoo.cpp
         vk/vk_draw_zoo.cpp
         vk/vk_dynamic_rendering.cpp
         vk/vk_empty_capture.cpp
-        vk/vk_ext_buffer_address.cpp
         vk/vk_custom_resolve.cpp
         vk/vk_extended_dyn_state.cpp
         vk/vk_graphics_pipeline.cpp
@@ -166,6 +166,7 @@ set(VULKAN_SRC
         vk/vk_simple_triangle.cpp
         vk/vk_spec_constants.cpp
         vk/vk_spirv_13_shaders.cpp
+        vk/vk_stripped_shaders.cpp
         vk/vk_subgroup_zoo.cpp
         vk/vk_structured_buffer_nested.cpp
         vk/vk_sync2.cpp
@@ -214,6 +215,7 @@ set(OPENGL_SRC
         gl/gl_resource_lifetimes.cpp
         gl/gl_runtime_bind_prog_to_pipe.cpp
         gl/gl_separable_geometry_shader.cpp
+        gl/gl_shader_debug_zoo.cpp
         gl/gl_shader_editing.cpp
         gl/gl_shader_isa.cpp
         gl/gl_simple_triangle.cpp
@@ -233,6 +235,10 @@ set(SRC main.cpp
         texture_zoo.cpp)
 
 project(demos)
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19.1)
+    list(APPEND warning_flags -Wno-deprecated-literal-operator)
+endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")

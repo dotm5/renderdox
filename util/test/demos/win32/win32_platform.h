@@ -44,6 +44,8 @@ uint32_t GetPID();
       __debugbreak();       \
   } while(0)
 
+#define UNCONDITIONAL_DEBUG_BREAK() __debugbreak()
+
 #define popen _popen
 #define pclose _pclose
 
@@ -52,5 +54,7 @@ uint32_t GetPID();
 #define MakeDir(dir) CreateDirectoryA(dir, NULL)
 
 #define WEXITSTATUS(code) code
+
+#define SetEnv(name, value) SetEnvironmentVariableA(name, value)
 
 #define EXECUTABLE_SUFFIX ".exe"

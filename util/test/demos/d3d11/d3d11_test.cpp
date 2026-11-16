@@ -31,6 +31,7 @@
 #include "../win32/win32_window.h"
 
 typedef HRESULT(WINAPI *PFN_CREATE_DXGI_FACTORY)(REFIID, void **);
+typedef HRESULT(WINAPI *PFN_GET_DEBUG_INTERFACE1)(UINT, REFIID, _COM_Outptr_ void **);
 
 namespace
 {
@@ -51,6 +52,7 @@ struct Capabilities
 pD3DCompile dyn_D3DCompile = NULL;
 pD3DStripShader dyn_D3DStripShader = NULL;
 pD3DSetBlobPart dyn_D3DSetBlobPart = NULL;
+pD3DGetBlobPart dyn_D3DGetBlobPart = NULL;
 
 PFN_D3D11_CREATE_DEVICE dyn_D3D11CreateDevice = NULL;
 PFN_D3D11_CREATE_DEVICE_AND_SWAP_CHAIN dyn_D3D11CreateDeviceAndSwapChain = NULL;
@@ -94,6 +96,7 @@ void D3D11GraphicsTest::Prepare(int argc, char **argv)
       dyn_D3DCompile = (pD3DCompile)GetProcAddress(d3dcompiler, "D3DCompile");
       dyn_D3DStripShader = (pD3DStripShader)GetProcAddress(d3dcompiler, "D3DStripShader");
       dyn_D3DSetBlobPart = (pD3DSetBlobPart)GetProcAddress(d3dcompiler, "D3DSetBlobPart");
+      dyn_D3DGetBlobPart = (pD3DGetBlobPart)GetProcAddress(d3dcompiler, "D3DGetBlobPart");
     }
 
     HRESULT hr = S_OK;
@@ -136,7 +139,7 @@ void D3D11GraphicsTest::Prepare(int argc, char **argv)
   else if(!factory)
     Avail = "Couldn't create DXGI factory";
   else if(!dyn_D3D11CreateDevice || !dyn_D3D11CreateDeviceAndSwapChain || !dyn_D3DCompile ||
-          !dyn_D3DStripShader || !dyn_D3DSetBlobPart)
+          !dyn_D3DStripShader || !dyn_D3DSetBlobPart || !dyn_D3DGetBlobPart)
     Avail = "Missing required entry point";
 }
 
@@ -319,6 +322,20 @@ void D3D11GraphicsTest::PostDeviceCreate()
     }
   }
 
+  if(breakOnDebug)
+  {
+    ID3D11InfoQueuePtr info = dev;
+    info->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_CORRUPTION, TRUE);
+    info->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_ERROR, TRUE);
+    info->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_WARNING, TRUE);
+
+    D3D11_INFO_QUEUE_FILTER filter = {};
+    filter.DenyList.NumIDs = (UINT)mutedMessages.size();
+    filter.DenyList.pIDList = mutedMessages.data();
+
+    info->PushStorageFilter(&filter);
+  }
+
   dev1 = dev;
   dev2 = dev;
   dev3 = dev;
@@ -388,6 +405,20 @@ void D3D11GraphicsTest::Shutdown()
   DefaultTriPS = NULL;
 
   DefaultTriVB = NULL;
+
+  PFN_GET_DEBUG_INTERFACE1 getDebug =
+      (PFN_GET_DEBUG_INTERFACE1)GetProcAddress(dxgi, "DXGIGetDebugInterface1");
+
+  if(debugDevice && getDebug && !subtest)
+  {
+    IDXGIDebug1Ptr dxgiDebug;
+    if(SUCCEEDED(getDebug(0, __uuidof(IDXGIDebug1), (void **)&dxgiDebug)))
+    {
+      dxgiDebug->ReportLiveObjects(
+          DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_DETAIL |
+                                               DXGI_DEBUG_RLO_IGNORE_INTERNAL));
+    }
+  }
 }
 
 bool D3D11GraphicsTest::Running()
@@ -643,12 +674,23 @@ void D3D11GraphicsTest::SetStencilRef(UINT ref)
 }
 
 ID3DBlobPtr D3D11GraphicsTest::Compile(std::string src, std::string entry, std::string profile,
-                                       bool skipoptimise)
+                                       uint32_t compileOptions)
 {
+  const bool skipoptimise = ((compileOptions & CompileOptionFlags::SkipOptimise) != 0);
+  const bool separateDebugLegacy = ((compileOptions & CompileOptionFlags::SeparateDebugLegacy) != 0);
+  const bool separateDebugSetPRIV =
+      ((compileOptions & CompileOptionFlags::SeparateDebugSetPRIV) != 0);
+  const bool separateDebug = ((compileOptions & CompileOptionFlags::SeparateDebug) != 0);
+  const bool manualDebugName = ((compileOptions & CompileOptionFlags::ManualDebugName) != 0);
+  const bool lz4Compress = ((compileOptions & CompileOptionFlags::LZ4Compress) != 0);
+
   ID3DBlobPtr blob = NULL;
   ID3DBlobPtr error = NULL;
 
   UINT flags = D3DCOMPILE_WARNINGS_ARE_ERRORS | D3DCOMPILE_DEBUG;
+
+  if((separateDebugLegacy || separateDebug) && !manualDebugName)
+    flags |= D3DCOMPILE_DEBUG_NAME_FOR_SOURCE;
 
   if(skipoptimise)
     flags |= D3DCOMPILE_SKIP_OPTIMIZATION | D3DCOMPILE_OPTIMIZATION_LEVEL0;
@@ -666,6 +708,76 @@ ID3DBlobPtr D3D11GraphicsTest::Compile(std::string src, std::string entry, std::
     blob = NULL;
     error = NULL;
     return NULL;
+  }
+
+  if(separateDebugLegacy || separateDebug)
+  {
+    std::string debugName;
+    if(manualDebugName)
+    {
+      debugName = "shader_" + profile.substr(0, 2) + ".dbg";
+    }
+    else
+    {
+      ID3DBlobPtr nameBlob;
+      LPVOID bufferPointer = blob->GetBufferPointer();
+      hr = dyn_D3DGetBlobPart(bufferPointer, blob->GetBufferSize(), D3D_BLOB_DEBUG_NAME, 0,
+                              &nameBlob);
+
+      if(SUCCEEDED(hr))
+      {
+        const uint16_t *flags_len = (const uint16_t *)nameBlob->GetBufferPointer();
+
+        const char *name_str = (const char *)(flags_len + 2);
+
+        debugName.assign(name_str, flags_len[1]);
+      }
+      else
+      {
+        TEST_ERROR("Couldn't get automatic name");
+        debugName = "shader_" + profile.substr(0, 2) + ".dbg";
+      }
+    }
+
+    std::string path = tmpPath + "/" + debugName;
+
+    if(separateDebug)
+    {
+      ID3DBlobPtr debugBlob;
+      dyn_D3DGetBlobPart(blob->GetBufferPointer(), blob->GetBufferSize(), D3D_BLOB_PDB, 0,
+                         &debugBlob);
+
+      WriteBlob(path, debugBlob, lz4Compress);
+
+      if(manualDebugName)
+      {
+        std::string nameBlob = path;
+        // pad the blob to multiple of 4
+        nameBlob.resize((path.size() + 0x3) & ~0x3);
+
+        nameBlob.insert(0, 4, '\0');
+        nameBlob[2] += path.size() & 0xff;
+
+        if(path.size() > 255)
+          TEST_ERROR("tmp path is too long!");
+
+        ID3DBlobPtr newBlob;
+
+        dyn_D3DSetBlobPart(blob->GetBufferPointer(), blob->GetBufferSize(), D3D_BLOB_DEBUG_NAME, 0,
+                           nameBlob.c_str(), nameBlob.size(), &newBlob);
+
+        blob = newBlob;
+      }
+    }
+    else if(separateDebugLegacy)
+    {
+      WriteBlob(path, blob, lz4Compress);
+
+      if(separateDebugSetPRIV)
+        SetBlobPath(path, blob);
+    }
+
+    Strip(blob);
   }
 
   return blob;

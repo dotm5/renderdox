@@ -50,11 +50,9 @@ struct D3D12EventNode
   {
     event = a.event;
     action = a.action;
+    SAFE_DELETE(state);
     if(a.state)
-    {
-      state = new D3D12RenderState();
-      *state = *a.state;
-    }
+      state = new D3D12RenderState(*a.state);
     executeData = a.executeData;
     resourceUsage = a.resourceUsage;
     debugMessages = a.debugMessages;
@@ -66,6 +64,29 @@ struct D3D12EventNode
     addPrimaryExecute = a.addPrimaryExecute;
     hasExecuteData = a.hasExecuteData;
     return *this;
+  }
+  D3D12EventNode &operator=(D3D12EventNode &&a)
+  {
+    event = a.event;
+    action = a.action;
+    SAFE_DELETE(state);
+    state = a.state;
+    a.state = NULL;
+    executeData = a.executeData;
+    resourceUsage = a.resourceUsage;
+    debugMessages = a.debugMessages;
+    annotations = a.annotations;
+    cmdListID = a.cmdListID;
+    primaryCmdId = a.primaryCmdId;
+    childCmdBufId = a.childCmdBufId;
+    addActionUse = a.addActionUse;
+    addPrimaryExecute = a.addPrimaryExecute;
+    hasExecuteData = a.hasExecuteData;
+    return *this;
+  }
+  void AddResourceUsage(ResourceId id, ResourceUsage usage)
+  {
+    resourceUsage.push_back(make_rdcpair(id, usage));
   }
 
   // eventId is not used
@@ -348,6 +369,7 @@ struct D3D12CommandData
   D3D12EventNode m_LoadingEventNode;
   rdcarray<D3D12EventNode> m_EventNodes;
   bool m_AddedEventNode;
+  bool m_Loading;
 
   uint64_t m_CurChunkOffset;
   SDChunkMetaData m_ChunkMetadata;
@@ -395,6 +417,7 @@ struct D3D12CommandData
                                          : m_EventNodes);
     return eventNodes.back();
   }
+  D3D12EventNode &GetLoadingEventNode() { return m_LoadingEventNode; }
 
   void BakeEventNodes(ActionDescription &rootAction);
 
@@ -405,6 +428,15 @@ struct D3D12CommandData
                                 D3D12_DESCRIPTOR_RANGE_TYPE type, uint32_t space, uint32_t bind,
                                 uint32_t rangeSize);
 
-  void AddResourceUsage(D3D12EventNode &eventNode, ResourceId id, ResourceUsage usage);
-  void AddCPUUsage(ResourceId id, ResourceUsage usage);
+  void AddResourceUsage(D3D12EventNode &eventNode, ResourceId id, ResourceUsage usage)
+  {
+    if(id == ResourceId())
+      return;
+
+    eventNode.AddResourceUsage(id, usage);
+  }
+  void AddEventResourceUsage(ResourceId id, ResourceUsage usage)
+  {
+    m_LoadingEventNode.AddResourceUsage(id, usage);
+  }
 };

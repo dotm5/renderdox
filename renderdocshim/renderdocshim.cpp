@@ -93,10 +93,7 @@ void CheckHook()
 
   if(exepath)
   {
-    // no memset :).
-    for(int i = 0; i < exepathLen; i++)
-      exepath[i] = 0;
-
+    // VirtualAlloc leaves a zero terminator even when the path is truncated.
     GetModuleFileNameW(NULL, exepath, exepathLen - 1);
 
     // no str*cmp functions

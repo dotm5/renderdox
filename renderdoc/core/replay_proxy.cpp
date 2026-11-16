@@ -222,6 +222,8 @@ ReplayProxy::ReplayProxy(ReadSerialiser &reader, WriteSerialiser &writer, IRemot
 
   m_APIProps = m_Remote->GetAPIProperties();
 
+  m_APIProps.rgpCapture = false;
+
   InitRemoteExecutionThread();
 
   if(m_Replay)
@@ -367,6 +369,7 @@ APIProperties ReplayProxy::Proxied_GetAPIProperties(ParamSerialiser &paramser,
   {
     ret.localRenderer = m_Proxy->GetAPIProperties().localRenderer;
     ret.remoteReplay = true;
+    ret.rgpCapture = false;
   }
 
   m_APIProps = ret;

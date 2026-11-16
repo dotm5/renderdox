@@ -246,6 +246,8 @@ RD_TEST(VK_Synchronization_2, VulkanGraphicsTest)
 
       vkCmdResetEvent2KHR(cmd, ev, VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT_KHR);
 
+      vkh::cmdPipelineBarrier(cmd, {}, {}, {vkh::MemoryBarrier(0, 0)});
+
       vkCmdClearColorImage(cmd, swapimg, VK_IMAGE_LAYOUT_GENERAL,
                            vkh::ClearColorValue(0.2f, 0.2f, 0.2f, 1.0f), 1,
                            vkh::ImageSubresourceRange());
@@ -293,6 +295,7 @@ RD_TEST(VK_Synchronization_2, VulkanGraphicsTest)
       undefImg.free();
     }
 
+    vkDestroyImage(device, unboundImg, NULL);
     vkDestroyQueryPool(device, pool, NULL);
     vkDestroyEvent(device, ev, NULL);
 

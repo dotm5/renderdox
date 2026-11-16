@@ -916,10 +916,19 @@ void GetHookedEnvp(char *const *envp, rdcstr &envpStr, rdcarray<char *> &modifie
 
 void ResetHookingEnvVars()
 {
-  direct_setenv(LIB_PATH_ENV_VAR, Process::GetEnvVariable("DCOMP_ORIGLIBPATH").c_str(), true);
-  direct_setenv(PRELOAD_ENV_VAR, Process::GetEnvVariable("DCOMP_ORIGPRELOAD").c_str(), true);
-  direct_setenv("DCOMP_ORIGLIBPATH", "", true);
-  direct_setenv("DCOMP_ORIGPRELOAD", "", true);
+  rdcstr origpath = Process::GetEnvVariable("DCOMP_ORIGLIBPATH");
+  rdcstr origpreload = Process::GetEnvVariable("DCOMP_ORIGPRELOAD");
+
+  if(!origpath.empty())
+  {
+    direct_setenv(LIB_PATH_ENV_VAR, origpath.c_str(), true);
+    direct_setenv("DCOMP_ORIGLIBPATH", "", true);
+  }
+  if(!origpreload.empty())
+  {
+    direct_setenv(PRELOAD_ENV_VAR, origpreload.c_str(), true);
+    direct_setenv("DCOMP_ORIGPRELOAD", "", true);
+  }
 }
 
 rdcpair<RDResult, uint32_t> Process::LaunchAndInjectIntoProcess(
