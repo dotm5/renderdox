@@ -93,9 +93,7 @@ void CheckHook()
 
   if(exepath)
   {
-    // no memset :).
-    SecureZeroMemory(exepath, exepathLen);
-
+    // VirtualAlloc leaves a zero terminator even when the path is truncated.
     GetModuleFileNameW(NULL, exepath, exepathLen - 1);
 
     // no str*cmp functions
