@@ -17,7 +17,8 @@ class DocumentationTests(unittest.TestCase):
         finally:
             sys.path.pop(0)
         readme = (ROOT / 'README.md').read_text(encoding='utf-8')
-        count = re.search(r'\| MCP capture and replay \| (\d+) tools', readme)
+        plain_readme = readme.replace('**', '').replace('`', '')
+        count = re.search(r'^\| MCP capture and replay \| (\d+) tools', plain_readme, re.M)
         self.assertIsNotNone(count)
         self.assertEqual(int(count.group(1)), len(TOOLS))
         current = (ROOT / 'docs/current-status.md').read_text(encoding='utf-8')
