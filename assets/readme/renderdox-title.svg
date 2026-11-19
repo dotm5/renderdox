@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="54" viewBox="0 0 240 54">
+  <title>RenderDox</title>
+  <style>
+    .warm { stop-color: #695638; }
+    .body { stop-color: #29384a; }
+    .cool { stop-color: #345c78; }
+    @media (prefers-color-scheme: dark) {
+      .warm { stop-color: #e8d8b6; }
+      .body { stop-color: #f4f6f8; }
+      .cool { stop-color: #b7dcec; }
+    }
+  </style>
+  <defs>
+    <linearGradient id="ink">
+      <stop class="warm"/>
+      <stop class="body" offset=".46"/>
+      <stop class="cool" offset="1"/>
+    </linearGradient>
+  </defs>
+  <text x="120" y="41" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif"
+        font-size="43" font-weight="700" letter-spacing="-.8" fill="url(#ink)">RenderDox</text>
+</svg>

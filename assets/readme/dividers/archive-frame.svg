@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 900 24" width="900" height="24" aria-hidden="true">
+  <style>
+    svg { --rail:#607e92; --gold:#a76e1c; --blue:#2863a6; --flash:#c28a28; }
+    @media (prefers-color-scheme: dark) {
+      svg { --rail:#90a9b8; --gold:#e8ba69; --blue:#97d7ff; --flash:#ffe3a5; }
+    }
+    .sweep { animation: traverse 7s linear infinite; }
+    @keyframes traverse {
+      from { transform:translateX(-170px); }
+      to   { transform:translateX(910px); }
+    }
+    .star-halo { opacity:.07; animation: star-breath 7s ease-in-out infinite; }
+    @keyframes star-breath { 0%, 100% { opacity:.05; } 50% { opacity:.14; } }
+    @media (prefers-reduced-motion: reduce) {
+      .sweep { display:none; }
+      .star-halo { animation:none; }
+    }
+  </style>
+  <defs>
+    <radialGradient id="starLight">
+      <stop stop-color="var(--gold)"/>
+      <stop offset=".45" stop-color="var(--gold)" stop-opacity=".46"/>
+      <stop offset="1" stop-color="var(--gold)" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="rail" gradientUnits="userSpaceOnUse" x1="0" x2="900">
+      <stop stop-color="var(--rail)" stop-opacity="0"/>
+      <stop offset=".10" stop-color="var(--rail)" stop-opacity=".49"/>
+      <stop offset=".41" stop-color="var(--rail)" stop-opacity=".54"/>
+      <stop offset=".5" stop-color="var(--gold)" stop-opacity=".8"/>
+      <stop offset=".59" stop-color="var(--rail)" stop-opacity=".54"/>
+      <stop offset=".90" stop-color="var(--rail)" stop-opacity=".49"/>
+      <stop offset="1" stop-color="var(--rail)" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="goldWash">
+      <stop stop-color="var(--flash)" stop-opacity="0"/>
+      <stop offset=".38" stop-color="var(--flash)" stop-opacity=".18"/>
+      <stop offset=".56" stop-color="var(--flash)" stop-opacity=".78"/>
+      <stop offset=".73" stop-color="var(--flash)" stop-opacity=".27"/>
+      <stop offset="1" stop-color="var(--flash)" stop-opacity="0"/>
+    </linearGradient>
+    <path id="rails" d="M0 6.5H69 M77 6.5H372C394 6.5 415 10.5 433 11.5 M0 17.5H69 M77 17.5H372C394 17.5 415 13.5 433 12.5
+      M900 6.5H831 M823 6.5H528C506 6.5 485 10.5 467 11.5 M900 17.5H831 M823 17.5H528C506 17.5 485 13.5 467 12.5"/>
+    <path id="outer" d="m450 2 10 10-10 10-10-10z"/>
+    <mask id="ink" maskUnits="userSpaceOnUse" x="0" y="0" width="900" height="24">
+      <g fill="none" stroke="white"><use xlink:href="#rails"/><use xlink:href="#outer"/></g>
+    </mask>
+  </defs>
+  <circle class="star-halo" cx="450" cy="12" r="7.75" fill="url(#starLight)"/>
+  <g fill="none" stroke-linejoin="round">
+    <use xlink:href="#rails" stroke="url(#rail)"/>
+    <path stroke="var(--rail)" opacity=".75" d="m69 6.5 4-4 4 4-4 4z m754 0 4-4 4 4-4 4z M69 17.5l4-4 4 4-4 4z m754 0 4-4 4 4-4 4z"/>
+    <use xlink:href="#outer" stroke="var(--gold)" stroke-width="1.2"/>
+    <path stroke="var(--blue)" d="m450 5.5 6.5 6.5-6.5 6.5-6.5-6.5z"/>
+  </g>
+  <path fill="var(--gold)" d="m450 7.5 .8 3.7 3.5.8-3.5.8-.8 3.7-.8-3.7-3.5-.8 3.5-.8z"/>
+  <g fill="var(--blue)"><circle cx="436.5" cy="12" r=".85"/><circle cx="463.5" cy="12" r=".85"/></g>
+  <g mask="url(#ink)"><rect class="sweep" width="160" height="24" fill="url(#goldWash)"/></g>
+</svg>
